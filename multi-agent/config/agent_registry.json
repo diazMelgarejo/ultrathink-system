@@ -1,0 +1,85 @@
+{
+  "version": "2.0.0",
+  "network_name": "ultrathink-agent-network",
+  "description": "7-agent ultrathink network for distributed problem solving",
+  "agents": [
+    {
+      "id": "orchestrator",
+      "type": "coordinator",
+      "skill_path": "agents/orchestrator/ultrathink-orchestrator.md",
+      "logic_path": "agents/orchestrator/orchestrator_logic.py",
+      "max_instances": 1,
+      "tools": ["state_manager", "message_bus", "all_agent_delegators"]
+    },
+    {
+      "id": "context-agent",
+      "type": "specialist",
+      "stage": 1,
+      "skill_path": "agents/context/context-immersion-agent.md",
+      "logic_path": "agents/context/context_tools.py",
+      "max_instances": 3,
+      "tools": ["git_history", "documentation_reader", "code_analyzer", "lessons_db"]
+    },
+    {
+      "id": "architect-agent",
+      "type": "specialist",
+      "stage": 2,
+      "skill_path": "agents/architect/visionary-architect-agent.md",
+      "logic_path": "agents/architect/architecture_tools.py",
+      "max_instances": 2,
+      "tools": ["module_decomposer", "interface_designer", "diagram_generator"]
+    },
+    {
+      "id": "refiner-agent",
+      "type": "specialist",
+      "stage": 3,
+      "skill_path": "agents/refiner/ruthless-refiner-agent.md",
+      "logic_path": "agents/refiner/refinement_tools.py",
+      "max_instances": 2,
+      "tools": ["complexity_analyzer", "redundancy_detector", "rubric_evaluator"]
+    },
+    {
+      "id": "executor-agent",
+      "type": "worker",
+      "stage": 4,
+      "skill_path": "agents/executor/masterful-executor-agent.md",
+      "logic_path": "agents/executor/execution_tools.py",
+      "max_instances": 5,
+      "tools": ["code_generator", "test_generator", "linter", "performance_profiler"]
+    },
+    {
+      "id": "verifier-agent",
+      "type": "validator",
+      "stage": 4.5,
+      "skill_path": "agents/verifier/verification-agent.md",
+      "logic_path": "agents/verifier/verification_tools.py",
+      "max_instances": 2,
+      "tools": ["test_runner", "diff_analyzer", "scenario_generator"]
+    },
+    {
+      "id": "crystallizer-agent",
+      "type": "documenter",
+      "stage": 5,
+      "skill_path": "agents/crystallizer/vision-crystallizer-agent.md",
+      "logic_path": "agents/crystallizer/documentation_tools.py",
+      "max_instances": 1,
+      "tools": ["diagram_generator", "lessons_db", "documentation_writer"]
+    }
+  ],
+  "routing": {
+    "task_received":          "orchestrator",
+    "context_needed":         "context-agent",
+    "design_needed":          "architect-agent",
+    "refinement_needed":      "refiner-agent",
+    "implementation_needed":  "executor-agent",
+    "verification_needed":    "verifier-agent",
+    "documentation_needed":   "crystallizer-agent"
+  },
+  "quality_gates": {
+    "context_confidence_min": 0.7,
+    "elegance_threshold":     0.8,
+    "max_refinement_loops":   3,
+    "max_executor_agents":    5,
+    "max_nesting_depth":      3
+  }
+}

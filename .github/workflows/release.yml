@@ -1,0 +1,24 @@
+name: Release
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pytest && pytest tests/ -v
+      - run: bash verify-package.sh
+      - name: Create ZIP
+        run: |
+          cd ..
+          zip -r ultrathink-system-${{ github.ref_name }}.zip ultrathink-system/ \
+            --exclude "*/\.*" --exclude "*/__pycache__/*"
+          mv ultrathink-system-${{ github.ref_name }}.zip ultrathink-system/
+      - uses: softprops/action-gh-release@v1
+        with:
+          files: ultrathink-system-${{ github.ref_name }}.zip
+          generate_release_notes: true

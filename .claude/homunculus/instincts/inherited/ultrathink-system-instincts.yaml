@@ -1,0 +1,108 @@
+# Instincts generated from https://github.com/diazMelgarejo/ultrathink-system
+# Generated: 2026-03-23T12:49:16.896Z
+# Version: 2.0
+
+---
+id: ultrathink-system-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/diazMelgarejo/ultrathink-system
+---
+
+# Ultrathink System Commit Length
+
+## Action
+
+Write moderate-length commit messages (~50 characters)
+
+## Evidence
+
+- Average commit message length: 50 chars
+- Based on 22 commits
+
+---
+id: ultrathink-system-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/diazMelgarejo/ultrathink-system
+---
+
+# Ultrathink System Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: ultrathink-system-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/diazMelgarejo/ultrathink-system
+---
+
+# Ultrathink System Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: ultrathink-system-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/diazMelgarejo/ultrathink-system
+---
+
+# Ultrathink System Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: ultrathink-system-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/diazMelgarejo/ultrathink-system
+---
+
+# Ultrathink System Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~12x per month
+- Files: **/*.test.*, **/api/**
+

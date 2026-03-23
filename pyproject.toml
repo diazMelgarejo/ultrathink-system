@@ -9,6 +9,10 @@ dependencies = [
 [tool.uv]
 managed = true
 
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["multi_agent*", "single_agent*"]
 [tool.hatch.build.targets.wheel]
 packages = ["multi_agent", "single_agent"]
 only-include = [

@@ -66,6 +66,49 @@
       "tools": ["diagram_generator", "lessons_db", "documentation_writer"]
     }
   ],
+  "autoresearch_agents": {
+    "_comment": "Pre-defined agent types for autoresearch swarm (task_type=autoresearch). Spawned by Perplexity-Tools AgentTracker; registered here for ultrathink Mode 3 awareness only.",
+    "autoresearch-coder": {
+      "id": "autoresearch-coder",
+      "type": "worker",
+      "device_affinity": "win-rtx3080",
+      "model_role": "autoresearch-coder",
+      "responsibilities": [
+        "Call CIDF decide() before editing train.py (rank 2: direct_typing on local file)",
+        "Deploy train.py via autoresearch_bridge.deploy_train_py() (scp)",
+        "Dispatch run via autoresearch_bridge.run_experiment_on_gpu()",
+        "Flip swarm_state.md GPU: IDLE→BUSY before run, BUSY→IDLE after fetch_run_log()"
+      ],
+      "max_instances": 1,
+      "idempotency": "AgentTracker.find_existing('autoresearch-coder', task_hash)"
+    },
+    "autoresearch-evaluator": {
+      "id": "autoresearch-evaluator",
+      "type": "validator",
+      "device_affinity": "mac",
+      "model_role": "autoresearch-critic",
+      "responsibilities": [
+        "Read log.txt via autoresearch_bridge.fetch_run_log()",
+        "Parse val_bpb programmatically — LINT-002 verification_required=True (no visual confirmation)",
+        "Write findings to swarm_state.md evaluator_findings section"
+      ],
+      "max_instances": 1,
+      "idempotency": "AgentTracker.find_existing('autoresearch-evaluator', task_hash)"
+    },
+    "autoresearch-orchestrator": {
+      "id": "autoresearch-orchestrator",
+      "type": "coordinator",
+      "device_affinity": "mac",
+      "model_role": "strategy",
+      "responsibilities": [
+        "Read swarm_state.md + git log to understand current experiment state",
+        "Propose next hypothesis; write orchestrator_directive to swarm_state.md",
+        "Coordinate coder + evaluator lifecycle via Perplexity-Tools AgentTracker"
+      ],
+      "max_instances": 1,
+      "idempotency": "AgentTracker.find_existing('autoresearch-orchestrator', task_hash)"
+    }
+  },
   "routing": {
     "task_received":          "orchestrator",
     "context_needed":         "context-agent",
@@ -73,7 +116,10 @@
     "refinement_needed":      "refiner-agent",
     "implementation_needed":  "executor-agent",
     "verification_needed":    "verifier-agent",
-    "documentation_needed":   "crystallizer-agent"
+    "documentation_needed":   "crystallizer-agent",
+    "autoresearch_received":  "autoresearch-orchestrator",
+    "autoresearch_coding":    "autoresearch-coder",
+    "autoresearch_eval":      "autoresearch-evaluator"
   },
   "quality_gates": {
     "context_confidence_min": 0.7,

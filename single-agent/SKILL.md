@@ -201,6 +201,15 @@ Orchestrator
 
 Config: `multi-agent/config/agent_registry.json` · `multi-agent/config/routing_rules.json`
 
+### autoresearch Integration (Mode 3 Task Type)
+
+When the router detects `task_type == "autoresearch"`:
+- **Execution**: Delegate to Perplexity-Tools `POST /autoresearch/sync` before any Mode 3 agent spawn.
+- **Roles**: Three specialized agents (Coder / Evaluator / Orchestrator) orchestrated by Perplexity-Tools `AgentTracker`.
+- **CIDF**: The **Coder** agent calls `decide()` before editing `train.py` → uses rank 2 (`direct_typing` on local file) followed by `scp` deployment.
+- **Verification**: The **Evaluator** agent enforces LINT-002 (`verification_required == True`) by parsing `log.txt` programmatically (not visual confirmation).
+- **Config**: `multi-agent/config/agent_registry.json` registers `autoresearch-coder`, `autoresearch-evaluator`, `autoresearch-orchestrator` as pre-defined agent types.
+
 ---
 
 ## The 6 Directives (Always Active, All Modes)

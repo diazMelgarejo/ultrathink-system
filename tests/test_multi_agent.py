@@ -2,7 +2,7 @@
 """
 test_multi_agent.py
 ===================
-Test suite for the ultrathink multi-agent package structure.
+Test suite for the ultrathink multi_agent package structure.
 Run: pytest tests/test_multi_agent.py -v
 """
 import json
@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 
 ROOT   = Path(__file__).parent.parent
-MULTI  = ROOT / "multi-agent"
+MULTI  = ROOT / "multi_agent"
 AGENTS = ["orchestrator", "context", "architect", "refiner", "executor", "verifier", "crystallizer"]
 SKILL_NAMES = {
     "orchestrator": "ultrathink-orchestrator.md",

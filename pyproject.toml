@@ -1,6 +1,6 @@
 [project]
 name = "ultrathink-system"
-version = "2.0.0"
+version = "0.9.4.1"
 description = "ultrathink Multi-Agent System"
 dependencies = [
     "redis>=5.0.0",
@@ -10,7 +10,7 @@ dependencies = [
 managed = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["multi-agent", "single-agent"]
+packages = ["multi_agent", "single_agent"]
 
 [build-system]
 requires = ["hatchling"]

@@ -6,6 +6,25 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.4.1] - 2026-03-23
+
+### Fixed
+- Directory naming convention: renamed `multi-agent/` → `multi_agent/` and `single-agent/` → `single_agent/` for valid Python package imports
+- Updated pyproject.toml wheel package list to use underscore names
+- Updated all tests, imports, and documentation references to underscore naming
+- Fixed routing_rules.json CIDF policy paths
+
+### Added
+- `test-package-install.py`: validates package metadata and pip install functionality
+- GitHub Actions CI workflow (`.github/workflows/ci.yml`) with pytest, build, and lint stages
+
+### Verified
+- 86 unit tests passing
+- sdist and wheel builds successful
+- Package install and import functionality working
+
+---
+
 ## [1.0.0] - 2026-03-20
 
 ### Added
@@ -19,9 +38,9 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **MCP servers**: `ultrathink_orchestration_server.py`, `agent_communication_server.py`
 - **Config**: `agent_registry.json`, `routing_rules.json`
 - **Examples**: financial-validator, api-integration, architecture-refactor
-- **Docs**: installation, quick-start, single-agent guide, multi-agent guide, API reference, troubleshooting, FAQ
+- **Docs**: installation, quick-start, single_agent guide, multi_agent guide, API reference, troubleshooting, FAQ
 - **Tests**: test_single_agent.py, test_multi_agent.py, test_orchestrator.py
-- **Installation scripts**: `install-single-agent.sh`, `install-multi-agent.sh`
+- **Installation scripts**: `install-single_agent.sh`, `install-multi_agent.sh`
 - **Verification**: `verify-package.sh`
 - Apache 2.0 license
 

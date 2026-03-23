@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-multi-agent.sh
+# install-multi_agent.sh
 # ultrathink System — Multi-Agent Network Installer
 set -euo pipefail
 
@@ -25,7 +25,7 @@ echo -e "  ${BLUE}Directory${RESET}: $INSTALL_DIR"
 echo ""
 
 mkdir -p "$INSTALL_DIR"
-cp -r multi-agent "$INSTALL_DIR/ultrathink-network"
+cp -r multi_agent "$INSTALL_DIR/ultrathink-network"
 mkdir -p "$HOME/.ultrathink/state"
 
 find "$INSTALL_DIR/ultrathink-network" -name "*.py" -exec chmod +x {} \;

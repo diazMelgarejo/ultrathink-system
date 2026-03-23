@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# install-single-agent.sh
+# install-single_agent.sh
 # ultrathink System — Single-Agent Installer
 set -euo pipefail
 
@@ -32,16 +32,16 @@ mkdir -p "$CLAUDE_DIR"
 
 # Copy or symlink
 if [[ "${1:-}" == "--symlink" ]]; then
-    ln -sf "$(pwd)/single-agent" "$CLAUDE_DIR/ultrathink-system-skill"
+    ln -sf "$(pwd)/single_agent" "$CLAUDE_DIR/ultrathink-system-skill"
     echo -e "  ${GREEN}✓${RESET} Symlinked ultrathink-system-skill (updates automatically)"
 else
-    cp -r single-agent "$CLAUDE_DIR/ultrathink-system-skill"
+    cp -r single_agent "$CLAUDE_DIR/ultrathink-system-skill"
     echo -e "  ${GREEN}✓${RESET} Installed ultrathink-system-skill"
 fi
 
 # Bootstrap tasks dir
 mkdir -p "$HOME/.ultrathink/tasks"
-cp single-agent/templates/* "$HOME/.ultrathink/tasks/" 2>/dev/null || true
+cp single_agent/templates/* "$HOME/.ultrathink/tasks/" 2>/dev/null || true
 
 # Make scripts executable
 chmod +x "$CLAUDE_DIR/ultrathink-system-skill/scripts/"*.py \
@@ -56,8 +56,8 @@ echo "  2. Say: 'Apply ultrathink system to: [your task]'"
 echo "  3. Or: 'ultrathink this'"
 echo ""
 echo -e "  ${YELLOW}Scripts:${RESET}"
-echo "  ./single-agent/scripts/create_task_plan.sh 'Task name'"
-echo "  python single-agent/scripts/verify_before_done.py --task 'Task'"
-echo "  python single-agent/scripts/capture_lesson.py"
+echo "  ./single_agent/scripts/create_task_plan.sh 'Task name'"
+echo "  python single_agent/scripts/verify_before_done.py --task 'Task'"
+echo "  python single_agent/scripts/capture_lesson.py"
 echo ""
 echo -e "  ${BLUE}Docs:${RESET} $CLAUDE_DIR/ultrathink-system-skill/README.md"

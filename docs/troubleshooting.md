@@ -26,7 +26,7 @@
 **Symptom**: Claude loses track of earlier context.
 **Solutions**:
 1. Use Directive #2 (Subagent Strategy) — offload research to subagents
-2. For multi-agent mode: use the orchestration server to distribute work
+2. For multi_agent mode: use the orchestration server to distribute work
 3. Break large tasks into smaller sub-tasks, each with their own `todo.md`
 
 ---
@@ -35,7 +35,7 @@
 
 **Symptom**: `python ultrathink_orchestration_server.py` errors on import
 **Solutions**:
-1. Ensure you're running from `multi-agent/mcp_servers/` directory (or set PYTHONPATH)
+1. Ensure you're running from `multi_agent/mcp_servers/` directory (or set PYTHONPATH)
 2. Check Python 3.8+: `python --version`
 3. Install optional deps: `pip install redis` (only needed for Redis backend)
 4. Fallback: the server runs with in-memory backend automatically

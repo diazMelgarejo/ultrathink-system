@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 
 # Add shared to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "multi-agent" / "shared"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "multi_agent" / "shared"))
 
 try:
     from ultrathink_core import (

@@ -34,18 +34,18 @@ Clear methodology → clear output. Vague intent → scaled ambiguity.
 ## Quick Start (3 Minutes)
 
 ```bash
-# 1. Install single-agent (Claude Code / Cowork / Open)
-./install-single-agent.sh
+# 1. Install single_agent (Claude Code / Cowork / Open)
+./install-single_agent.sh
 
 # 2. Activate in Claude
 # "ultrathink this"
 # "Apply ultrathink system to: [your task]"
 
 # 3. Create a task plan
-./single-agent/scripts/create_task_plan.sh "Build my feature"
+./single_agent/scripts/create_task_plan.sh "Build my feature"
 
 # 4. Verify before marking done
-python single-agent/scripts/verify_before_done.py --task "Build my feature"
+python single_agent/scripts/verify_before_done.py --task "Build my feature"
 ```
 
 ---
@@ -55,7 +55,7 @@ python single-agent/scripts/verify_before_done.py --task "Build my feature"
 ```
 ultrathink-system/
 │
-├── single-agent/                   ← Install here for Claude Code / Cowork
+├── single_agent/                   ← Install here for Claude Code / Cowork
 │   ├── SKILL.md                    ← Main intelligence layer (<500 lines)
 │   ├── references/                 ← Deep-dive documentation
 │   │   ├── ultrathink-5-stages.md
@@ -68,7 +68,7 @@ ultrathink-system/
 │   │   └── create_task_plan.sh     ← Task plan generator
 │   └── templates/                  ← Reusable task / lesson templates
 │
-├── multi-agent/                    ← Install here for Clawdbot / OpenClaw
+├── multi_agent/                    ← Install here for Clawdbot / OpenClaw
 │   ├── agents/                     ← 7 specialized agents
 │   │   ├── orchestrator/           ← Coordinates 5-stage process
 │   │   ├── context/                ← Stage 1: Context Immersion
@@ -93,7 +93,7 @@ ultrathink-system/
 
 ### Single-Agent (Most Users)
 ```bash
-./install-single-agent.sh
+./install-single_agent.sh
 ```
 
 | Platform | Directory |
@@ -105,8 +105,8 @@ ultrathink-system/
 
 ### Multi-Agent Network (Distributed / Parallel)
 ```bash
-./install-multi-agent.sh
-python multi-agent/mcp_servers/ultrathink_orchestration_server.py
+./install-multi_agent.sh
+python multi_agent/mcp_servers/ultrathink_orchestration_server.py
 ```
 
 ---
@@ -184,7 +184,7 @@ This skill follows the SKILL.md open standard and is compatible with
 
 ```bash
 # Add to your ECC profile
-cp -r single-agent ~/.claude/skills/ultrathink-system-skill
+cp -r single_agent ~/.claude/skills/ultrathink-system-skill
 
 # Then use with any ECC-compatible harness
 ```

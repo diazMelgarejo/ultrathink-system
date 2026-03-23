@@ -10,7 +10,6 @@ dependencies = [
 managed = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["multi_agent", "single_agent"]
 only-include = [
     "multi_agent/",
     "single_agent/",

@@ -11,7 +11,7 @@ chk_d() { [ -d "$1" ] && echo -e "  ${GREEN}✓${RESET} $1/" || { echo -e "  ${R
 echo -e "${BOLD}🔍 ultrathink System — Package Integrity Check${RESET}\n"
 
 echo "📄 Root:";    chk_f LICENSE; chk_f README.md; chk_f CONTRIBUTING.md; chk_f CHANGELOG.md
-chk_f install-single_agent.sh; chk_f install-multi_agent.sh; chk_f verify-package.sh
+chk_f install-single-agent.sh; chk_f install-multi-agent.sh; chk_f verify-package.sh
 
 echo -e "\n📦 Single-agent:"; chk_f single_agent/SKILL.md; chk_f single_agent/README.md
 chk_d single_agent/references; chk_d single_agent/scripts; chk_d single_agent/templates

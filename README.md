@@ -9,7 +9,7 @@
 [![ECC Tools](https://img.shields.io/badge/ECC_Tools-Compatible-brightgreen)](https://ecc.tools)
 [![Version](https://img.shields.io/badge/version-1.0.0-orange)](CHANGELOG.md)
 
-**Compatible with**: Claude Code · Cowork · Open · Clawdbot · MoltBot · OpenClaw · ECC Tools · everything-claude-code
+**Compatible with**: Claude Code · Cowork · Clawdbot · MoltBot · OpenClaw · ECC-Tools (everything-claude-code)
 
 ---
 

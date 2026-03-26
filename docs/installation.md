@@ -13,7 +13,7 @@
 
 ### Automated
 ```bash
-./install-single_agent.sh
+./install-single-agent.sh
 ```
 
 ### Manual
@@ -42,7 +42,7 @@ cp -r single_agent ~/.ecc/skills/ultrathink-system-skill
 
 ### Automated
 ```bash
-./install-multi_agent.sh
+./install-multi-agent.sh
 ```
 
 ### Manual

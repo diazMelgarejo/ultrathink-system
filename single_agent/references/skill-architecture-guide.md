@@ -25,7 +25,7 @@ Only the frontmatter is loaded during agent startup. This keeps discovery overhe
 ---
 name: skill-name
 description: Third-person description with specific activation triggers
-version: 1.0.0
+version: 0.9.4.3
 license: Apache 2.0
 compatibility: claude-code, cowork, python>=3.8
 allowed-tools: bash, file-operations, web-search

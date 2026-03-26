@@ -1,7 +1,7 @@
 ---
 name: masterful-executor-agent
 description: Implements refined designs with TDD and obsessive attention to edge cases. Up to 5 parallel instances. Activates when orchestrator delegates execution stage.
-version: 2.0.0
+version: 0.9.4.3
 license: Apache 2.0
 compatibility: clawdbot, moltbot, openclaw
 allowed-tools: code-generator test-generator linter performance-profiler

@@ -7,7 +7,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![SKILL.md Standard](https://img.shields.io/badge/SKILL.md-Compatible-green)](https://ecc.tools/skills)
 [![ECC Tools](https://img.shields.io/badge/ECC_Tools-Compatible-brightgreen)](https://ecc.tools)
-[![Version](https://img.shields.io/badge/version-1.0.0-orange)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.4.3-orange)](CHANGELOG.md)
 
 **Compatible with**: Claude Code · Cowork · Clawdbot · MoltBot · OpenClaw · ECC-Tools (everything-claude-code)
 
@@ -34,8 +34,10 @@ Clear methodology → clear output. Vague intent → scaled ambiguity.
 ## Quick Start (3 Minutes)
 
 ```bash
+# From the repository root:
+
 # 1. Install single_agent (Claude Code / Cowork / Open)
-./install-single_agent.sh
+./install-single-agent.sh
 
 # 2. Activate in Claude
 # "ultrathink this"
@@ -93,7 +95,7 @@ ultrathink-system/
 
 ### Single-Agent (Most Users)
 ```bash
-./install-single_agent.sh
+./install-single-agent.sh
 ```
 
 | Platform | Directory |
@@ -105,7 +107,7 @@ ultrathink-system/
 
 ### Multi-Agent Network (Distributed / Parallel)
 ```bash
-./install-multi_agent.sh
+./install-multi-agent.sh
 python multi_agent/mcp_servers/ultrathink_orchestration_server.py
 ```
 
@@ -163,17 +165,19 @@ User → Orchestrator
 ## Self-Improvement System
 
 ```bash
-# After any mistake or user correction:
-python scripts/capture_lesson.py
+# From the repository root, after any mistake or user correction:
+python single_agent/scripts/capture_lesson.py
 
 # Review before starting work:
-python scripts/capture_lesson.py --review
+python single_agent/scripts/capture_lesson.py --review
 
 # Analyze your mistake patterns:
-python scripts/capture_lesson.py --stats
+python single_agent/scripts/capture_lesson.py --stats
 ```
 
 Lessons compound over time. Mistake rate measurably declines.
+After installation into a skill directory, run the same commands from inside that
+installed directory with `scripts/...` instead of `single_agent/scripts/...`.
 
 ---
 

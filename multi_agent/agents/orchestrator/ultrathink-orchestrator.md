@@ -1,7 +1,7 @@
 ---
 name: ultrathink-orchestrator
 description: Coordinates the complete ultrathink 5-stage process across specialized agents. Routes tasks to context, architect, refiner, executor, verifier, and crystallizer agents. Activates for any complex multi-step task requiring distributed AI agent collaboration.
-version: 2.0.0
+version: 0.9.4.3
 license: Apache 2.0
 compatibility: clawdbot, moltbot, openclaw, any-mcp-framework
 allowed-tools: state-manager, message-bus, agent-delegator, parallel-executor

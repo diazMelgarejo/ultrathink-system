@@ -32,7 +32,7 @@ A: No. The default in-memory backend works for development and single-machine se
 A: Single-agent for most tasks — it's faster and simpler. Multi-agent for large parallel tasks (refactoring many files, researching multiple approaches simultaneously, or when context window is a bottleneck).
 
 **Q: How do I add my own lessons?**
-A: `python scripts/capture_lesson.py` — follow the prompts. Or open `tasks/lessons.md` directly and add an entry following the template in `templates/lessons-log.md`.
+A: From the repository root, run `python single_agent/scripts/capture_lesson.py`. From the installed skill directory, run `python scripts/capture_lesson.py`. Or open `tasks/lessons.md` directly and add an entry following the template in `templates/lessons-log.md`.
 
 **Q: Can I customize the skill for my project?**
 A: Yes! Add a `## Project-Specific Rules` section to `single_agent/SKILL.md`. Specify your stack, patterns, and constraints. The skill architecture standard supports this in its "Degrees of Freedom" section.

@@ -26,6 +26,21 @@ chk_f single_agent/templates/task-plan.md
 chk_f single_agent/templates/lessons-log.md
 chk_f single_agent/templates/verification-checklist.md
 
+echo -e "\n🔧 CIDF Package:"
+chk_d single_agent/cidf
+chk_d single_agent/cidf/core
+chk_d single_agent/cidf/linter
+chk_d single_agent/cidf/tests
+chk_f single_agent/cidf/README.md
+chk_f single_agent/cidf/FRAMEWORK.md
+chk_f single_agent/cidf/core/content_insertion_framework.py
+chk_f single_agent/cidf/core/content_insertion_policy.json
+chk_f single_agent/cidf/core/contentInsertionFramework.ts
+chk_f single_agent/cidf/linter/policy_linter.py
+chk_f single_agent/cidf/linter/policyLinter.ts
+chk_f single_agent/cidf/tests/test_conformance.py
+chk_f single_agent/cidf/tests/conformance.test.ts
+
 echo -e "\n🤖 Multi-agent:"; chk_d multi_agent/agents
 for a in orchestrator context architect refiner executor verifier crystallizer; do
   chk_d "multi_agent/agents/$a"
@@ -50,14 +65,3 @@ else
     echo -e "${RED}${BOLD}❌ Package integrity: FAILED — $errors file(s) missing${RESET}"
     exit 1
 fi
-
-echo -e "\n🔧 CIDF Package:"
-chk_f single_agent/cidf/README.md
-chk_f single_agent/cidf/FRAMEWORK.md
-chk_f single_agent/cidf/core/content_insertion_framework.py
-chk_f single_agent/cidf/core/content_insertion_policy.json
-chk_f single_agent/cidf/core/contentInsertionFramework.ts
-chk_f single_agent/cidf/linter/policy_linter.py
-chk_f single_agent/cidf/linter/policyLinter.ts
-chk_f single_agent/cidf/tests/test_conformance.py
-chk_f single_agent/cidf/tests/conformance.test.ts

@@ -17,7 +17,8 @@
 **Solutions**:
 1. Create `pytest.ini` or add `[tool.pytest.ini_options]` to `pyproject.toml`
 2. Install pytest: `pip install pytest`
-3. Use `--no-interact` flag to skip interactive checks: `python verify_before_done.py --no-interact`
+3. From the repository root, use `python single_agent/scripts/verify_before_done.py --no-interact`
+4. From the installed skill directory, use `python scripts/verify_before_done.py --no-interact`
 
 ---
 
@@ -46,6 +47,7 @@
 
 **Symptom**: `capture_lesson.py` can't find `tasks/lessons.md`
 **Solutions**:
-1. Run `./scripts/create_task_plan.sh "Task"` first — creates the tasks/ directory
+1. From the repository root, run `./single_agent/scripts/create_task_plan.sh "Task"` first
 2. Or: `mkdir -p tasks && touch tasks/lessons.md`
-3. Use `--dir /path/to/project` flag to specify project directory
+3. From the installed skill directory, run `./scripts/create_task_plan.sh "Task"`
+4. Use `--dir /path/to/project` flag to specify project directory

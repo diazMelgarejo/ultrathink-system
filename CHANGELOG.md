@@ -6,6 +6,19 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.4.3] - 2026-03-26
+
+### Fixed
+- Root docs now use the real installer filenames: `install-single-agent.sh` and `install-multi-agent.sh`
+- `verify-package.sh` now validates the CIDF package before reporting final pass/fail
+- Package install verification now uses a local build-plus-wheel-install flow that works offline when tooling is present
+- Repository-root docs now distinguish `single_agent/scripts/...` commands from installed-skill `scripts/...` commands
+
+### Changed
+- Declared Hatchling explicitly as the build backend
+- Aligned current package metadata, skill/config versions, and user-facing release surfaces to `0.9.4.3`
+- Expanded ignore rules for repo-local build outputs and disposable test environments
+
 ## [0.9.4.1] - 2026-03-23
 
 ### Fixed
@@ -40,7 +53,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **Examples**: financial-validator, api-integration, architecture-refactor
 - **Docs**: installation, quick-start, single_agent guide, multi_agent guide, API reference, troubleshooting, FAQ
 - **Tests**: test_single_agent.py, test_multi_agent.py, test_orchestrator.py
-- **Installation scripts**: `install-single_agent.sh`, `install-multi_agent.sh`
+- **Installation scripts**: `install-single-agent.sh`, `install-multi-agent.sh`
 - **Verification**: `verify-package.sh`
 - Apache 2.0 license
 

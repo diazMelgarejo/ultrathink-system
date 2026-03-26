@@ -272,3 +272,47 @@ tasks/
 ---
 
 *References: `cidf/FRAMEWORK.md` · `references/content-insertion-framework.md` · `references/ultrathink-5-stages.md` · `references/core-operational-directives.md`*
+
+
+---
+
+## Perplexity-Tools Orchestration Context
+
+**When ultrathink-system is invoked via Perplexity-Tools orchestration, the following rules apply.**
+
+ultrathink-system is Layer 2 in the 4-layer stack:
+```
+Perplexity-Tools (Layer 1) → ultrathink-system (Layer 2) → ECC Tools (Layer 3) → autoresearch (Layer 4)
+```
+
+### Priority Rule (Non-Negotiable)
+
+- **PT SKILL.md runs first** — PT owns top-level model selection and task routing
+- ultrathink is called **only when** `reasoning_depth=ultra` OR `privacy_critical=True`
+- Do **not** override PT's model selection for top-level agents
+- Only override when `reasoning_depth == ultra` and PT explicitly delegates
+
+### Behavioral Constraints Under PT Orchestration
+
+| Constraint | Rule |
+|---|---|
+| Model selection | Defer to PT's `config/routing.yml` for top-level models |
+| Statelessness | ultrathink stays stateless; PT owns dedup via `.state/agents.json` |
+| API endpoint | Serve via `api_server.py` on `POST /ultrathink` (port 8001) |
+| Timeout | Respect `ULTRATHINK_TIMEOUT` env var (default: 120s) |
+| Privacy | No cloud API calls from ultrathink — local Ollama only |
+| Fallback | If Ollama unreachable, return HTTP 503; PT handles fallback to local qwen3:30b |
+
+### Trigger Conditions (PT → ultrathink)
+
+ultrathink is activated by PT routing when:
+- `task_type` matches `deep_reasoning` OR `code_analysis` in `config/routing.yml`
+- `privacy_critical=True` flag is set in the PT task payload
+- `reasoning_depth=ultra` is explicitly requested
+
+### Integration References
+
+- Bridge spec: `docs/PERPLEXITY_BRIDGE.md`
+- Sync analysis: `docs/SYNC_ANALYSIS.md`
+- PT routing: `https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/config/routing.yml`
+- PT SKILL.md: `https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/SKILL.md`

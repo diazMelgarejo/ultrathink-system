@@ -118,6 +118,8 @@ Executable implementation in `cidf/` (same directory as this SKILL.md):
 | `cidf/linter/policy_linter.py` | LINT-001–005 CI guard (`lint_strict()`) |
 | `cidf/tests/test_conformance.py` | 30 conformance tests — must all pass |
 | `cidf/FRAMEWORK.md` | Canonical v1.2 specification |
+| `cidf/DESIGN.md` | Original design doc: flowcharts, decision matrices, meta-lesson |
+| `references/amplifier-principle.md` | Foundational essay: why developers must stay in the driver's seat |
 | `references/content-insertion-framework.md` | Human reference v1.2 + cidf/ pointer |
 
 **Quick usage (Python)**:
@@ -260,7 +262,7 @@ tasks/
 | Verification before done | 100% |
 | Repeat mistake rate | < 5% (declining) |
 
-References: `cidf/FRAMEWORK.md` · `references/content-insertion-framework.md` · `references/ultrathink-5-stages.md` · `references/core-operational-directives.md`
+References: `cidf/FRAMEWORK.md` · `cidf/DESIGN.md` · `references/amplifier-principle.md` · `references/content-insertion-framework.md` · `references/ultrathink-5-stages.md` · `references/core-operational-directives.md`
 
 ## Perplexity-Tools Orchestration Context
 

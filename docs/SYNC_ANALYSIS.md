@@ -1,7 +1,6 @@
 # Sync Analysis: ultrathink-system ↔ Perplexity-Tools
 
-**Date:** 2026-03-26 | **Version:** Both at v0.9.4.3
-
+**Date:** 2026-03-27 | **Version:** PT v0.9.5.0 | ultrathink v0.9.4.3
 ---
 
 ## TL;DR — Status Summary
@@ -11,8 +10,7 @@
 | **Version** | ✅ IN SYNC | Both at v0.9.4.3 |
 | **Architecture contract** | ✅ IN SYNC | 4-layer hierarchy documented + upheld |
 | **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.4.3 |
-| **API endpoint spec** | ⚠️ PARTIAL | Spec exists in docs; no `api_server.py` yet in repo |
-| **Routing logic in PT** | ⚠️ PARTIAL | PT README shows routing; no actual `routing.yml` reference to ultrathink |
+| **API endpoint spec** | ✅ IN SYNC | `api_server.py` created; POST /ultrathink + GET /health implemented || **Routing logic in PT** | ⚠️ PARTIAL | PT README shows routing; no actual `routing.yml` reference to ultrathink |
 | **Idempotency contract** | ⚠️ PARTIAL | PT uses `.state/agents.json`; ultrathink side uses Redis (not yet implemented) |
 | **Shared `.env` contract** | ⚠️ PARTIAL | Vars defined in BRIDGE doc; not in `.env` files of either repo |
 | **SKILL.md cross-ref** | ✅ IN SYNC | PT SKILL.md references ultrathink routing methodology |
@@ -232,6 +230,77 @@ PT only has `requirements.txt`. Making PT installable enables:
 - **Do not make ultrathink stateful** with its own agent registry. PT owns that.
 - **Do not add Perplexity API calls to ultrathink.** It stays local-only (privacy layer).
 - **Do not change the priority rule.** PT SKILL.md → ECC → ultrathink ordering is correct.
+
+
+---
+
+## Update 2026-03-27: v0.9.5.0 Hardware Abstraction Layer [SYNC]
+
+### Status: P0 & P1 Gaps RESOLVED ✅
+
+All critical integration gaps from the previous analysis have been addressed:
+
+**P0 — RESOLVED:**
+- ✅ `api_server.py` created in ultrathink-system (commit 3a98311, 18h ago)
+  - Implements `POST /ultrathink` and `GET /health`
+  - Wire to 5-stage reasoning pipeline complete
+  - Runs on port 8001 as specified
+
+**P1 — RESOLVED:**
+- ✅ ultrathink-system `.env.example` updated with required API/model vars
+- ✅ Perplexity-Tools `.env.example` updated with `ULTRATHINK_ENDPOINT`, `ULTRATHINK_TIMEOUT`, `ULTRATHINK_ENABLED`
+- ✅ PT `config/routing.yml` now has `deep_reasoning` and `code_analysis` routes with ultrathink endpoint + fallback
+
+### New in PT v0.9.5.0: Hardware Abstraction Layer
+
+Perplexity-Tools has added hardware-aware orchestration:
+
+#### Added Files:
+- `hardware/SKILL.md` — Hardware profiles for `mac-studio` (Apple Silicon) and `win-rtx3080` (Dell RTX 3080)
+  - Role-based model assignment matrix
+  - VRAM/RAM safety rules
+  - Fallback degradation chains
+- `hardware/Modelfile.win-rtx3080` — Ollama Modelfile for Qwen3.5-35B-A3B with Flash Attention + KV cache compression
+- `hardware/Modelfile.mac-studio` — Ollama Modelfile for Qwen3.5-9B manager agent with unified memory tuning
+- `agent_launcher.py` — Hardware detection script with graceful degradation (Distributed → Mac-only → LM Studio → Cloud)
+  - Outputs routing state to `.state/agents.json`
+  - 3-second timeout to avoid blocking
+- `setup_wizard.py` — Idempotent installation wizard
+  - Scans for existing AI software (Ollama, LM Studio, MLX)
+  - Tiered setup guidance (Priority 1: easiest, Priority 2: advanced)
+
+#### Model Updates:
+- Qwen3.5-35B-A3B MoE (Windows): `frob/qwen3.5:35b-a3b-instruct-ud-q4_K_M`
+- Qwen3.5-9B (Mac manager): `qwen3.5:9b-instruct`
+- MLX path preferred on Apple Silicon for maximum performance
+
+### Sync Impact
+
+**No Breaking Changes:**
+- ultrathink-system API contract unchanged
+- 4-layer architecture priority rule preserved
+- ultrathink remains stateless; PT owns dedup via `.state/agents.json`
+
+**Coordination Needed (P2/Future):**
+- [ ] ultrathink-system SKILL.md should reference hardware profiles from PT for optimal model selection
+- [ ] PERPLEXITY_BRIDGE.md should be updated to include hardware abstraction layer examples
+- [ ] Consider adding hardware profile awareness to ultrathink's model selection if it needs to make autonomous model choices
+
+**Tests & CI (P2 items remain):**
+- PT still has no `tests/` directory (GAP 5)
+- PT still has no `.github/workflows/` (GAP 6)
+- ultrathink-system maintains 86+ tests + CI
+
+### Recommended Next Actions
+
+1. **Update PERPLEXITY_BRIDGE.md** to reference `hardware/SKILL.md` and new model selection patterns
+2. **Cross-link SKILL.md files** so ultrathink knows to respect PT's hardware-aware routing
+3. **Add integration test** that verifies PT correctly routes deep reasoning tasks to ultrathink with hardware-appropriate models
+4. **Consider**: Should ultrathink-system be aware of hardware profiles, or should it remain fully hardware-agnostic?
+
+---
+
+**Generated:** 2026-03-27 | **Analyst:** Comet (Perplexity)
 
 ---
 

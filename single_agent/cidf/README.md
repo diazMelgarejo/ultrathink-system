@@ -20,8 +20,11 @@ cidf/
 ├── tests/
 │   ├── test_conformance.py               # pytest conformance suite (6 test vectors)
 │   └── conformance.test.ts               # TypeScript conformance suite
+├── DESIGN.md                             # Original design doc: flowcharts, decision matrices, meta-lesson
 └── FRAMEWORK.md                          # Full framework specification
 ```
+
+`DESIGN.md` is the original design document with flowcharts, decision matrices, pseudo-code, and the meta-lesson from the Amplifier Principle workflow session.
 
 ---
 

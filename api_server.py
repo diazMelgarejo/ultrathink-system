@@ -245,3 +245,4 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host=API_HOST, port=API_PORT)
+VERSION = "0.9.6.0"

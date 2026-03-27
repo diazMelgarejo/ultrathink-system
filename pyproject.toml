@@ -1,1 +1,48 @@
-chore: bump version to 0.9.6.0 to align with Perplexity-Tools
+[build-system]
+requires = ["hatchling>=1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ultrathink-system"
+version = "0.9.6.0"
+description = "ultrathink Multi-Agent System"
+requires-python = ">=3.8"
+dependencies = [
+    "redis>=5.0.0",
+]
+
+[tool.uv]
+managed = true
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/multi_agent",
+    "/single_agent",
+    "/examples",
+    "/docs",
+    "/tests",
+    "/LICENSE",
+    "/README.md",
+    "/CONTRIBUTING.md",
+    "/CHANGELOG.md",
+    "/install-single-agent.sh",
+    "/install-multi-agent.sh",
+    "/verify-package.sh",
+    "/test-package-install.py",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["multi_agent", "single_agent"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"docs" = "docs"
+"examples" = "examples"
+"tests" = "tests"
+"LICENSE" = "LICENSE"
+"README.md" = "README.md"
+"CONTRIBUTING.md" = "CONTRIBUTING.md"
+"CHANGELOG.md" = "CHANGELOG.md"
+"install-single-agent.sh" = "install-single-agent.sh"
+"install-multi-agent.sh" = "install-multi-agent.sh"
+"verify-package.sh" = "verify-package.sh"
+"test-package-install.py" = "test-package-install.py"

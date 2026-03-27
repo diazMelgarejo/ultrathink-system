@@ -6,6 +6,16 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+
+## [0.9.5.0] - 2025-03-26
+
+### Added
+- Multi-computer orchestration workflow with full hardware profile awareness
+- LAN-wide AI model discovery and takeover recruitment logic (lan_discovery.py)
+- ECC and autoresearch spawn reconciliation registry (spawn_reconciliation.py)
+- P2 hardening: Expanded test infrastructure and CI/CD pipelines
+- Full repository-wide version synchronization to 0.9.5.0
+
 ## [0.9.4.3] - 2026-03-26
 
 ### Fixed

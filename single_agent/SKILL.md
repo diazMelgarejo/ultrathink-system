@@ -11,6 +11,34 @@ allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrath
 
 > "Technology married with humanities yields solutions that make hearts sing. Every solution should feel inevitable — so elegant it couldn't be done any other way."
 
+## Pre-Router Gate: AFRP (Mandatory)
+
+**Before the Execution Mode Router fires, every non-trivial query passes through the Audience-First Response Protocol.**
+
+```
+Task arrives
+│
+▼
+┌─────────────────────────────────────────────────────────┐
+│ AFRP GATE — Audience-First Response Protocol            │
+│ Sub-skill: afrp/SKILL.md                                │
+│                                                         │
+│ 1. Classify query type (A/B/C/D)                        │
+│ 2. If B/C/D → ask max 2 clarifying questions            │
+│ 3. Separate profile data from audience data              │
+│ 4. Declare scope                                        │
+│ 5. Calibrate abstraction level                          │
+│ 6. Pass resolved context to Router                      │
+└─────────────────────────────────────────────────────────┘
+│
+▼
+Execution Mode Router (below)
+```
+
+**Load:** [`afrp/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/afrp/SKILL.md) — always loaded first, before mode selection, before CIDF, before any agent bifurcation.
+
+> Implements the Amplifier Principle: "Point it at clear intent and it accelerates you; point it at ambiguity and it scales the ambiguity."
+
 ## Execution Mode Router
 
 **This skill runs in one of three modes. The router decides automatically.**
@@ -263,7 +291,7 @@ tasks/
 | Verification before done | 100% |
 | Repeat mistake rate | < 5% (declining) |
 
-References: `cidf/SKILL.md` (sub-skill, recursive) · `cidf/FRAMEWORK.md` · `cidf/DESIGN.md` · `references/amplifier-principle.md` · `references/content-insertion-framework.md` · `references/ultrathink-5-stages.md` · `references/core-operational-directives.md`
+References: `afrp/SKILL.md` (sub-skill, pre-router gate) · `cidf/SKILL.md` (sub-skill, recursive) · `cidf/FRAMEWORK.md` · `cidf/DESIGN.md` · `references/amplifier-principle.md` · `references/content-insertion-framework.md` · `references/ultrathink-5-stages.md` · `references/core-operational-directives.md`
 
 ## Perplexity-Tools Orchestration Context
 
@@ -308,6 +336,7 @@ ultrathink is activated by PT routing when:
 * • **Reconciliation**: Implemented **Layer 2 Spawn Reconciliation** to prevent redundant model spawns.
 * • **Distributed State**: Added support for shared Redis state for global session tracking across the LAN.
 * • **Hardening**: Reinforced phase transitions to be resume-aware.
+* • **AFRP**: Integrated Audience-First Response Protocol as mandatory pre-router gate (`afrp/SKILL.md`).
 
 ### v0.9.4.3 (2026-03-24)
 * • Master methodology refinement and CIDF v1.2 standardization.

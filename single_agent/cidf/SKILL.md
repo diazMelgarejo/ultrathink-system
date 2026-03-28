@@ -48,6 +48,12 @@ This SKILL.md is a **sub-skill** of [`single_agent/SKILL.md`](https://github.com
 | Machine-parseable policy for agent frameworks | `core/content_insertion_policy.json` |
 | Python/TS implementation details | `core/content_insertion_framework.py` or `.ts` |
 
+## Relationship to AFRP
+
+AFRP (Audience-First Response Protocol) runs **before** CIDF in the processing chain. AFRP determines *what* content should exist and *for whom*. CIDF determines *how* to insert that content. When AFRP has resolved audience and abstraction level, that context should inform CIDF execution — the insertion method may vary based on who the content is for.
+
+Loading order: `afrp/SKILL.md` → parent `SKILL.md` Router → this `cidf/SKILL.md` → specific sub_skill on demand.
+
 ## The One Rule
 
 > Use the simplest tool that works. Complexity is a cost, not a feature.

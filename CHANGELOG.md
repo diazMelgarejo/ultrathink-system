@@ -16,6 +16,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 - **CIDF Sub-skill**: `cidf/SKILL.md` with recursive sub-skill loading and agent discovery
 - **CIDF DESIGN.md**: Original design document with flowcharts, decision matrices, meta-lesson
 - **Amplifier Principle**: Foundational philosophy document in `references/amplifier-principle.md`
+- **AFRP**: Audience-First Response Protocol integrated as mandatory pre-router gate in `single_agent/afrp/SKILL.md`
 - `api_server.py` updated to v0.9.6.0 with GPU reconciliation via PT `/reconcile` endpoint
 
 ### Changed

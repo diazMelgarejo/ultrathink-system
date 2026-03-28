@@ -6,45 +6,51 @@ description: >-
   (form input → typing → paste → upload → scripting), lints decisions against 5 policy
   rules, executes with automatic fallback, and verifies programmatically. Load when
   performing any content insertion into documents, web forms, or editor fields.
+version: '1.2'
 license: Apache-2.0
-metadata:
-  author: diazMelgarejo
-  version: '1.2'
+parent_skill: single_agent/SKILL.md
+compatibility: claude-code, cowork, clawdbot, moltbot, openclaw, ecc-tools
+allowed-tools: bash, file-operations, web-search
+sub_skills:
+  - path: FRAMEWORK.md
+    trigger: "Need full CIDF specification, method priority rules, automation gate details, or verification protocol"
+  - path: DESIGN.md
+    trigger: "Need original design rationale, flowcharts, decision matrices, pseudo-code algorithm, or meta-lesson"
+  - path: ../references/amplifier-principle.md
+    trigger: "Need foundational philosophy on why developers must stay in the driver's seat with AI tools"
+  - path: ../references/content-insertion-framework.md
+    trigger: "Need machine-parseable policy JSON block and human reference for content insertion"
+  - path: core/content_insertion_policy.json
+    trigger: "Need machine-parseable policy for programmatic consumption by LangChain, CrewAI, or MCP agents"
 ---
 
-# Content Insertion Decision Framework (CIDF)
+# CIDF — Content Insertion Decision Framework
 
 Runnable Python + TypeScript decision engine that prevents over-engineering content insertion tasks.
 
-**Core principle:** Use the simplest tool that works. Complexity is a cost, not a feature.
+## Recursive Loading Protocol
 
-## When to Use This Skill
+This SKILL.md is a **sub-skill** of [`single_agent/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/SKILL.md) (the parent ultrathink skill). It provides focused context for all content insertion decisions.
 
-- Inserting text, data, or files into a target field, editor, or document
-- Choosing between form input, typing, clipboard paste, file upload, or scripting
-- Validating that an agent's insertion plan isn't over-engineered
-- Building or reviewing automation workflows that involve content placement
+**Loading behavior:**
+- Agents **SHOULD** load this file when any content insertion task is detected
+- Agents **CAN** recursively load deeper documents listed in `sub_skills` frontmatter when they need more detail
+- Loading order: parent `SKILL.md` → this `cidf/SKILL.md` → specific sub_skill on demand
 
-## Repository
+**Decision table — what to load:**
 
-All source code, specs, and tests live under:
+| Need | Load |
+|------|------|
+| Quick insertion decision | This file only (method priority + lint rules below) |
+| Full specification or edge cases | `FRAMEWORK.md` |
+| Design rationale, flowcharts, pseudo-code | `DESIGN.md` |
+| Foundational philosophy (why humans lead) | `../references/amplifier-principle.md` |
+| Machine-parseable policy for agent frameworks | `core/content_insertion_policy.json` |
+| Python/TS implementation details | `core/content_insertion_framework.py` or `.ts` |
 
-[`ultrathink-system/single_agent/cidf/`](https://github.com/diazMelgarejo/ultrathink-system/tree/main/single_agent/cidf)
+## The One Rule
 
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| [`FRAMEWORK.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/FRAMEWORK.md) | Full specification — the one rule, task classification, method priority order, automation gate, verification protocol, anti-patterns, and per-platform skill sets |
-| [`DESIGN.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/DESIGN.md) | Original design document — JSON decision tree, flowcharts, decision matrices, and the meta-lesson from the Amplifier Principle |
-| [`README.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/README.md) | Package overview, quick-start usage (Python), lint rules, how to run conformance tests |
-| [`core/content_insertion_framework.py`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/core/content_insertion_framework.py) | Python decision engine — `Task`, `Env`, `Decision` dataclasses, `decide()`, `execute_with_fallback()`, `verify()` |
-| [`core/contentInsertionFramework.ts`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/core/contentInsertionFramework.ts) | TypeScript mirror of the Python core — identical interfaces and logic |
-| [`core/content_insertion_policy.json`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/core/content_insertion_policy.json) | Machine-parseable policy — inputs schema, tool priority with eligibility conditions, automation gate rules, lint definitions, and 6 test vectors |
-| [`linter/policy_linter.py`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/linter/policy_linter.py) | Python linter enforcing LINT-001 through LINT-005 |
-| [`linter/policyLinter.ts`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/linter/policyLinter.ts) | TypeScript port of the linter |
-| [`tests/test_conformance.py`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/tests/test_conformance.py) | Python conformance suite (6 test vectors, run with `pytest`) |
-| [`tests/conformance.test.ts`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/tests/conformance.test.ts) | TypeScript conformance suite (same 6 vectors, run with `npx jest`) |
+> Use the simplest tool that works. Complexity is a cost, not a feature.
 
 ## Method Priority Order
 
@@ -121,3 +127,40 @@ decision = decide(task, env)          # returns Decision with chosen_tool + fall
 lint_strict(decision, task, env)      # raises LintError on any violation
 result = execute_with_fallback(...)   # runs with automatic fallback + verification
 ```
+
+## Package Map
+
+```
+cidf/
+├── SKILL.md                              ← you are here (discovery + recursive loading)
+├── FRAMEWORK.md                          ← full v1.2 specification
+├── DESIGN.md                             ← original design doc + meta-lesson
+├── README.md                             ← quick-start guide
+├── core/
+│   ├── content_insertion_framework.py    ← Python: decide(), verify(), execute_with_fallback()
+│   ├── contentInsertionFramework.ts      ← TypeScript mirror
+│   └── content_insertion_policy.json     ← machine-parseable policy + 6 test vectors
+├── linter/
+│   ├── policy_linter.py                  ← LINT-001–005 enforcement
+│   └── policyLinter.ts                   ← TypeScript linter
+└── tests/
+    ├── test_conformance.py               ← pytest conformance (6 vectors)
+    └── conformance.test.ts               ← jest conformance
+```
+
+## Boundaries
+
+### Always Do
+- Run `decide()` before any content insertion
+- Verify programmatically after every insertion
+- Start at rank 1 every time
+
+### Ask First
+- Switching from automation to manual approach
+- Modifying `content_insertion_policy.json`
+
+### Never Do
+- Skip verification (LINT-002)
+- Jump directly to scripting without trying ranks 1-4
+- Trust visual confirmation alone
+- Mark complete without programmatic verification

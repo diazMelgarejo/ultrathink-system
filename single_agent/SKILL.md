@@ -108,6 +108,7 @@ execute_method() → visual_ok? ──no──→ refresh_page()
 ```
 
 ### CIDF Runnable Package
+**Sub-skill:** [`cidf/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/cidf/SKILL.md) — load for full CIDF context, recursive sub-skill loading, and programmatic integration details.
 Executable implementation in `cidf/` (same directory as this SKILL.md):
 
 | File | Purpose |
@@ -262,7 +263,7 @@ tasks/
 | Verification before done | 100% |
 | Repeat mistake rate | < 5% (declining) |
 
-References: `cidf/FRAMEWORK.md` · `cidf/DESIGN.md` · `references/amplifier-principle.md` · `references/content-insertion-framework.md` · `references/ultrathink-5-stages.md` · `references/core-operational-directives.md`
+References: `cidf/SKILL.md` (sub-skill, recursive) · `cidf/FRAMEWORK.md` · `cidf/DESIGN.md` · `references/amplifier-principle.md` · `references/content-insertion-framework.md` · `references/ultrathink-5-stages.md` · `references/core-operational-directives.md`
 
 ## Perplexity-Tools Orchestration Context
 

@@ -8,7 +8,7 @@ description: >-
   BEFORE the Execution Mode Router fires. Prevents personalized slop, mirror
   responses, abstraction mismatch, and premature confidence. Load first — before
   any agent bifurcation, before CIDF, before mode selection.
-version: '0.9.6.0'
+version: '0.9.7.0'
 license: Apache-2.0
 parent_skill: single_agent/SKILL.md
 compatibility: claude-code, cowork, clawdbot, moltbot, openclaw, ecc-tools, perplexity-tools

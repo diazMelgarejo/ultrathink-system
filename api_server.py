@@ -48,7 +48,7 @@ CODE_MODEL = os.getenv("CODE_MODEL", "qwen3-coder:14b")
 # Request timeout (seconds) — deep reasoning can take 60-120 s
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "120"))
 
-VERSION = "0.9.6.0"
+VERSION = "0.9.7.0"
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ultrathink.api")
@@ -245,4 +245,4 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host=API_HOST, port=API_PORT)
-VERSION = "0.9.6.0"
+VERSION = "0.9.7.0"

@@ -7,6 +7,30 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ---
 
 
+## [0.9.7.0] - 2026-03-28
+
+### Added
+- **AFRP**: Audience-First Response Protocol — mandatory pre-router gate at `single_agent/afrp/SKILL.md` [SYNC]
+  - 7-step protocol: Stop → Classify → Clarify → Separate Profile → Scope → Calibrate → Slop Test
+  - Machine-caller escape path for programmatic invocation via `POST /ultrathink`
+  - Failure mode taxonomy with 6 named anti-patterns and recovery procedures
+  - Cross-skill integration docs (Router, CIDF, Amplifier Principle relationships)
+- **AFRP failure-modes.md**: Extended failure mode reference with diagnostic decision tree
+- **AFRP README.md**: Quick-start and package structure
+
+### Changed
+- `single_agent/SKILL.md`: Pre-Router Gate section added before Execution Mode Router
+- `single_agent/cidf/SKILL.md`: "Relationship to AFRP" section with loading order
+- All 14 multi_agent subsystem files aligned from v0.9.4.3 to v0.9.7.0
+
+### Fixed
+- `.github/workflows/ci.yml`: Standardized `setup-python@v4` → `setup-python@v5`
+- Removed empty/premature v0.9.7.0 changelog header in SKILL.md
+
+### Synced with Perplexity-Tools
+- Both repos synchronized to v0.9.7.0 [SYNC]
+- AFRP cross-referenced in PT SKILL.md 4-layer architecture table [SYNC]
+
 ## [0.9.6.0] - 2026-03-27
 
 ### Added

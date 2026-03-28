@@ -1,6 +1,6 @@
 # Perplexity-Tools Bridge for UltraThink System
 
-## Version 0.9.6.0
+## Version 0.9.7.0
 
 ### Overview
 
@@ -322,7 +322,7 @@ curl http://localhost:8000/health
 
 **This integration requires:**
 
-- ultrathink-system >= v0.9.6.0
+- ultrathink-system >= v0.9.7.0
 - Perplexity-Tools >= v0.9.0.0
 - Ollama >= 0.1.20 (with Qwen3 support)
 - Redis >= 6.0

@@ -1,7 +1,7 @@
 ---
 name: ultrathink-system-skill
 description: Master methodology for elegant problem solving. Unifies single_agent and multi_agent execution under the ultrathink 5-stage process. Routes automatically – runs inline for simple tasks (using CIDF v1.2 for any content insertion), escalates to the 7-agent network only when parallelism or scope demands it. Activates for any task requiring architectural thinking, systematic verification, content insertion decisions, or self-improvement.
-version: 0.9.6.0
+version: 0.9.7.0
 license: Apache 2.0
 compatibility: claude-code, cowork, clawdbot, moltbot, openclaw, ecc-tools
 allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink
@@ -330,6 +330,11 @@ ultrathink is activated by PT routing when:
 * • PT SKILL.md: `https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/SKILL.md`
 
 ## Changelog
+
+### v0.9.7.0 (2026-03-28)
+* • **AFRP**: Audience-First Response Protocol integrated as mandatory pre-router gate (`afrp/SKILL.md`) [SYNC].
+* • **Multi-agent alignment**: All 14 multi_agent subsystem files bumped from v0.9.4.3 to v0.9.7.0.
+* • **CI hardening**: Standardized `setup-python@v5` across all workflows.
 
 ### v0.9.6.0 (2026-03-27)
 * **LAN Continuity**: Synchronized **LAN Detect & Resume** logic with Perplexity-Tools.

@@ -1,15 +1,15 @@
 # Sync Analysis: ultrathink-system ↔ Perplexity-Tools
 
-**Date:** 2026-03-27 | **Version:** PT v0.9.5.0 | ultrathink v0.9.4.3
+**Date:** 2026-03-28 | **Version:** Both at v0.9.6.0
 ---
 
 ## TL;DR — Status Summary
 
 | Dimension | Status | Notes |
 |-----------|--------|-------|
-| **Version** | ✅ IN SYNC | Both at v0.9.4.3 |
+| **Version** | ✅ IN SYNC | Both at v0.9.6.0 |
 | **Architecture contract** | ✅ IN SYNC | 4-layer hierarchy documented + upheld |
-| **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.4.3 |
+| **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.6.0 |
 | **API endpoint spec** | ✅ IN SYNC | `api_server.py` created; POST /ultrathink + GET /health implemented || **Routing logic in PT** | ⚠️ PARTIAL | PT README shows routing; no actual `routing.yml` reference to ultrathink |
 | **Idempotency contract** | ⚠️ PARTIAL | PT uses `.state/agents.json`; ultrathink side uses Redis (not yet implemented) |
 | **Shared `.env` contract** | ⚠️ PARTIAL | Vars defined in BRIDGE doc; not in `.env` files of either repo |
@@ -34,7 +34,7 @@ autoresearch      ← research automation, idempotent sync
 ```
 Priority rule is identical in both READMEs. No conflict.
 
-### 2. Version Parity — Both at v0.9.4.3
+### 2. Version Parity — Both at v0.9.6.0
 Aligned same day (2026-03-26). Releases match.
 
 ### 3. Cross-Reference Links — Complete

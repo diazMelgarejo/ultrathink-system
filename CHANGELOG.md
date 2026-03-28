@@ -7,7 +7,29 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 ---
 
 
-## [0.9.5.0] - 2025-03-26
+## [0.9.6.0] - 2026-03-27
+
+### Added
+- **LAN Continuity**: LAN Detect & Resume synchronized with Perplexity-Tools [SYNC]
+- **Spawn Reconciliation**: Layer 2 spawn reconciliation to prevent redundant model spawns [SYNC]
+- **Distributed State**: Shared Redis state for global session tracking across LAN
+- **CIDF Sub-skill**: `cidf/SKILL.md` with recursive sub-skill loading and agent discovery
+- **CIDF DESIGN.md**: Original design document with flowcharts, decision matrices, meta-lesson
+- **Amplifier Principle**: Foundational philosophy document in `references/amplifier-principle.md`
+- `api_server.py` updated to v0.9.6.0 with GPU reconciliation via PT `/reconcile` endpoint
+
+### Changed
+- `single_agent/SKILL.md` updated to v0.9.6.0 with LAN continuity and reconciliation sections
+- Phase transitions hardened to be resume-aware
+- `pyproject.toml` version aligned to 0.9.6.0
+- CIDF README.md updated with DESIGN.md in package structure
+
+### Synced with Perplexity-Tools
+- Both repos synchronized to v0.9.6.0
+- Network config harmonized (Windows 192.168.1.100, Mac 192.168.1.101)
+- Cross-repo SKILL.md references with recursive loading pointers
+
+## [0.9.5.0] - 2026-03-27
 
 ### Added
 - Multi-computer orchestration workflow with full hardware profile awareness

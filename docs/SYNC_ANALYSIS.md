@@ -200,7 +200,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 - Qwen3.5-9B (Mac manager): `qwen3.5:9b-instruct`
 - MLX path preferred on Apple Silicon for maximum performance
 
-### Sync Impact
+### Sync Impactdocs(sync): mark Recommended Next Action #2 DONE in SYNC_ANALYSIS.md
 
 **No Breaking Changes:**
 - ultrathink-system API contract unchanged
@@ -220,7 +220,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 ### Recommended Next Actions
 
 1. ✅ **Cross-link SKILL.md files** — DONE: ultrathink SKILL.md now references PT `hardware/SKILL.md` for hardware-aware model selection
-2. **Add integration test** that verifies PT correctly routes deep reasoning tasks to ultrathink with hardware-appropriate models
+2. ✅ **Add integration test** — DONE: `tests/test_hardware_routing.py` (commit `82cb179`) verifies PT correctly routes deep reasoning tasks to ultrathink with hardware-appropriate models (mac-studio → MLX backend; win-rtx3080 → Ollama backend).
 3. **Consider**: Should ultrathink-system be aware of hardware profiles, or should it remain fully hardware-agnostic?
 
 ---

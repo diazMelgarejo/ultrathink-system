@@ -9,7 +9,7 @@
 |---|---|---|
 | **Version** | ✅ IN SYNC | Both at v0.9.8.0 |
 | **Architecture contract** | ✅ IN SYNC | 4-layer hierarchy documented + upheld |
-| **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.7.0; HAL section pending |
+| **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.8.0; HAL cross-link complete 
 | **API endpoint spec** | ✅ IN SYNC | `api_server.py` v0.9.8.0; POST /ultrathink + GET /health + rate limiting |
 | **Idempotency contract** | ✅ RESOLVED | PT owns all state via `.state/agents.json`; ultrathink stateless (no Redis). Redis deferred to PT v1.1+ |
 | **Shared `.env` contract** | ✅ IN SYNC | Vars in both `.env.example` files match BRIDGE doc |
@@ -20,7 +20,7 @@
 | **CI/CD** | ✅ IN SYNC | Both repos have `.github/workflows/ci.yml` with pytest + lint |
 | **Tests** | ✅ RESOLVED | PT now has 6 test files (56+ tests); ultrathink has 86+ tests |
 | **routing.yml** | ✅ IN SYNC | PT `config/routing.yml` has `deep_reasoning` + `code_analysis` ultrathink routes |
-| **HAL doc cross-ref** | ⚠️ PARTIAL | PERPLEXITY_BRIDGE.md updated with HAL section; ultrathink SKILL.md cross-link pending |
+| **HAL doc cross-ref** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md HAL section complete; ultrathink SKILL.md cross-link added (v0.9.8.0) |
 
 ## What IS Working (Synergized Well)
 
@@ -200,7 +200,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 **Coordination Items (updated):**
 - [x] PERPLEXITY_BRIDGE.md updated with Hardware Abstraction Layer section
-- [ ] ultrathink-system SKILL.md should reference hardware profiles from PT for optimal model selection
+- [x] ultrathink-system SKILL.md should reference hardware profiles from PT for optimal model selection
 - [ ] Consider adding hardware profile awareness to ultrathink's model selection if it needs to make autonomous model choices
 
 **Tests & CI (P2 items RESOLVED):**
@@ -210,7 +210,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 ### Recommended Next Actions
 
-1. **Cross-link SKILL.md files** so ultrathink knows to respect PT's hardware-aware routing
+1. ✅ **Cross-link SKILL.md files** — DONE: ultrathink SKILL.md now references PT `hardware/SKILL.md` for hardware-aware model selectionrouting
 2. **Add integration test** that verifies PT correctly routes deep reasoning tasks to ultrathink with hardware-appropriate models
 3. **Consider**: Should ultrathink-system be aware of hardware profiles, or should it remain fully hardware-agnostic?
 

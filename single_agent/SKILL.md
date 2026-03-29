@@ -1,7 +1,7 @@
 ---
 name: ultrathink-system-skill
 description: Master methodology for elegant problem solving. Unifies single_agent and multi_agent execution under the ultrathink 5-stage process. Routes automatically – runs inline for simple tasks (using CIDF v1.2 for any content insertion), escalates to the 7-agent network only when parallelism or scope demands it. Activates for any task requiring architectural thinking, systematic verification, content insertion decisions, or self-improvement.
-version: 0.9.7.0
+version: 0.9.7.0.9.8.0
 license: Apache 2.0
 compatibility: claude-code, cowork, clawdbot, moltbot, openclaw, ecc-tools
 allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink
@@ -328,8 +328,13 @@ ultrathink is activated by PT routing when:
 * • Sync analysis: `docs/SYNC_ANALYSIS.md`
 * • PT routing: `https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/config/routing.yml`
 * • PT SKILL.md: `https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/SKILL.md`
+* * • PT Hardware profiles: `https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/hardware/SKILL.md` (mac-studio / win-rtx3080 model assignment matrix)
 
 ## Changelog
+
+### v0.9.8.0 (2026-03-28)
+* • **Hardware cross-link**: Added PT `hardware/SKILL.md` reference to Integration References.
+* • **Version bump**: Aligned to v0.9.8.0 matching `api_server.py` (rate limiting, Pydantic V2 validators).
 
 ### v0.9.7.0 (2026-03-28)
 * • **AFRP**: Audience-First Response Protocol integrated as mandatory pre-router gate (`afrp/SKILL.md`) [SYNC].

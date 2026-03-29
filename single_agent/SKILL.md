@@ -83,9 +83,9 @@ ultrathink network: [task]
 Since **v0.9.6.0**, ultrathink supports **LAN Detect & Resume** in coordination with **Perplexity-Tools**.
 
 ### LAN Resume Logic
-* **Detect & Re-attach**: On startup, ultrathink checks for an existing session on the LAN (Redis: `ultrathink:session:*`).
+* **Detect & Re-attach**: On startup, ultrathink checks for an existing session via local file-based state (`.state/session.log`).
 * **Short Logging**: Maintains minimal state logs in `.state/session.log` to allow resumption of complex 5-stage reasoning processes after interruption.
-* **Distributed Discovery**: If a shared Redis is found (`REDIS_HOST`), state is synchronized globally; otherwise, local file-based state is used.
+* **Stateless by design**: ultrathink has no Redis dependency. All durable orchestration state (agent registry, budget tracking, distributed coordination) is owned by Perplexity-Tools. Redis-backed coordination is a future PT-only enhancement planned for v1.1+.
 
 ### Spawn Reconciliation (Layer 2 Coordination)
 * **Global Registry Check**: Before spawning any sub-agent or worker, ultrathink MUST reconcile the spawn with the **Perplexity-Tools Orchestrator** (if available) to ensure proper session planning and model assignment.
@@ -339,7 +339,7 @@ ultrathink is activated by PT routing when:
 ### v0.9.6.0 (2026-03-27)
 * **LAN Continuity**: Synchronized **LAN Detect & Resume** logic with Perplexity-Tools.
 * **Reconciliation**: Implemented **Layer 2 Spawn Reconciliation** to prevent redundant model spawns.
-* **Distributed State**: Added support for shared Redis state for global session tracking across the LAN.
+* **Distributed State**: File-based session state for local tracking; Redis deferred to PT-only (v1.1+).
 * **Hardening**: Reinforced phase transitions to be resume-aware.
 * **AFRP**: Integrated Audience-First Response Protocol as mandatory pre-router gate (`afrp/SKILL.md`).
 

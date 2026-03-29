@@ -20,7 +20,10 @@
 | **CI/CD** | ✅ IN SYNC | Both repos have `.github/workflows/ci.yml` with pytest + lint |
 | **Tests** | ✅ RESOLVED | PT now has 6 test files (56+ tests); ultrathink has 86+ tests |
 | **routing.yml** | ✅ IN SYNC | PT `config/routing.yml` has `deep_reasoning` + `code_analysis` ultrathink routes |
-| **HAL doc cross-ref** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md HAL section complete; ultrathink SKILL.md cross-link added (v0.9.8.0) |
+| **HAL doc cross-ref** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md HAL section complete; 
+| **PT hardware cross-link (OPT 1)** | ✅ RESOLVED | ultrathink `single_agent/SKILL.md` references PT `hardware/SKILL.md`; `orchestrator/__init__.py` has `__version__` |
+| **PT `pyproject.toml` (OPT 2)** | ✅ RESOLVED | PT now pip-installable as `perplexity-tools`; `[tool.pytest.ini_options]` + dev extras included |
+| **Integration test suite (OPT 3)** | ✅ RESOLVED | `tests/test_ultrathink_integration.py` — 12 tests verifying routing.yml ↔ ultrathink | **Integration test suite (OPT 3)** | ✅ RESOLVED | `tests/test_ultrathink_integration.py` — 12 tests verifying routing.yml ↔ ultrathink contract |
 
 ## What IS Working (Synergized Well)
 
@@ -110,7 +113,9 @@ Architecture decision locked: ultrathink remains **stateless** with no Redis req
 
 ### OPT 1: ultrathink SKILL.md → PT Hardware Profile Cross-Link
 
-**Status:** ⚠️ OPEN
+**Status:** ✅ RESOLVED (rolling — pre-v1.0 RC)
+
+**Implemented:** ultrathink `single_agent/SKILL.md` updated (commit `ac292db`) with hardware-aware routing section referencing PT `hardware/SKILL.md`. `orchestrator/__init__.py` also updated with `__version__` for package metadata consistency.
 
 ultrathink-system's `single_agent/SKILL.md` should reference PT's hardware profiles so that when running inside PT orchestration, ultrathink knows to respect PT's hardware-aware routing.
 
@@ -124,13 +129,17 @@ When running inside Perplexity-Tools orchestration:
 
 ### OPT 2: `pyproject.toml` in PT
 
-**Status:** ⚠️ OPEN
+**Status:** ✅ RESOLVED (rolling — pre-v1.0 RC)
+
+**Implemented:** `pyproject.toml` added to Perplexity-Tools root (commit `5082db6`). Includes `[project]` metadata, `[project.optional-dependencies]` for dev/test, and `[tool.pytest.ini_options]` config. PT is now pip-installable as `perplexity-tools`.
 
 ultrathink-system is pip-installable. PT only has `requirements.txt`. Making PT installable enables consistent versioning and dependency pinning across the stack.
 
 ### OPT 3: Unified Integration Test
 
-**Status:** ⚠️ OPEN
+**Status:** ✅ RESOLVED (rolling — pre-v1.0 RC)
+
+**Implemented:** `tests/test_ultrathink_integration.py` added to Perplexity-Tools (commit `c84a5f6`). 12 tests in `TestRoutingYmlUltrathinkContract` verifying `deep_reasoning` + `code_analysis` routes declare `ULTRATHINK_ENDPOINT`, `fallback=local_qwen30b`, and `requires=[ultrathink_available]`.
 
 A single integration test that fires a task at PT and verifies it correctly routes to ultrathink:
 

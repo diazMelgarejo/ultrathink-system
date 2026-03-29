@@ -5,7 +5,7 @@
 - Bash 4+ (for shell scripts)
 - Claude Code, Cowork, Clawdbot, MoltBot, or OpenClaw installed
 - Git (optional, for cloning)
-- Redis (optional, for multi_agent production mode)
+- Redis: NOT required. ultrathink-system is stateless. Redis is a future PT-only dependency (v1.1+)
 
 ---
 

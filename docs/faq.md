@@ -21,8 +21,8 @@ A: Normal Claude is reactive. ultrathink makes Claude systematic: always plans f
 3. For Team/Enterprise Claude: verify Skills are enabled org-wide
 4. Try manual trigger: "Apply ultrathink system to: [task]"
 
-**Q: Do I need Redis for the multi_agent system?**
-A: No. The default in-memory backend works for development and single-machine setups. Redis is recommended for production distributed deployments.
+**Q: Do I need Redis?**
+A: No. ultrathink-system is stateless and has no Redis dependency. The multi_agent subsystem uses in-memory state by default. Redis is a future Perplexity-Tools-only enhancement planned for multi-instance distributed deployments (v1.1+).
 
 ---
 

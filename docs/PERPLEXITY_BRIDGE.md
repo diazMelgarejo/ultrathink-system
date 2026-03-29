@@ -177,6 +177,8 @@ ultrathink-system remains **hardware-agnostic** by design (privacy layer). PT ha
 **Reference:** See `https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/hardware/SKILL.md` for complete hardware profiles.
 ### Idempotent Orchestration
 
+> **Architecture Note (v0.9.7.0):** Redis-based task caching is a **Perplexity-Tools responsibility only**. ultrathink-system is stateless and has no Redis dependency. The Redis code below runs inside PT, not inside ultrathink. Redis itself is deferred to v1.1+ when PT supports multi-instance distributed deployments.
+
 **Perplexity-Tools checks Redis before spawning ultrathink tasks:**
 
 ```python
@@ -325,7 +327,7 @@ curl http://localhost:8000/health
 - ultrathink-system >= v0.9.7.0
 - Perplexity-Tools >= v0.9.0.0
 - Ollama >= 0.1.20 (with Qwen3 support)
-- Redis >= 6.0
+- Redis >= 6.0 (PT-only, deferred to v1.1+ for multi-instance deployments; not required for MVP single-instance/LAN operation)
 - Python >= 3.8
 
 ### Changelog

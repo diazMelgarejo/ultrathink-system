@@ -11,7 +11,7 @@
 | **Architecture contract** | ✅ IN SYNC | 4-layer hierarchy documented + upheld |
 | **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.6.0 |
 | **API endpoint spec** | ✅ IN SYNC | `api_server.py` created; POST /ultrathink + GET /health implemented || **Routing logic in PT** | ⚠️ PARTIAL | PT README shows routing; no actual `routing.yml` reference to ultrathink |
-| **Idempotency contract** | ⚠️ PARTIAL | PT uses `.state/agents.json`; ultrathink side uses Redis (not yet implemented) |
+| **Idempotency contract** | ✅ RESOLVED | PT owns all state via `.state/agents.json`; ultrathink is stateless (no Redis). Redis deferred to PT v1.1+ |
 | **Shared `.env` contract** | ⚠️ PARTIAL | Vars defined in BRIDGE doc; not in `.env` files of either repo |
 | **SKILL.md cross-ref** | ✅ IN SYNC | PT SKILL.md references ultrathink routing methodology |
 | **ECC Tools integration** | ✅ IN SYNC | Both agree on ECC as Stage-4 sub-agent selector |
@@ -134,6 +134,8 @@ Redis is **not installed/configured** in ultrathink-system.
 
 **Recommended:** Option 3 — ultrathink stays stateless; PT checks `.state/agents.json` before calling ultrathink.
 
+**Resolution (v0.9.7.0):** Architecture decision locked — ultrathink remains stateless with no Redis requirement. PT is the sole orchestration layer and owns agent instantiation, tracking, queueing, budget enforcement, and file-based runtime state. Redis-backed coordination is a future PT-only enhancement planned for multi-instance distributed deployments in v1.1+.
+
 ### GAP 5: PT Has No Tests
 **Severity:** MEDIUM
 
@@ -216,7 +218,7 @@ PT only has `requirements.txt`. Making PT installable enables:
 | P1 | Add ultrathink route to PT `config/routing.yml` | Perplexity-Tools | Medium |
 | P2 | Create `tests/` in Perplexity-Tools | Perplexity-Tools | High |
 | P2 | Add `.github/workflows/` to Perplexity-Tools | Perplexity-Tools | Medium |
-| P2 | Simplify Redis → stateless ultrathink + PT dedup | Both | Medium |
+| P2 | ~~Simplify Redis → stateless ultrathink + PT dedup~~ | ✅ DONE | Resolved in v0.9.7.0 — ultrathink stateless, PT owns all state |
 | P3 | Add `CHANGELOG.md` to Perplexity-Tools | Perplexity-Tools | Low |
 | P3 | Add `check-stack.sh` health script | Either | Low |
 | P3 | Add `pyproject.toml` to Perplexity-Tools | Perplexity-Tools | Medium |

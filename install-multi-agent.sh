@@ -35,10 +35,9 @@ echo -e "  ${GREEN}✓${RESET} Installed ultrathink-network (7 agents)"
 
 # Check Python deps
 if python3 -c "import redis" &>/dev/null; then
-    echo -e "  ${GREEN}✓${RESET} Redis available (production state backend)"
+    echo -e "  ${GREEN}✓${RESET} Redis available (optional — PT-only backend, not required for ultrathink)"
 else
-    echo -e "  ${YELLOW}⚠${RESET}  Redis not installed — will use in-memory backend"
-    echo "     To install: pip install redis"
+    echo -e "  ${YELLOW}ℹ${RESET}  Redis not installed — not required. ultrathink is stateless. Redis is a future PT-only enhancement (v1.1+)"
 fi
 
 echo ""

@@ -210,7 +210,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 **Coordination Items (updated):**
 - [x] PERPLEXITY_BRIDGE.md updated with Hardware Abstraction Layer section
 - [x] ultrathink-system SKILL.md should reference hardware profiles from PT for optimal model selection
-- [ ] Consider adding hardware profile awareness to ultrathink's model selection if it needs to make autonomous model choices
+- [x] Consider adding hardware profile awareness to ultrathink's model selection if it needs to make autonomous model choices
 
 **Tests & CI (P2 items RESOLVED):**
 - ✅ PT now has `tests/` with 6 test files (56+ tests)
@@ -221,7 +221,33 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 1. ✅ **Cross-link SKILL.md files** — DONE: ultrathink SKILL.md now references PT `hardware/SKILL.md` for hardware-aware model selection
 2. ✅ **Add integration test** — DONE: `tests/test_hardware_routing.py` (commit `82cb179`) verifies PT correctly routes deep reasoning tasks to ultrathink with hardware-appropriate models (mac-studio → MLX backend; win-rtx3080 → Ollama backend).
-3. **Consider**: Should ultrathink-system be aware of hardware profiles, or should it remain fully hardware-agnostic?
+3. :white_check_mark: **Hardware-agnostic core + model_hint passthrough** — DONE (ADR-001, v0.9.9.0): ultrathink remains fully hardware-agnostic. `api_server.py` accepts an optional `model_hint` field from PT; when present it overrides the internal model-selection heuristic. PT's `hardware/SKILL.md` owns all machine-profile logic. Commit `0aaa2cb`.
+
+### Architecture Decision Record: ADR-001 (v0.9.9.0)
+
+**Decision:** ultrathink-system remains fully hardware-agnostic at its core.
+
+**Context:** PT v0.9.5.0 added a Hardware Abstraction Layer (`hardware/SKILL.md`, `agent_launcher.py`) that detects mac-studio (MLX) vs win-rtx3080 (Ollama/CUDA) and assigns optimal models per hardware profile. The question arose: should ultrathink replicate this hardware detection internally?
+
+**Decision drivers:**
+- ultrathink's purpose is reasoning methodology, not hardware orchestration
+- PT already owns the hardware layer; duplication would violate the 4-layer hierarchy
+- ultrathink must remain stateless and portable (privacy-critical local-only design)
+- Adding hardware detection to ultrathink would tighten coupling and break portability
+
+**Resolution:** Hardware-agnostic core with optional `model_hint` passthrough:
+- `UltraThinkRequest.model_hint: Optional[str]` — PT may inject a hardware-appropriate model name
+- `_select_model()` honors `model_hint` when present; falls back to task-type heuristic otherwise
+- ultrathink logs `hint=<model>` so operators can verify PT is routing correctly
+- `metadata.model_hint_used: bool` in response so PT can audit hint acceptance
+
+**Consequences:**
+- mac-studio PT instance: sends `model_hint=qwen3:8b-instruct` (MLX-optimised)
+- win-rtx3080 PT instance: sends `model_hint=qwen3:30b-a3b-instruct-q4_K_M` (Ollama GGUF)
+- ultrathink standalone (no PT): falls back to internal heuristic (unchanged behavior)
+- No breaking change — `model_hint` is optional; existing callers unaffected
+
+**Status:** RESOLVED — implemented in commit `0aaa2cb` (api_server.py v0.9.9.0)
 
 ---
 

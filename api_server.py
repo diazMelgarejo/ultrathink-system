@@ -14,7 +14,7 @@ Design principles
 
 Usage
 -----
-  pip install fastapi uvicorn httpx python-dotenv
+  pip install fastapi uvicorn httpx python-dotenv slowapi
   python -m uvicorn api_server:app --host 0.0.0.0 --port 8001
 """
 
@@ -25,8 +25,12 @@ from typing import Optional
 
 import httpx
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from pydantic import BaseModel, Field, validator
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 load_dotenv()
 
@@ -46,28 +50,40 @@ FAST_MODEL = os.getenv("FAST_MODEL", "qwen3:8b-instruct")
 CODE_MODEL = os.getenv("CODE_MODEL", "qwen3-coder:14b")
 
 # Request timeout (seconds) — deep reasoning can take 60-120 s
-OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "120"))
+# sec: clamp to sane bounds (1–600 s) to prevent misconfiguration
+_raw_timeout = int(os.getenv("OLLAMA_TIMEOUT", "120"))
+OLLAMA_TIMEOUT = max(1, min(_raw_timeout, 600))
 
-# v0.9.7.0 Hardening: Version consistency with Perplexity-Tools
-VERSION = "0.9.7.0"
+# v0.9.8.0 Security Hardening: rate limiting + input validation
+VERSION = "0.9.8.0"
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ultrathink.api")
 
 # ---------------------------------------------------------------------------
-# FastAPI app
+# FastAPI app + rate limiter (OWASP API4 — Unrestricted Resource Consumption)
 # ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+
 app = FastAPI(
     title="UltraThink API",
     version=VERSION,
     description="Deep-reasoning bridge for Perplexity-Tools orchestrator",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# sec: restrict to known hosts in production (set ALLOWED_HOSTS env var)
+_allowed_hosts = os.getenv("ALLOWED_HOSTS", "*")
+if _allowed_hosts != "*":
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=_allowed_hosts.split(","))
 
 # ---------------------------------------------------------------------------
 # Request / Response models
 # ---------------------------------------------------------------------------
 class UltraThinkRequest(BaseModel):
-    task_description: str = Field(..., min_length=1, description="What to reason about")
+    # sec: bounded task_description (OWASP API3 injection + API4 DoS)
+    task_description: str = Field(..., min_length=1, max_length=8000, description="What to reason about")
     reasoning_depth: str = Field(
         "standard",
         description="standard | deep | ultra",
@@ -78,9 +94,15 @@ class UltraThinkRequest(BaseModel):
         description="analysis | code | research | planning",
         pattern="^(analysis|code|research|planning)$",
     )
-    context: Optional[str] = Field(None, description="Extra background context")
+    context: Optional[str] = Field(None, description="Extra background context", max_length=4000)
     max_tokens: int = Field(4000, ge=256, le=16000)
     temperature: float = Field(0.7, ge=0.0, le=1.0)
+
+    @validator("task_description", "context")
+    def no_null_bytes(cls, v: Optional[str]) -> Optional[str]:
+        if v and "\x00" in v:
+            raise ValueError("Null bytes not allowed")
+        return v
 
 
 class UltraThinkResponse(BaseModel):
@@ -95,8 +117,9 @@ class UltraThinkResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     version: str
-    ollama_primary: str
-    ollama_fallback: str
+    # sec: do NOT expose internal IPs (OWASP API8 Security Misconfiguration)
+    ollama_primary_reachable: bool
+    ollama_fallback_reachable: bool
     models: dict
 
 
@@ -107,9 +130,9 @@ def _select_model(task_type: str, reasoning_depth: str) -> str:
     """Pick the best local Ollama model for this task.
 
     Priority (mirrors PERPLEXITY_BRIDGE.md Model Selection Matrix):
-      code         -> CODE_MODEL  (qwen3-coder:14b)
-      ultra depth  -> DEFAULT_MODEL (qwen3:30b)
-      standard / fast -> FAST_MODEL (qwen3:8b) unless depth >= deep
+        code          -> CODE_MODEL (qwen3-coder:14b)
+        ultra depth   -> DEFAULT_MODEL (qwen3:30b)
+        standard/fast -> FAST_MODEL (qwen3:8b) unless depth >= deep
     """
     if task_type == "code":
         return CODE_MODEL
@@ -181,13 +204,29 @@ async def _call_with_fallback(prompt: str, model: str, max_tokens: int, temperat
 # Endpoints
 # ---------------------------------------------------------------------------
 @app.get("/health", response_model=HealthResponse)
-async def health():
-    """Health check — confirms the server is up and shows config."""
+@limiter.limit("30/minute")
+async def health(request: Request):
+    """Health check — confirms the server is up.
+    sec: internal IPs are not exposed; only reachability booleans returned.
+    """
+    primary_ok = False
+    fallback_ok = False
+    async with httpx.AsyncClient(timeout=3) as client:
+        try:
+            r = await client.get(f"{OLLAMA_PRIMARY}/api/tags")
+            primary_ok = r.status_code == 200
+        except Exception:
+            pass
+        try:
+            r = await client.get(f"{OLLAMA_FALLBACK}/api/tags")
+            fallback_ok = r.status_code == 200
+        except Exception:
+            pass
     return HealthResponse(
         status="ok",
         version=VERSION,
-        ollama_primary=OLLAMA_PRIMARY,
-        ollama_fallback=OLLAMA_FALLBACK,
+        ollama_primary_reachable=primary_ok,
+        ollama_fallback_reachable=fallback_ok,
         models={
             "default": DEFAULT_MODEL,
             "fast": FAST_MODEL,
@@ -197,7 +236,8 @@ async def health():
 
 
 @app.post("/ultrathink", response_model=UltraThinkResponse)
-async def ultrathink(req: UltraThinkRequest):
+@limiter.limit("20/minute")
+async def ultrathink(req: UltraThinkRequest, request: Request):
     """Deep-reasoning endpoint called by Perplexity-Tools orchestrator.
 
     Stateless: callers are responsible for deduplication before calling.
@@ -221,15 +261,15 @@ async def ultrathink(req: UltraThinkRequest):
         raise HTTPException(status_code=503, detail=str(exc))
 
     elapsed_ms = int((time.monotonic() - start) * 1000)
-    log.info("ultrathink done | %d ms via %s", elapsed_ms, endpoint_used)
+    log.info("ultrathink done | %d ms", elapsed_ms)
     return UltraThinkResponse(
         status="success",
         result=result,
         model_used=model,
         execution_time_ms=elapsed_ms,
         reasoning_depth=req.reasoning_depth,
+        # sec: do not expose endpoint_used (contains internal IP)
         metadata={
-            "endpoint_used": endpoint_used,
             "prompt_chars": len(prompt),
         },
     )

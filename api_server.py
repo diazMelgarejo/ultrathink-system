@@ -38,7 +38,7 @@ API_HOST = os.getenv("API_HOST", "0.0.0.0")
 
 # Ollama endpoints — prefer the Dell RTX 3080 for heavy models
 OLLAMA_PRIMARY = os.getenv("OLLAMA_WINDOWS_ENDPOINT", "http://192.168.1.100:11434")
-OLLAMA_FALLBACK = os.getenv("OLLAMA_MAC_ENDPOINT", "http://192.168.1.101:11434")
+OLLAMA_FALLBACK = os.getenv("OLLAMA_MAC_ENDPOINT", "http://localhost:11434")
 
 # Model selection per task type (override via env vars)
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen3:30b-a3b-instruct-q4_K_M")
@@ -48,6 +48,7 @@ CODE_MODEL = os.getenv("CODE_MODEL", "qwen3-coder:14b")
 # Request timeout (seconds) — deep reasoning can take 60-120 s
 OLLAMA_TIMEOUT = int(os.getenv("OLLAMA_TIMEOUT", "120"))
 
+# v0.9.7.0 Hardening: Version consistency with Perplexity-Tools
 VERSION = "0.9.7.0"
 
 logging.basicConfig(level=logging.INFO)
@@ -61,7 +62,6 @@ app = FastAPI(
     version=VERSION,
     description="Deep-reasoning bridge for Perplexity-Tools orchestrator",
 )
-
 
 # ---------------------------------------------------------------------------
 # Request / Response models
@@ -107,9 +107,9 @@ def _select_model(task_type: str, reasoning_depth: str) -> str:
     """Pick the best local Ollama model for this task.
 
     Priority (mirrors PERPLEXITY_BRIDGE.md Model Selection Matrix):
-      code               -> CODE_MODEL  (qwen3-coder:14b)
-      ultra depth        -> DEFAULT_MODEL (qwen3:30b)
-      standard / fast    -> FAST_MODEL  (qwen3:8b) unless depth >= deep
+      code         -> CODE_MODEL  (qwen3-coder:14b)
+      ultra depth  -> DEFAULT_MODEL (qwen3:30b)
+      standard / fast -> FAST_MODEL (qwen3:8b) unless depth >= deep
     """
     if task_type == "code":
         return CODE_MODEL
@@ -205,7 +205,6 @@ async def ultrathink(req: UltraThinkRequest):
     start = time.monotonic()
     model = _select_model(req.task_type, req.reasoning_depth)
     prompt = _build_prompt(req)
-
     log.info(
         "ultrathink | depth=%s task_type=%s model=%s tokens=%d",
         req.reasoning_depth,
@@ -213,7 +212,6 @@ async def ultrathink(req: UltraThinkRequest):
         model,
         req.max_tokens,
     )
-
     try:
         result, endpoint_used = await _call_with_fallback(
             prompt, model, req.max_tokens, req.temperature
@@ -224,7 +222,6 @@ async def ultrathink(req: UltraThinkRequest):
 
     elapsed_ms = int((time.monotonic() - start) * 1000)
     log.info("ultrathink done | %d ms via %s", elapsed_ms, endpoint_used)
-
     return UltraThinkResponse(
         status="success",
         result=result,
@@ -243,7 +240,4 @@ async def ultrathink(req: UltraThinkRequest):
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run(app, host=API_HOST, port=API_PORT)
-VERSION = "0.9.7.0"
-uvicorn.run(app, host=API_HOST, port=API_PORT)

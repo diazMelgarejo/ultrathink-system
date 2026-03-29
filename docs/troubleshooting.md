@@ -38,7 +38,7 @@
 **Solutions**:
 1. Ensure you're running from `multi_agent/mcp_servers/` directory (or set PYTHONPATH)
 2. Check Python 3.8+: `python --version`
-3. Install optional deps: `pip install redis` (only needed for Redis backend)
+3. Note: Redis is NOT required for ultrathink-system. If you see Redis connection errors, they originate from Perplexity-Tools (the orchestrator layer), not from ultrathink.
 4. Fallback: the server runs with in-memory backend automatically
 
 ---

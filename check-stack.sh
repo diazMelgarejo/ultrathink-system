@@ -32,6 +32,8 @@ check() {
   fi
 }
 
+# NOTE: Redis is a PT-only dependency (deferred to v1.1+).
+# This check is informational only — ultrathink does not require Redis.
 check_redis() {
   if command -v redis-cli &>/dev/null; then
     if redis-cli -h "$REDIS_HOST" -p "$REDIS_PORT" ping 2>/dev/null | grep -q PONG; then

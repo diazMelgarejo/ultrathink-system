@@ -27,7 +27,7 @@ import httpx
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
@@ -98,7 +98,8 @@ class UltraThinkRequest(BaseModel):
     max_tokens: int = Field(4000, ge=256, le=16000)
     temperature: float = Field(0.7, ge=0.0, le=1.0)
 
-    @validator("task_description", "context")
+        @field_validator("task_description", "context", mode="before")
+    @classmethod
     def no_null_bytes(cls, v: Optional[str]) -> Optional[str]:
         if v and "\x00" in v:
             raise ValueError("Null bytes not allowed")

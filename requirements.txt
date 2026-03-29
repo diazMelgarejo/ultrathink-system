@@ -1,4 +1,4 @@
-# ultrathink-system v0.9.7.0 — Runtime dependencies
+# ultrathink-system v0.9.8.0 — Runtime dependencies
 # Matches the usage block in api_server.py docstring.
 
 # Web framework
@@ -13,6 +13,9 @@ python-dotenv>=1.0.1
 
 # Data validation
 pydantic>=2.6.0
+
+# Security: rate limiting (OWASP API4)
+slowapi>=0.1.9
 
 # Test dependencies
 pytest>=8.0.0

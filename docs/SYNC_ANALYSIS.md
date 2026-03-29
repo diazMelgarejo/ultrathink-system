@@ -210,7 +210,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 ### Recommended Next Actions
 
-1. ✅ **Cross-link SKILL.md files** — DONE: ultrathink SKILL.md now references PT `hardware/SKILL.md` for hardware-aware model selectionrouting
+1. ✅ **Cross-link SKILL.md files** — DONE: ultrathink SKILL.md now references PT `hardware/SKILL.md` for hardware-aware model selection
 2. **Add integration test** that verifies PT correctly routes deep reasoning tasks to ultrathink with hardware-appropriate models
 3. **Consider**: Should ultrathink-system be aware of hardware profiles, or should it remain fully hardware-agnostic?
 

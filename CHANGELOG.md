@@ -6,6 +6,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.8.0] - 2026-04-24
+
+### Security
+
+- **api_server.py**: Rate limiting via `slowapi` (OWASP API4) [SYNC]
+- **api_server.py**: Input validation — bounded `task_description` with `max_length=8000` and `ALLOWED_HOSTS` middleware [SYNC]
+- **api_server.py**: Timeout clamped to 1–600 s range to prevent misconfiguration
+- **api_server.py**: Internal IPs not exposed in health endpoint (OWASP API8) [SYNC]
+
+### Fixed
+
+- **api_server.py**: Migrated `@validator` to Pydantic V2 `@field_validator` + `@classmethod` (deprecation fix) [SYNC]
+
+### Synced with Perplexity-Tools
+
+- Both repos synchronized to v0.9.8.0 [SYNC]
+- `orchestrator.py` receives same security hardening and Pydantic V2 migration [SYNC]
+
+---
+
 
 ## [0.9.7.0] - 2026-03-28
 

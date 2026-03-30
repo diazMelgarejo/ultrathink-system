@@ -1,22 +1,21 @@
 # Sync Analysis: ultrathink-system ↔ Perplexity-Tools
 
-**Date:** 2026-03-28 | **Version:** ultrathink v0.9.8.0 · PT v0.9.8.0
+**Date:** 2026-03-30 | **Version:** ultrathink v0.9.9.0 · PT v0.9.9.0
 
-> Historical analysis note: this file contains older integration snapshots.
-> In the current checkout, MCP is the active primary bridge. `api_server.py`
-> now exists as an implemented backup method, so any `POST /ultrathink`
-> references below should be read as backup-context unless explicitly stated
-> otherwise.
+> **v1.0 RC transport clarification:** HTTP Bridge (`POST /ultrathink` via `api_server.py`)
+> is the **active primary transport** for v1.0 RC. MCP-Optional transport (stdio JSON-RPC)
+> is planned for v1.1. Any references below to "MCP as primary" or "HTTP as backup" reflect
+> older analysis snapshots and should be read as pre-v0.9.9.0 context.
 ---
 
 ## TL;DR — Status Summary
 
 | Dimension | Status | Notes |
 |---|---|---|
-| **Version** | ✅ IN SYNC | Both at v0.9.8.0 |
+| **Version** | ✅ IN SYNC | Both at v0.9.9.0 |
 | **Architecture contract** | ✅ IN SYNC | 4-layer hierarchy documented + upheld |
 | **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.8.0; HAL cross-link complete 
-| **API endpoint spec** | HISTORICAL / BACKUP | Older snapshots referenced `api_server.py` + `POST /ultrathink`; current checkout uses MCP-first docs |
+| **API endpoint spec** | ✅ IN SYNC | HTTP Bridge (`POST /ultrathink`) is v1.0 RC primary transport; MCP-Optional planned for v1.1 |
 | **Idempotency contract** | ✅ RESOLVED | PT owns all state via `.state/agents.json`; ultrathink stateless (no Redis). Redis deferred to PT v1.1+ |
 | **Shared `.env` contract** | ✅ IN SYNC | Vars in both `.env.example` files match BRIDGE doc |
 | **SKILL.md cross-ref** | ✅ IN SYNC | PT SKILL.md references ultrathink routing methodology |
@@ -258,6 +257,32 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 **Status:** Implemented backup note — do not treat `api_server.py v0.9.9.0` as the active primary contract in this checkout.
 
+## Update 2026-03-30: v0.9.9.0 v1.0 RC Refinements [SYNC]
+
+### Transport Naming Corrected
+- **HTTP Bridge (`POST /ultrathink`)** is now documented as the v1.0 RC primary transport.
+- **MCP-Optional transport** (stdio JSON-RPC) renamed from "MCP-first" — planned for v1.1.
+  `ultrathink_orchestration_server.py` MCP `_solve()` remains a stub; no production Ollama call yet.
+- Both repos updated: `api_server.py` docstring, `PERPLEXITY_BRIDGE.md`, both `ROADMAP_v1.1.md` files.
+
+### Redis Import Hardened
+- `orchestrator.py` soft import: `try: import redis.asyncio as _redis_mod / except ImportError: _redis_mod = None`
+- `requirements.txt` redis moved to optional comment.
+- Test `test_orchestrator_starts_without_redis_package` added.
+
+### ECC Sync Gate Added
+- `ECC_SYNC_ENABLED` env var in `orchestrator/ecc_tools_sync.py` (default: true).
+- `tests/conftest.py` sets `ECC_SYNC_ENABLED=false` at session scope so tests never hit the network.
+
+### MCP-Optional v1.1 TODO Checklists Added
+- Tier 1 (PT): `orchestrator/ultrathink_mcp_client.py`, `call_ultrathink_mcp_or_bridge()`, tests — in `PT/docs/ROADMAP_v1.1.md`.
+- Tier 2 (ultrathink): `multi_agent/shared/ollama_client.py`, `_solve()` real pipeline, tests — in `ultrathink/docs/ROADMAP_v1.1.md`.
+- Recommended sequencing: Tier 2 (server pipeline) before Tier 1 (client infrastructure).
+
+### Test Count
+- PT: 108 tests passing (up from 93 before v0.9.9.0 refinements).
+- ultrathink-system: unchanged, CI green.
+
 ---
 
-**Generated:** 2026-03-28 | **Analyst:** Comet (Perplexity)
+**Generated:** 2026-03-30 | **Analyst:** Claude Sonnet 4.6

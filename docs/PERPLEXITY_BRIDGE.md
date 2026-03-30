@@ -2,16 +2,18 @@
 
 ## Version 0.9.9.0
 
-## Current Contract
+## Current Contract (v1.0 RC)
 
-This checkout treats the MCP server as the canonical integration surface between
-**Perplexity-Tools** and **ultrathink-system**.
+**Active transport:** HTTP Bridge (`POST /ultrathink` on port 8001 via `api_server.py`).
+MCP-Optional transport is planned for v1.1 — see [MCP-Optional Transport (v1.1)](#mcp-optional-transport-v11) below.
 
 - `Perplexity-Tools` remains the top-level orchestrator and selects ultrathink
-  behavior through `task_type` routing.
-- `ultrathink-system` exposes the current bridge through
-  `multi_agent/mcp_servers/ultrathink_orchestration_server.py`.
-- The live MCP tool surface is:
+  behavior through `task_type` routing (`deep_reasoning`, `code_analysis`).
+- `ultrathink-system` serves the HTTP bridge via `api_server.py` (FastAPI, port 8001).
+- The MCP server (`multi_agent/mcp_servers/ultrathink_orchestration_server.py`)
+  exposes the tool surface below but its `_solve()` is a stub — it does not yet
+  call Ollama. All production traffic flows through the HTTP bridge.
+- MCP tool surface (v1.1+ target):
   - `ultrathink_solve`
   - `ultrathink_delegate`
   - `ultrathink_status`
@@ -57,15 +59,14 @@ python multi_agent/mcp_servers/ultrathink_orchestration_server.py
 The MCP server publishes the tool schemas defined in `TOOL_SCHEMAS` and is the
 current source of truth for bridge behavior in this repository.
 
-## HTTP Backup Status
+## HTTP Bridge Status (v1.0 RC — Primary Transport)
 
-The HTTP `/ultrathink` path is now implemented in this repo checkout as a
-backup compatibility bridge via `api_server.py`.
+The HTTP `/ultrathink` path via `api_server.py` is the **primary v1.0 RC transport**.
 
-- It is implemented in-repo.
-- It is not the current primary contract.
-- MCP remains the source of truth; the HTTP bridge must stay semantically aligned
-  with MCP through shared mapping helpers and tests.
+- Fully implemented: FastAPI + uvicorn, port 8001, rate-limited, Pydantic V2 validated.
+- All production PT→ultrathink calls go through this path.
+- Semantically aligned with MCP through shared `bridge_contract.py` mapping helpers.
+- Will remain supported when MCP-Optional transport lands in v1.1 (HTTP is not deprecated).
 
 The exact contract mapping is:
 
@@ -81,6 +82,49 @@ hardware routing remains owned by `Perplexity-Tools`.
 If neither `reasoning_depth` nor `optimize_for` is supplied, the backup server
 keeps the legacy HTTP default of `reasoning_depth=standard` for compatibility
 with existing direct HTTP callers.
+
+## MCP-Optional Transport (v1.1)
+
+MCP-Optional adds stdio JSON-RPC transport alongside HTTP. Both coexist; callers
+opt in to MCP when the environment supports it. HTTP bridge remains fully supported.
+
+### Transport naming convention
+
+| Release | Transport | Status |
+|---------|-----------|--------|
+| v1.0 RC | HTTP Bridge (`POST /ultrathink`) | **Active — ships now** |
+| v1.1 | MCP-Optional (stdio JSON-RPC) | Planned — opt-in alongside HTTP |
+| Future | MCP-Primary (if HTTP ever retired) | Not scheduled |
+
+### Why MCP `_solve()` currently falls back to HTTP
+
+The MCP server's `_solve()` creates a `TaskState` and returns a stub:
+```json
+{"task_id": "...", "status": "started", "message": "Poll ultrathink_status for updates."}
+```
+It does not call Ollama or run the 5-stage pipeline. Until Tier 2 is implemented,
+any MCP client will fall back to HTTP automatically.
+
+### Implementation sequencing (Tier 2 before Tier 1)
+
+**Tier 2 (ultrathink-system first):** Extract Ollama pipeline into
+`multi_agent/shared/ollama_client.py`, then implement `_solve()` to call Ollama
+synchronously and return the full result inline — matching the HTTP synchronous
+contract, no polling loop needed.
+
+**Tier 1 (Perplexity-Tools after):** Build `orchestrator/ultrathink_mcp_client.py`
+(subprocess lifecycle + JSON-RPC framing), add `call_ultrathink_mcp_or_bridge()`
+to `ultrathink_bridge.py` with HTTP fallback, expose `"transport": "mcp"` or
+`"transport": "http"` in the response envelope.
+
+**Why this order:** Tier 1 infrastructure without Tier 2 means every call falls
+back to HTTP anyway. Building the real backend first makes Tier 1 immediately testable.
+
+### Checklist links
+- Tier 1 TODO: [Perplexity-Tools/docs/ROADMAP_v1.1.md](../../perplexity-api/Perplexity-Tools/docs/ROADMAP_v1.1.md)
+- Tier 2 TODO: [ultrathink-system/docs/ROADMAP_v1.1.md](ROADMAP_v1.1.md)
+
+---
 
 ## Historical HTTP Design Context
 

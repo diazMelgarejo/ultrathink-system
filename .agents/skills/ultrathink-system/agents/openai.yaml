@@ -1,6 +1,6 @@
 interface:
   display_name: "Ultrathink System"
-  short_description: "Repo-specific patterns and workflows for ultrathink-system"
-  default_prompt: "Use the ultrathink-system repo skill to follow existing architecture, testing, and workflow conventions."
+  short_description: "Ultrathink 5-stage methodology, AFRP gate, CIDF v1.2, and multi-agent patterns for ultrathink-system"
+  default_prompt: "Load single_agent/SKILL.md (the mother skill, v0.9.8.0) and follow the ultrathink architecture, AFRP gate, CIDF rules, and conventional commit conventions for this repository."
 policy:
   allow_implicit_invocation: true

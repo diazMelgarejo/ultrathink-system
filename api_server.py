@@ -8,7 +8,7 @@ Design principles
 * Stateless - no agent registry, no Redis.  PT owns lifecycle/dedup via
   .state/agents.json before calling this server.
 * Graceful degradation - if Ollama is unreachable the endpoint returns an
-  error JSON with status="error"; PT then falls back to local Qwen3-30B.
+  error JSON with status="error"; PT then falls back to local Qwen3.5-35B.
 * Dependency-minimal - FastAPI + httpx + python-dotenv + slowapi (see
   requirements.txt). No Redis, no agent registry.
 * Hardware-agnostic by default - ultrathink does NOT detect hardware itself.
@@ -47,7 +47,7 @@ OLLAMA_PRIMARY = os.getenv("OLLAMA_WINDOWS_ENDPOINT", "http://192.168.1.100:1143
 OLLAMA_FALLBACK = os.getenv("OLLAMA_MAC_ENDPOINT", "http://localhost:11434")
 
 # Model selection per task type (override via env vars)
-DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen3:30b-a3b-instruct-q4_K_M")
+DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen3.5:35b-a3b-q4_K_M")
 FAST_MODEL = os.getenv("FAST_MODEL", "qwen3:8b-instruct")
 CODE_MODEL = os.getenv("CODE_MODEL", "qwen3-coder:14b")
 
@@ -149,7 +149,7 @@ def _select_model(task_type: str, reasoning_depth: str, model_hint: Optional[str
 
     Fallback priority (mirrors PERPLEXITY_BRIDGE.md Model Selection Matrix):
       code        -> CODE_MODEL  (qwen3-coder:14b)
-      ultra depth -> DEFAULT_MODEL (qwen3:30b)
+      ultra depth -> DEFAULT_MODEL (qwen3.5:35b)
       standard    -> FAST_MODEL  (qwen3:8b) unless depth >= deep
     """
     if model_hint:

@@ -14,20 +14,28 @@ This document lists architecture enhancements explicitly deferred from MVP to v1
 **v1.1 target:** MCP over stdio becomes an optional transport alongside HTTP. Both coexist; callers opt in to MCP when the environment supports it. HTTP bridge remains fully supported.
 
 ### Required work:
-- [ ] Flesh out MCP server stubs in `multi_agent/mcp_servers/ultrathink_orchestration_server.py`
-  - `_solve()` must call Ollama and run actual 5-stage reasoning (currently returns stub)
-  - `_delegate()` must publish to message bus (currently returns stub)
-  - `_status()` and `_lessons()` need real state/lessons backends
-- [ ] Build MCP client in PT (`orchestrator/ultrathink_mcp_client.py`)
-  - Spawn `ultrathink_orchestration_server.py` as subprocess
-  - JSON-RPC framing over stdin/stdout
-  - Lifecycle management (start, health check, restart on crash)
-- [ ] Update `orchestrator/fastapi_app.py` bridge logic:
-  - Try MCP client first
-  - On MCP failure, fall back to HTTP bridge
-  - Surface transport method in response (`"transport": "mcp"` or `"transport": "http"`)
-- [ ] Switch `httpx.post` (sync) to `httpx.AsyncClient` in bridge to avoid blocking event loop
-- [ ] Add tests for both MCP success and MCP-failure-to-HTTP-fallback paths
+
+#### Tier 2 — MCP server pipeline (real Ollama backend, ultrathink-system side)
+> Tier 1 (MCP client infrastructure in PT) is tracked in Perplexity-Tools ROADMAP.
+> Implement Tier 2 here first so Tier 1 has a real backend to call.
+
+- [ ] Extract Ollama pipeline into `multi_agent/shared/ollama_client.py`
+  - Move `_build_prompt()`, `_call_ollama()`, `_call_with_fallback()`, `_select_model()` out of `api_server.py`
+  - Both `api_server.py` and `ultrathink_orchestration_server.py` import from this shared module
+  - No behavior change to `api_server.py` — just moves code, all tests still pass
+- [ ] Implement `_solve()` in `ultrathink_orchestration_server.py` to call Ollama synchronously
+  - Return full result inline (`{"result": str, "task_id": str, "model_used": str, ...}`)
+  - Skip polling design — synchronous return matches HTTP contract, simplifies client
+  - Map `optimize_for` → `reasoning_depth` via `bridge_contract.py`
+  - Use `ollama_client.generate()` with primary/fallback endpoint logic
+- [ ] Implement `_delegate()` with real message bus publish (or document as intentional stub)
+- [ ] Wire `_status()` to real `StateManager` backends
+- [ ] Wire `_lessons()` to real lessons store
+- [ ] Create `tests/test_mcp_server.py`
+  - Mock Ollama: `_solve()` returns full result inline
+  - `_status()` with known task_id
+  - `_lessons()` with domain filter
+- [ ] Add tests for MCP success and MCP-failure-to-HTTP-fallback (coordinated with PT Tier 1 tests)
 
 ### Protocol boundary:
 | Dimension | MCP Server (v1.1) | HTTP Server (current) |

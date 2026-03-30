@@ -315,7 +315,7 @@ Perplexity-Tools (Layer 1) → ultrathink-system (Layer 2) → ECC Tools (Layer 
 | Statelessness | ultrathink stays stateless; PT owns dedup via `.state/agents.json` |
 | API endpoint | Serve via `api_server.py` on `POST /ultrathink` (port 8001) |
 | Timeout | Respect `ULTRATHINK_TIMEOUT` env var (default: 120s) |
-| Fallback | If Ollama unreachable, return HTTP 503; PT handles fallback to local qwen3:30b |
+| Fallback | If Ollama unreachable, return HTTP 503; PT handles fallback to local qwen3.5:35b-a3b-q4_K_M |
 
 ### Trigger Conditions (PT → ultrathink)
 ultrathink is activated by PT routing when:

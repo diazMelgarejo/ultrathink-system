@@ -13,6 +13,10 @@ from multi_agent.mcp_servers.ultrathink_orchestration_server import TOOL_SCHEMAS
 
 ROOT = Path(__file__).parent.parent
 BRIDGE_DOC = ROOT / "docs" / "PERPLEXITY_BRIDGE.md"
+SYNC_ANALYSIS_DOC = ROOT / "docs" / "SYNC_ANALYSIS.md"
+AFRP_SKILL = ROOT / "single_agent" / "afrp" / "SKILL.md"
+AFRP_README = ROOT / "single_agent" / "afrp" / "README.md"
+SINGLE_AGENT_SKILL = ROOT / "single_agent" / "SKILL.md"
 
 
 def test_bridge_doc_references_live_mcp_tool_names():
@@ -28,3 +32,15 @@ def test_bridge_doc_marks_http_path_as_future_backup():
     assert "future backup" in content
     assert "TODO" in content
     assert "not implemented in this repo checkout" in content
+
+
+def test_legacy_http_docs_are_marked_as_backup_or_historical():
+    docs = {
+        SYNC_ANALYSIS_DOC: "Historical analysis note:",
+        AFRP_SKILL: "backup HTTP `/ultrathink` path",
+        AFRP_README: "backup HTTP `/ultrathink` path",
+        SINGLE_AGENT_SKILL: "backup HTTP bridge is restored later",
+    }
+
+    for path, expected_text in docs.items():
+        assert expected_text in path.read_text(), f"Missing backup marker in {path.name}"

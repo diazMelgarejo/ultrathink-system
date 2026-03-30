@@ -17,7 +17,7 @@ This checkout treats the MCP server as the canonical integration surface between
   - `ultrathink_status`
   - `ultrathink_lessons`
 
-## MCP-First Flow
+## HTTP Bridge Flow (v1.0 RC)
 
 `Perplexity-Tools` reaches the local ultrathink reasoning layer by choosing
 local-only route types such as `deep_reasoning` and `code_analysis`.

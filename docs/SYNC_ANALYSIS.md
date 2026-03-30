@@ -3,9 +3,10 @@
 **Date:** 2026-03-28 | **Version:** ultrathink v0.9.8.0 · PT v0.9.8.0
 
 > Historical analysis note: this file contains older integration snapshots.
-> In the current checkout, MCP is the active primary bridge. Any `api_server.py`
-> or `POST /ultrathink` references below should be read as backup-method or
-> future-TODO context unless the implementation exists and is tested in-repo.
+> In the current checkout, MCP is the active primary bridge. `api_server.py`
+> now exists as an implemented backup method, so any `POST /ultrathink`
+> references below should be read as backup-context unless explicitly stated
+> otherwise.
 ---
 
 ## TL;DR — Status Summary
@@ -94,8 +95,8 @@ PT receives task → deep reasoning? → call ultrathink:8001
 
 Earlier sync snapshots treated `api_server.py` as the primary bridge and
 documented `POST /ultrathink` plus `GET /health`. In the current checkout,
-that should be read as backup-method / future-TODO context until an in-repo
-HTTP implementation exists and is tested.
+that server exists as an implemented backup method with request/response tests,
+but it is still not the primary bridge contract.
 
 ### GAP 2: PT `routing.yml` — ✅ RESOLVED (v0.9.5.0)
 
@@ -173,7 +174,7 @@ All critical integration gaps from the initial analysis have been addressed.
 
 **P0 — RESOLVED:**
 - Historical backup path: older sync snapshots referenced `api_server.py`
-  - `POST /ultrathink` and `GET /health` are backup/TODO context in this checkout
+  - `POST /ultrathink` and `GET /health` are implemented backup endpoints in this checkout
   - Wire to 5-stage reasoning pipeline complete
   - Runs on port 8001 as specified
   - v0.9.8.0: rate limiting, Pydantic V2 validators, security hardening
@@ -229,7 +230,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 1. ✅ **Cross-link SKILL.md files** — DONE: ultrathink SKILL.md now references PT `hardware/SKILL.md` for hardware-aware model selection
 2. ✅ **Add integration test** — DONE: `tests/test_hardware_routing.py` (commit `82cb179`) verifies PT correctly routes deep reasoning tasks to ultrathink with hardware-appropriate models (mac-studio → MLX backend; win-rtx3080 → Ollama backend).
-3. :white_check_mark: **Hardware-agnostic core + model_hint passthrough** — HISTORICAL BACKUP NOTE: older sync snapshots described an HTTP `api_server.py` accepting `model_hint`. In the current checkout, treat that as backup/TODO context while PT's `hardware/SKILL.md` remains the active hardware-routing source of truth.
+3. :white_check_mark: **Hardware-agnostic core + model_hint passthrough** — IMPLEMENTED BACKUP NOTE: the HTTP `api_server.py` bridge accepts `model_hint`, but PT's `hardware/SKILL.md` remains the active hardware-routing source of truth.
 
 ### Architecture Decision Record: ADR-001 (v0.9.9.0)
 
@@ -255,7 +256,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 - ultrathink standalone (no PT): falls back to internal heuristic (unchanged behavior)
 - No breaking change — `model_hint` is optional; existing callers unaffected
 
-**Status:** Historical backup note — do not treat `api_server.py v0.9.9.0` as the active primary contract in this checkout.
+**Status:** Implemented backup note — do not treat `api_server.py v0.9.9.0` as the active primary contract in this checkout.
 
 ---
 

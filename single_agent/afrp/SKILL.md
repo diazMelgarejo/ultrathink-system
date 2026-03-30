@@ -62,7 +62,7 @@ Task arrives
 CIDF (on content insertion) / other sub-skills (on demand)
 ```
 
-**Rule:** No agent — single or multi, local or delegated — should generate substantive output without first passing through the AFRP gate. When Perplexity-Tools delegates to ultrathink through the active MCP bridge, or through the backup HTTP `/ultrathink` path if that bridge is restored later, the AFRP gate runs inside ultrathink before any reasoning begins.
+**Rule:** No agent — single or multi, local or delegated — should generate substantive output without first passing through the AFRP gate. When Perplexity-Tools delegates to ultrathink through the active MCP bridge, or through the implemented backup HTTP `/ultrathink` path, the AFRP gate runs inside ultrathink before any reasoning begins.
 
 ## Step-by-Step Protocol
 
@@ -82,7 +82,7 @@ Before writing a single sentence of response content, run this internal checklis
 
 ### Machine-Caller Escape Path
 
-When the caller is an agent (not a human) — e.g., Perplexity-Tools calling the MCP bridge, or the backup HTTP `/ultrathink` path when that exists — the AFRP gate cannot pause for clarification. In this case:
+When the caller is an agent (not a human) — e.g., Perplexity-Tools calling the MCP bridge, or the implemented backup HTTP `/ultrathink` path — the AFRP gate cannot pause for clarification. In this case:
 
 1. Default to **Type A handling** (answer directly with available context)
 2. Include an `afrp_gaps` field in the response metadata listing which boxes were unchecked

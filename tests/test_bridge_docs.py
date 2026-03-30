@@ -26,20 +26,20 @@ def test_bridge_doc_references_live_mcp_tool_names():
         assert f"`{schema['name']}`" in content
 
 
-def test_bridge_doc_marks_http_path_as_future_backup():
+def test_bridge_doc_marks_http_path_as_implemented_backup():
     content = BRIDGE_DOC.read_text()
 
-    assert "future backup" in content
-    assert "TODO" in content
-    assert "not implemented in this repo checkout" in content
+    assert "backup compatibility bridge" in content
+    assert "implemented in this repo checkout" in content
+    assert "not the current primary contract" in content
 
 
 def test_legacy_http_docs_are_marked_as_backup_or_historical():
     docs = {
         SYNC_ANALYSIS_DOC: "Historical analysis note:",
-        AFRP_SKILL: "backup HTTP `/ultrathink` path",
-        AFRP_README: "backup HTTP `/ultrathink` path",
-        SINGLE_AGENT_SKILL: "backup HTTP bridge is restored later",
+        AFRP_SKILL: "implemented backup HTTP `/ultrathink` path",
+        AFRP_README: "implemented backup HTTP `/ultrathink` path",
+        SINGLE_AGENT_SKILL: "backup HTTP `/ultrathink` is implemented via `api_server.py`",
     }
 
     for path, expected_text in docs.items():

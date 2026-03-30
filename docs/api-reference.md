@@ -74,6 +74,78 @@ Creates: tasks/todo.md, tasks/lessons.md (if not exists)
 → { "lessons": [...], "total": N }
 ```
 
+## HTTP Backup Bridge
+
+### POST /ultrathink
+```json
+{
+  "task_description": "string (required)",
+  "reasoning_depth": "standard|deep|ultra (optional)",
+  "optimize_for": "reliability|creativity|speed (optional)",
+  "task_type": "planning|analysis|code|research",
+  "context": "optional background context",
+  "max_tokens": 4000,
+  "temperature": 0.7,
+  "model_hint": "optional model override"
+}
+```
+
+If neither `reasoning_depth` nor `optimize_for` is provided, the legacy HTTP
+default remains `reasoning_depth="standard"` for compatibility with direct HTTP
+callers.
+
+Response:
+
+```json
+{
+  "status": "success|error",
+  "result": "string",
+  "reasoning_depth": "standard|deep|ultra",
+  "model_used": "string",
+  "execution_time_ms": 12,
+  "metadata": {
+    "prompt_chars": 1234,
+    "bridge_mode": "http_backup",
+    "primary_contract": "mcp",
+    "mapped_optimize_for": "reliability",
+    "mapping_source": "reasoning_depth|optimize_for|default",
+    "model_hint_used": false,
+    "endpoint_used": "redacted"
+  }
+}
+```
+
+### GET /health
+```json
+{
+  "status": "ok",
+  "version": "0.9.9.0",
+  "ollama_primary_reachable": true,
+  "ollama_fallback_reachable": true,
+  "models": {
+    "default": "qwen3.5:35b-a3b-q4_K_M",
+    "fast": "qwen3:8b-instruct",
+    "code": "qwen3-coder:14b"
+  },
+  "bridge_mode": "http_backup",
+  "primary_contract": "mcp",
+  "http_endpoint": "/ultrathink",
+  "mapping": {
+    "reliability": "ultra",
+    "creativity": "deep",
+    "speed": "standard"
+  }
+}
+```
+
+### Contract Mapping
+
+| MCP `optimize_for` | HTTP `reasoning_depth` |
+|---|---|
+| `reliability` | `ultra` |
+| `creativity` | `deep` |
+| `speed` | `standard` |
+
 ## Data Types
 
 ### TaskState

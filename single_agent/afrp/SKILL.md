@@ -62,7 +62,7 @@ Task arrives
 CIDF (on content insertion) / other sub-skills (on demand)
 ```
 
-**Rule:** No agent — single or multi, local or delegated — should generate substantive output without first passing through the AFRP gate. When Perplexity-Tools delegates to ultrathink via `POST /ultrathink`, the AFRP gate runs inside ultrathink before any reasoning begins.
+**Rule:** No agent — single or multi, local or delegated — should generate substantive output without first passing through the AFRP gate. When Perplexity-Tools delegates to ultrathink through the active MCP bridge, or through the backup HTTP `/ultrathink` path if that bridge is restored later, the AFRP gate runs inside ultrathink before any reasoning begins.
 
 ## Step-by-Step Protocol
 
@@ -82,7 +82,7 @@ Before writing a single sentence of response content, run this internal checklis
 
 ### Machine-Caller Escape Path
 
-When the caller is an agent (not a human) — e.g., Perplexity-Tools calling `POST /ultrathink` — the AFRP gate cannot pause for clarification. In this case:
+When the caller is an agent (not a human) — e.g., Perplexity-Tools calling the MCP bridge, or the backup HTTP `/ultrathink` path when that exists — the AFRP gate cannot pause for clarification. In this case:
 
 1. Default to **Type A handling** (answer directly with available context)
 2. Include an `afrp_gaps` field in the response metadata listing which boxes were unchecked
@@ -294,7 +294,7 @@ When ultrathink delegates to ECC Tools (Layer 3) or spawns sub-agents:
 ### v0.9.6.0 (2026-03-28)
 - Initial integration into ultrathink-system as mandatory pre-router gate
 - Added YAML frontmatter, parent_skill pointer, sub_skills, Boundaries section
-- Added Machine-Caller Escape Path for programmatic invocation via `POST /ultrathink`
+- Added Machine-Caller Escape Path for programmatic invocation via the MCP bridge and the backup HTTP `/ultrathink` path
 - Added Cross-Skill Integration section (Router, CIDF, Amplifier Principle relationships)
 - Added Cross-Agent Loading protocol for 4-layer stack delegation
 - Aligned version to repo standard (0.9.6.0)

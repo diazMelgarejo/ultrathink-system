@@ -304,24 +304,24 @@ Perplexity-Tools (Layer 1) → ultrathink-system (Layer 2) → ECC Tools (Layer 
 
 ### Priority Rule (Non-Negotiable)
 * • **PT SKILL.md runs first** — PT owns top-level model selection and task routing
-* • ultrathink is called **only when** `reasoning_depth=ultra` OR `privacy_critical=True`
+* • ultrathink is called when PT selects `task_type=deep_reasoning` or `task_type=code_analysis`; older HTTP-primary docs described this as backup `reasoning_depth=ultra` or `privacy_critical=True`
 * • Do **not** override PT's model selection for top-level agents
-* • Only override when `reasoning_depth == ultra` and PT explicitly delegates
+* • Only use `reasoning_depth == ultra` as a backup HTTP-path concept when that bridge is restored and PT explicitly delegates
 
 ### Behavioral Constraints Under PT Orchestration
 | Constraint | Rule |
 | :--- | :--- |
 | Model selection | Defer to PT's `config/routing.yml` for top-level models |
 | Statelessness | ultrathink stays stateless; PT owns dedup via `.state/agents.json` |
-| API endpoint | Serve via `api_server.py` on `POST /ultrathink` (port 8001) |
+| API endpoint | Current bridge: MCP server; backup HTTP `/ultrathink` remains future/TODO until implemented in-repo |
 | Timeout | Respect `ULTRATHINK_TIMEOUT` env var (default: 120s) |
 | Fallback | If Ollama unreachable, return HTTP 503; PT handles fallback to local qwen3.5:35b-a3b-q4_K_M |
 
 ### Trigger Conditions (PT → ultrathink)
 ultrathink is activated by PT routing when:
 * • `task_type` matches `deep_reasoning` OR `code_analysis` in `config/routing.yml`
-* • `privacy_critical=True` flag is set in the PT task payload
-* • `reasoning_depth=ultra` is explicitly requested
+* • PT selects `task_type=deep_reasoning` or `task_type=code_analysis`
+* • If the backup HTTP bridge is restored later, `privacy_critical=True` and `reasoning_depth=ultra` remain legacy trigger language only until the request contract is implemented in-repo
 
 ### Integration References
 * • Bridge spec: `docs/PERPLEXITY_BRIDGE.md`
@@ -334,7 +334,7 @@ ultrathink is activated by PT routing when:
 
 ### v0.9.8.0 (2026-03-28)
 * • **Hardware cross-link**: Added PT `hardware/SKILL.md` reference to Integration References.
-* • **Version bump**: Aligned to v0.9.8.0 matching `api_server.py` (rate limiting, Pydantic V2 validators).
+* • **Version bump**: Aligned bridge references to the MCP-first contract; any `api_server.py` mention is backup/TODO context in this checkout.
 
 ### v0.9.7.0 (2026-03-28)
 * • **AFRP**: Audience-First Response Protocol integrated as mandatory pre-router gate (`afrp/SKILL.md`) [SYNC].

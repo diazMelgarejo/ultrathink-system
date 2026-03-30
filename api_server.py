@@ -6,8 +6,8 @@ ultrathink 5-stage reasoning pipeline via HTTP.
 
 Design principles
 -----------------
-* MCP remains the primary bridge contract.
-* This server is the in-repo HTTP backup bridge.
+* HTTP bridge is the v1.0 RC transport; MCP-optional transport is planned for v1.1+.
+* This server is the active HTTP bridge for v1.0 RC (not a backup — it is the transport).
 * Stateless - no agent registry, no Redis. PT owns lifecycle/dedup via
   .state/agents.json before calling this server.
 * Graceful degradation - if Ollama is unreachable the endpoint returns an
@@ -66,7 +66,7 @@ app = FastAPI(
     version=VERSION,
     description=(
         "Backup compatibility HTTP bridge for Perplexity-Tools. "
-        "MCP remains the primary contract."
+        "HTTP bridge is the v1.0 RC transport. MCP-optional planned for v1.1+."
     ),
 )
 app.state.limiter = limiter

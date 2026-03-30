@@ -2,7 +2,8 @@
 """
 test_bridge_docs.py
 ===================
-Regression tests for the MCP-first Perplexity bridge documentation.
+Regression tests for the HTTP-Bridge-primary Perplexity bridge documentation.
+Transport naming: HTTP Bridge = v1.0 RC primary; MCP-Optional = v1.1 planned.
 """
 from __future__ import annotations
 
@@ -26,21 +27,23 @@ def test_bridge_doc_references_live_mcp_tool_names():
         assert f"`{schema['name']}`" in content
 
 
-def test_bridge_doc_marks_http_path_as_implemented_backup():
+def test_bridge_doc_marks_http_path_as_primary_transport():
     content = BRIDGE_DOC.read_text()
 
-    assert "backup compatibility bridge" in content
-    assert "implemented in this repo checkout" in content
-    assert "not the current primary contract" in content
+    # HTTP bridge is the v1.0 RC primary transport (not a backup)
+    assert "HTTP Bridge" in content
+    assert "v1.0 RC" in content
+    assert "primary" in content
 
 
 def test_legacy_http_docs_are_marked_as_backup_or_historical():
     docs = {
-        SYNC_ANALYSIS_DOC: "Historical analysis note:",
+        # SYNC_ANALYSIS.md now has v1.0 RC transport clarification block
+        SYNC_ANALYSIS_DOC: "v1.0 RC transport clarification",
         AFRP_SKILL: "implemented backup HTTP `/ultrathink` path",
         AFRP_README: "implemented backup HTTP `/ultrathink` path",
         SINGLE_AGENT_SKILL: "backup HTTP `/ultrathink` is implemented via `api_server.py`",
     }
 
     for path, expected_text in docs.items():
-        assert expected_text in path.read_text(), f"Missing backup marker in {path.name}"
+        assert expected_text in path.read_text(), f"Missing marker in {path.name}"

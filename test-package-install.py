@@ -12,6 +12,7 @@ import subprocess
 import sys
 import tempfile
 import venv
+import zipfile
 from pathlib import Path
 
 
@@ -101,6 +102,12 @@ def main():
         return False
     wheel_path = wheel_candidates[-1]
     print(f"✓ built wheel: {wheel_path.name}")
+    with zipfile.ZipFile(wheel_path) as wheel_zip:
+        wheel_entries = set(wheel_zip.namelist())
+    if "api_server.py" not in wheel_entries:
+        print("❌ wheel is missing api_server.py")
+        return False
+    print("✓ wheel includes api_server.py")
 
     # 4. Install the built wheel into an isolated temp venv and test imports.
     print("\n[4/4] Installing built wheel and testing imports...")

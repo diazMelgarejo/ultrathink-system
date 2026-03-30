@@ -42,8 +42,8 @@ Perplexity-Tools owns hardware-aware routing before tasks reach ultrathink.
 
 - `mac-studio` and `win-rtx3080` profiles stay on the PT side.
 - ultrathink remains the hardware-agnostic local reasoning layer.
-- If PT restores a dedicated HTTP bridge later, model or hardware hints must be
-  documented and tested in-repo before they become part of the active contract.
+- The implemented HTTP backup bridge accepts `model_hint`, but PT still owns
+  the hardware-routing decision that produces that hint.
 
 ## Current MCP Runtime
 
@@ -59,34 +59,41 @@ current source of truth for bridge behavior in this repository.
 
 ## HTTP Backup Status
 
-The HTTP `/ultrathink` path is retained as a future backup reference only.
+The HTTP `/ultrathink` path is now implemented in this repo checkout as a
+backup compatibility bridge via `api_server.py`.
 
-- It is not implemented in this repo checkout.
+- It is implemented in-repo.
 - It is not the current primary contract.
-- Any future HTTP bridge restoration must add an in-repo server, tests, and a
-  documentation sync pass before it can be treated as active again.
+- MCP remains the source of truth; the HTTP bridge must stay semantically aligned
+  with MCP through shared mapping helpers and tests.
 
-TODO for future integration syncs:
+The exact contract mapping is:
 
-- Add the HTTP server implementation to this repo if the backup path is revived.
-- Add request/response tests that prove the HTTP bridge matches the MCP
-  semantics.
-- Document any mapping between HTTP `reasoning_depth` and MCP `optimize_for`.
-- Document any PT hardware hints or model hints that become part of the HTTP
-  request contract.
+| MCP `optimize_for` | HTTP `reasoning_depth` |
+|---|---|
+| `reliability` | `ultra` |
+| `creativity` | `deep` |
+| `speed` | `standard` |
+
+The backup HTTP bridge also accepts `model_hint` for compatibility, but PT
+hardware routing remains owned by `Perplexity-Tools`.
+
+If neither `reasoning_depth` nor `optimize_for` is supplied, the backup server
+keeps the legacy HTTP default of `reasoning_depth=standard` for compatibility
+with existing direct HTTP callers.
 
 ## Historical HTTP Design Context
 
 Earlier drafts described an HTTP escape hatch where `Perplexity-Tools` would
-call `/ultrathink` and pass `reasoning_depth`. That design is retained as
-historical context only.
+call `/ultrathink` and pass `reasoning_depth`. That design now exists as an
+implemented backup method rather than a future-only note.
 
-- `reasoning_depth` belongs to that HTTP design, not the live PT request model.
-- `privacy_critical` explained why sensitive tasks should stay local, but it was
-  never implemented as a live PT request field in this checkout.
-
-If the HTTP bridge is restored later, treat it as a future backup path until
-its implementation, tests, and docs are synchronized in-repo.
+- `reasoning_depth` belongs to the backup HTTP design, not the live PT request
+  model.
+- `privacy_critical` explained why sensitive tasks should stay local, but it is
+  still not a live PT request field in this checkout.
+- PT continues to express primary routing intent through `task_type`, while the
+  backup HTTP server normalizes optional `optimize_for` into `reasoning_depth`.
 
 ## Version Compatibility
 

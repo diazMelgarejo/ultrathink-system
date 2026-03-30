@@ -13,11 +13,21 @@ This document lists architecture enhancements explicitly deferred from MVP to v1
 
 **v1.1 target:** MCP over stdio becomes an optional transport alongside HTTP. Both coexist; callers opt in to MCP when the environment supports it. HTTP bridge remains fully supported.
 
+### Implementation Order — Read Before Starting
+
+> **Start here (Tier 2) before PT builds Tier 1.**
+> Tier 1 (MCP client infrastructure in PT) is tracked in
+> [Perplexity-Tools/docs/ROADMAP_v1.1.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/ROADMAP_v1.1.md).
+>
+> **The HTTP bridge stays fully functional at every intermediate state.**
+> No feature breaks if this work is incomplete or abandoned mid-flight:
+> - Before Tier 2: PT's MCP client (if built) sees a stub response and falls back to HTTP automatically.
+> - After Tier 2, before Tier 1: Ollama pipeline runs in MCP server; HTTP bridge unchanged, still primary.
+> - After both tiers: PT tries MCP first, falls back to HTTP on any subprocess failure. HTTP is never removed.
+
 ### Required work:
 
 #### Tier 2 — MCP server pipeline (real Ollama backend, ultrathink-system side)
-> Tier 1 (MCP client infrastructure in PT) is tracked in Perplexity-Tools ROADMAP.
-> Implement Tier 2 here first so Tier 1 has a real backend to call.
 
 - [ ] Extract Ollama pipeline into `multi_agent/shared/ollama_client.py`
   - Move `_build_prompt()`, `_call_ollama()`, `_call_with_fallback()`, `_select_model()` out of `api_server.py`

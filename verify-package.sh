@@ -11,7 +11,7 @@ chk_d() { [ -d "$1" ] && echo -e "  ${GREEN}✓${RESET} $1/" || { echo -e "  ${R
 echo -e "${BOLD}🔍 ultrathink System — Package Integrity Check${RESET}\n"
 
 echo "📄 Root:";    chk_f LICENSE; chk_f README.md; chk_f CONTRIBUTING.md; chk_f CHANGELOG.md
-chk_f install-single-agent.sh; chk_f install-multi-agent.sh; chk_f verify-package.sh
+chk_f api_server.py; chk_f install-single-agent.sh; chk_f install-multi-agent.sh; chk_f verify-package.sh
 
 echo -e "\n📦 Single-agent:"; chk_f single_agent/SKILL.md; chk_f single_agent/README.md
 chk_d single_agent/references; chk_d single_agent/scripts; chk_d single_agent/templates
@@ -55,7 +55,7 @@ chk_f multi_agent/mcp_servers/agent_communication_server.py
 
 echo -e "\n📚 Examples:"; chk_d examples/financial-validator; chk_d examples/api-integration; chk_d examples/architecture-refactor
 echo -e "\n📖 Docs:";    chk_f docs/installation.md; chk_f docs/quick-start.md; chk_f docs/faq.md; chk_f docs/troubleshooting.md; chk_f docs/api-reference.md
-echo -e "\n🧪 Tests:";   chk_f tests/test_single_agent.py; chk_f tests/test_multi_agent.py; chk_f tests/test_orchestrator.py
+echo -e "\n🧪 Tests:";   chk_f tests/test_single_agent.py; chk_f tests/test_multi_agent.py; chk_f tests/test_orchestrator.py; chk_f tests/test_api_server.py
 
 echo ""
 if [ "$errors" -eq 0 ]; then

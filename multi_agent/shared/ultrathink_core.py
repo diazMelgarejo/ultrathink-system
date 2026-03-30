@@ -11,8 +11,14 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
+
+# ── Timestamp helpers ────────────────────────────────────────────────────────
+
+def _utc_now_iso() -> str:
+    """Return an ISO 8601 timestamp with an explicit UTC offset."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 # ── Enumerations ──────────────────────────────────────────────────────────────
@@ -55,7 +61,7 @@ class AgentMessage:
     payload:      dict[str, Any]
     trace_id:     str = field(default_factory=lambda: str(uuid.uuid4()))
     message_id:   str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp:    str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp:    str = field(default_factory=_utc_now_iso)
     priority:     str = "medium"  # high | medium | low
     metadata:     dict = field(default_factory=dict)
 
@@ -87,7 +93,7 @@ class TaskState:
     stage_outputs:     dict[str, Any] = field(default_factory=dict)
     agents_active:     list[dict] = field(default_factory=list)
     lessons_learned:   list[dict] = field(default_factory=list)
-    created_at:        str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at:        str = field(default_factory=_utc_now_iso)
     completed_at:      Optional[str] = None
 
     def needs_refinement(self) -> bool:

@@ -7,11 +7,11 @@ This document lists architecture enhancements explicitly deferred from MVP to v1
 
 ---
 
-## 1. MCP-First Transport (Option 1)
+## 1. MCP-Optional Transport (v1.1)
 
-**Current state (MVP):** PT calls ultrathink via HTTP bridge (`POST /ultrathink` on api_server.py port 8001). The bridge is always active when ModelRegistry selects an ultrathink route.
+**Current state (v1.0 RC):** PT calls ultrathink via HTTP bridge (`POST /ultrathink` on api_server.py port 8001). The HTTP bridge is the active v1.0 RC transport.
 
-**v1.1 target:** MCP over stdio becomes the primary transport. HTTP bridge becomes the true fallback.
+**v1.1 target:** MCP over stdio becomes an optional transport alongside HTTP. Both coexist; callers opt in to MCP when the environment supports it. HTTP bridge remains fully supported.
 
 ### Required work:
 - [ ] Flesh out MCP server stubs in `multi_agent/mcp_servers/ultrathink_orchestration_server.py`

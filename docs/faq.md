@@ -24,6 +24,12 @@ A: Normal Claude is reactive. ultrathink makes Claude systematic: always plans f
 **Q: Do I need Redis?**
 A: No. ultrathink-system is stateless and has no Redis dependency. The multi_agent subsystem uses in-memory state by default. Redis is a future Perplexity-Tools-only enhancement planned for multi-instance distributed deployments (v1.1+).
 
+**Q: Is the MCP transport live or a stub?**
+A: The MCP server (`multi_agent/mcp_servers/ultrathink_orchestration_server.py`) exists and handles JSON-RPC protocol correctly, but `_solve()` and `_delegate()` are stubs — they do not call Ollama or run the 5-stage pipeline. All v1.0 RC production traffic goes through the HTTP bridge (`POST /ultrathink`, port 8001). Full MCP-Optional transport is a v1.1 item: Tier 2 (implement real `_solve()` pipeline here) then Tier 1 (build MCP client in Perplexity-Tools). See [ROADMAP_v1.1.md](ROADMAP_v1.1.md).
+
+**Q: What is the recommended transport sequencing for MCP-Optional?**
+A: Implement Tier 2 (ultrathink-system server pipeline) before Tier 1 (PT client infrastructure). Reason: building the client without a real backend means every call falls back to HTTP anyway, making the client untestable end-to-end. Extract `multi_agent/shared/ollama_client.py` first, implement `_solve()` synchronously (returns full result inline — no polling loop), then build the PT subprocess client.
+
 ---
 
 ## Usage

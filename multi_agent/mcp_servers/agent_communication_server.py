@@ -3,7 +3,7 @@
 agent_communication_server.py
 ==============================
 MCP Server: ultrathink Agent-to-Agent Communication
-Version: 0.9.7.0 | License: Apache 2.0
+Version: 0.9.9.0 | License: Apache 2.0
 
 Provides direct inter-agent messaging tools for sub-agent delegation
 within the ultrathink network.
@@ -70,7 +70,7 @@ class AgentCommunicationServer:
             if method == "initialize":
                 result = {"protocolVersion": "2024-11-05",
                           "capabilities": {"tools": {}},
-                          "serverInfo": {"name": "agent-communication-server", "version": "0.9.7.0"}}
+                          "serverInfo": {"name": "agent-communication-server", "version": "0.9.9.0"}}
             elif method == "tools/list":
                 result = {"tools": TOOL_SCHEMAS}
             elif method == "tools/call":

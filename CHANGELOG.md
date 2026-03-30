@@ -6,6 +6,26 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [0.9.9.0] - 2026-03-30
+
+### Added
+- **v1.1+ Roadmap**: `docs/ROADMAP_v1.1.md` documenting deferred MCP-first transport and Redis coordination
+- **Bridge Contract**: `multi_agent/shared/bridge_contract.py` — shared mapping between MCP `optimize_for` and HTTP `reasoning_depth`
+
+### Changed
+- api_server.py hardened: OLLAMA_FALLBACK default corrected, duplicate lines removed, Pydantic validators tightened
+- Architecture documentation clarified: ultrathink is stateless, HTTP bridge is the MVP transport, MCP over stdio deferred to v1.1+
+
+### Fixed
+- Version alignment: all files synchronized to 0.9.9.0
+
+### Synced with Perplexity-Tools
+- Both repos synchronized to v0.9.9.0 [SYNC]
+- HTTP bridge made always-active in PT (opt-in flag removed) [SYNC]
+- MCP-first transport deferred to v1.1+ in both repos [SYNC]
+
+---
+
 ## [0.9.8.0] - 2026-03-29
 
 ### Security

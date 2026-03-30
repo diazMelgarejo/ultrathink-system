@@ -3,7 +3,7 @@
 state_manager.py
 ================
 Shared state persistence for the ultrathink multi_agent network.
-Version: 0.9.7.0 | License: Apache 2.0
+Version: 0.9.9.0 | License: Apache 2.0
 
 Provides a simple key-value store interface that can be backed by:
 - In-memory dict (development/testing)

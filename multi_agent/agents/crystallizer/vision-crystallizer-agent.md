@@ -1,7 +1,7 @@
 ---
 name: vision-crystallizer-agent
 description: Generates assumptions ledger, simplification story, and inevitability argument. Updates shared lessons database. Activates when orchestrator delegates crystallization stage.
-version: 0.9.7.0
+version: 0.9.9.0
 license: Apache 2.0
 compatibility: clawdbot, moltbot, openclaw
 allowed-tools: diagram-generator lessons-db documentation-writer

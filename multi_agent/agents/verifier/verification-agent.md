@@ -1,7 +1,7 @@
 ---
 name: verification-agent
 description: Comprehensive programmatic verification suite before any task completion. Blocks until PASS verdict. Activates when orchestrator delegates verification stage.
-version: 0.9.7.0
+version: 0.9.9.0
 license: Apache 2.0
 compatibility: clawdbot, moltbot, openclaw
 allowed-tools: test-runner diff-analyzer scenario-generator quality-gate-enforcer

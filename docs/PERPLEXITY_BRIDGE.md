@@ -1,6 +1,6 @@
 # Perplexity-Tools Bridge for UltraThink System
 
-## Version 0.9.7.0
+## Version 0.9.9.0
 
 ## Current Contract
 
@@ -99,7 +99,7 @@ implemented backup method rather than a future-only note.
 
 This bridge documentation assumes:
 
-- ultrathink-system >= v0.9.7.0
+- ultrathink-system >= v0.9.9.0
 - Perplexity-Tools >= v0.9.0.0
 - Python >= 3.8
 

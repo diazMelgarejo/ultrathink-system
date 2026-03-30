@@ -3,7 +3,7 @@
 message_bus.py
 ==============
 Async message bus for inter-agent communication.
-Version: 0.9.7.0 | License: Apache 2.0
+Version: 0.9.9.0 | License: Apache 2.0
 
 Supports:
 - In-memory asyncio queue (development/testing)

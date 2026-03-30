@@ -1,7 +1,7 @@
 ---
 name: ruthless-refiner-agent
 description: Eliminates all non-essential complexity from designs. Activates when elegance_score is below threshold or orchestrator delegates refinement stage.
-version: 0.9.7.0
+version: 0.9.9.0
 license: Apache 2.0
 compatibility: clawdbot, moltbot, openclaw
 allowed-tools: complexity-analyzer redundancy-detector rubric-evaluator simplification-suggester

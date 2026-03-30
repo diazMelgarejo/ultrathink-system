@@ -107,18 +107,26 @@ any MCP client will fall back to HTTP automatically.
 
 ### Implementation sequencing (Tier 2 before Tier 1)
 
-**Tier 2 (ultrathink-system first):** Extract Ollama pipeline into
-`multi_agent/shared/ollama_client.py`, then implement `_solve()` to call Ollama
-synchronously and return the full result inline — matching the HTTP synchronous
-contract, no polling loop needed.
+**Step 1 — Tier 2 (ultrathink-system, do this first):**
+Extract Ollama pipeline into `multi_agent/shared/ollama_client.py`, then implement
+`_solve()` to call Ollama synchronously and return the full result inline —
+matching the HTTP synchronous contract, no polling loop needed.
 
-**Tier 1 (Perplexity-Tools after):** Build `orchestrator/ultrathink_mcp_client.py`
-(subprocess lifecycle + JSON-RPC framing), add `call_ultrathink_mcp_or_bridge()`
-to `ultrathink_bridge.py` with HTTP fallback, expose `"transport": "mcp"` or
-`"transport": "http"` in the response envelope.
+**Step 2 — Tier 1 (Perplexity-Tools, do this after Tier 2 is merged):**
+Build `orchestrator/ultrathink_mcp_client.py` (subprocess lifecycle + JSON-RPC
+framing), add `call_ultrathink_mcp_or_bridge()` to `ultrathink_bridge.py` with
+HTTP fallback, expose `"transport": "mcp"` or `"transport": "http"` in the
+response envelope.
 
 **Why this order:** Tier 1 infrastructure without Tier 2 means every call falls
-back to HTTP anyway. Building the real backend first makes Tier 1 immediately testable.
+back to HTTP anyway — the client would be untestable end-to-end. Building the
+real server backend first makes Tier 1 immediately verifiable.
+
+**The HTTP bridge stays fully functional at every intermediate state.**
+Nothing breaks if work is paused or abandoned between tiers:
+- Before Tier 2: MCP client (if built early) detects stub response (`status: started`, no `result`) and falls back to HTTP automatically.
+- After Tier 2, before Tier 1: MCP server returns real results; HTTP bridge unchanged, still the active primary transport.
+- After both tiers: PT tries MCP first, falls back to HTTP on any subprocess failure. HTTP is never deprecated.
 
 ### Checklist links
 - Tier 1 TODO: [Perplexity-Tools/docs/ROADMAP_v1.1.md](../../perplexity-api/Perplexity-Tools/docs/ROADMAP_v1.1.md)

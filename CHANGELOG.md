@@ -6,6 +6,22 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0-rc] - 2026-03-30 [SYNC]
+
+### Changed
+- HTTP bridge (`POST /ultrathink`, `api_server.py`) confirmed as v1.0 RC primary transport.
+  Docs corrected across `PERPLEXITY_BRIDGE.md`, `SYNC_ANALYSIS.md`, `api-reference.md`,
+  `faq.md`, and `ROADMAP_v1.1.md` to reflect this.
+
+### Synced with Perplexity-Tools [SYNC]
+- PT added `orchestrator/ultrathink_mcp_client.py` (MCP-Optional Tier 1 client infrastructure)
+- PT async httpx fix: `httpx.post()` → `httpx.AsyncClient` in bridge wrapper
+- `"transport": "mcp" | "http"` key now surfaced in PT `/orchestrate` response
+- MCP `_solve()` remains a stub here — PT client detects stub and falls back to HTTP
+- Tier 2 (real `_solve()` pipeline) tracked in `docs/ROADMAP_v1.1.md`
+
+---
+
 ## [0.9.9.0] - 2026-03-30
 
 ### Added

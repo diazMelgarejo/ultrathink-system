@@ -2,7 +2,7 @@
 """
 test_api_server.py
 ==================
-Request/response tests for the backup HTTP bridge.
+Request/response tests for the HTTP bridge.
 """
 from __future__ import annotations
 
@@ -153,7 +153,7 @@ def test_http_bridge_honors_model_hint(monkeypatch):
     assert captured["model"] == "custom-model"
 
 
-def test_http_health_reports_backup_bridge(monkeypatch):
+def test_http_health_endpoint(monkeypatch):
     monkeypatch.setattr(api_server.httpx, "AsyncClient", _FakeAsyncClient)
 
     with TestClient(api_server.app, raise_server_exceptions=True) as client:
@@ -164,7 +164,9 @@ def test_http_health_reports_backup_bridge(monkeypatch):
     assert body["status"] == "ok"
     assert body["ollama_primary_reachable"] is True
     assert body["ollama_fallback_reachable"] is True
-    assert body["bridge_mode"] == "http_backup"
+    assert body["bridge_mode"] == "http_primary"
+    assert body["orchestrator"] == "mac-studio"
+    assert body["execution_target"] == "win-rtx3080"
     assert body["primary_contract"] == "mcp"
     assert body["mapping"] == {
         "reliability": "ultra",

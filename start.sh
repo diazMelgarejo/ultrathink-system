@@ -17,6 +17,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PT_DIR="$(cd "$SCRIPT_DIR/../perplexity-api/Perplexity-Tools" 2>/dev/null && pwd || echo "")"
 
+# Each service uses its own venv python if present, else falls back to active python
+PT_PYTHON="${PT_DIR}/.venv/bin/python"
+US_PYTHON="${SCRIPT_DIR}/.venv/bin/python"
+[ -x "$PT_PYTHON" ] || PT_PYTHON="$(which python)"
+[ -x "$US_PYTHON" ] || US_PYTHON="$(which python)"
+
 PT_PORT=${PT_PORT:-8000}
 US_PORT=${US_PORT:-8001}
 PORTAL_PORT=${PORTAL_PORT:-8002}
@@ -91,8 +97,7 @@ if [ -n "$PT_DIR" ] && [ -f "$PT_DIR/orchestrator.py" ]; then
     echo "  PT   :$PT_PORT already running"
   else
     echo "  PT   starting → $LOG_DIR/pt.log"
-    (cd "$PT_DIR" && PYTHONPATH="$PT_DIR" python -m uvicorn orchestrator:app \
-      --app-dir "$PT_DIR" \
+    (cd "$PT_DIR" && PYTHONPATH="$PT_DIR" "$PT_PYTHON" -m uvicorn orchestrator.fastapi_app:app \
       --host 0.0.0.0 --port "$PT_PORT" \
       >> "$LOG_DIR/pt.log" 2>&1) &
     wait_for_port "$PT_PORT" "PT"
@@ -106,8 +111,7 @@ if pid_on_port "$US_PORT" | grep -q .; then
   echo "  US   :$US_PORT already running"
 else
   echo "  US   starting → $LOG_DIR/us.log"
-  (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" python -m uvicorn api_server:app \
-    --app-dir "$SCRIPT_DIR" \
+  (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" "$US_PYTHON" -m uvicorn api_server:app \
     --host 0.0.0.0 --port "$US_PORT" \
     >> "$LOG_DIR/us.log" 2>&1) &
   wait_for_port "$US_PORT" "US"
@@ -118,8 +122,7 @@ if pid_on_port "$PORTAL_PORT" | grep -q .; then
   echo "  Portal :$PORTAL_PORT already running"
 else
   echo "  Portal starting → $LOG_DIR/portal.log"
-  (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" python -m uvicorn portal_server:app \
-    --app-dir "$SCRIPT_DIR" \
+  (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" "$US_PYTHON" -m uvicorn portal_server:app \
     --host 0.0.0.0 --port "$PORTAL_PORT" \
     >> "$LOG_DIR/portal.log" 2>&1) &
   wait_for_port "$PORTAL_PORT" "Portal"

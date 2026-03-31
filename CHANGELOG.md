@@ -6,6 +6,40 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
+## [1.0.0-rc] - 2026-03-31 [SYNC]
+
+### Added
+- `multi_agent/mcp_servers/lmstudio_bridge.py` — async httpx LM Studio client
+- `multi_agent/mcp_servers/lmstudio_mcp_server.py` — MCP stdio server:
+  `lmstudio_chat`, `lmstudio_list_models`, `lmstudio_orchestrate`, `lmstudio_health`
+- `portal_server.py` — LAN portal port 8002, slate-grey (#475569), white text
+- `multi_agent/config/mcp.json` — LM Studio plugin registration
+
+### Changed
+- `.env.example` — LM Studio vars + canonical model IDs documented
+
+### Architecture (v1.0 RC)
+- Mac = Orchestrator + Final Validator/Presenter (context=4096)
+- Windows = UltraThink Agent (all roles, sequential or 1-4 parallel)
+- Orchestration cycle: Mac dispatches → Win works → Mac validates →
+  optional cloud verify (online + budget) → Mac presents → repeat
+
+### Canonical Models [SYNC]
+- Win: Qwen3.5-27B Q4_K_M, GPU Offload=40, Context=16384
+  (also loadable in Ollama/koboldcpp — backend-agnostic GGUF)
+- Mac: Qwen3.5-9B-MLX-4bit, Metal full offload, Context=4096
+  (conservative, safe on M2 16GB; weights compatible with Ollama)
+
+---
+
+# Changelog
+
+All notable changes to ultrathink System are documented here.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+Versioning follows [Semantic Versioning](https://semver.org/).
+
+---
+
 ## [1.0-rc] - 2026-03-30 [SYNC]
 
 ### Changed

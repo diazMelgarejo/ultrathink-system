@@ -11,12 +11,19 @@ dependencies = [
     "fastapi>=0.109.0",
     "httpx>=0.26.0",
     "python-dotenv>=1.0.1",
-    "slowapi>=0.1.9",
+    "slowapi>=0.1.9,<0.2",
     "uvicorn>=0.27.0",
 ]
 
 [tool.uv]
 managed = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+    "ignore:There is no current event loop:DeprecationWarning",
+    "ignore::ResourceWarning",
+]
 
 [tool.hatch.build.targets.sdist]
 include = [

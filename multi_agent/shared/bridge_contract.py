@@ -30,6 +30,32 @@ REASONING_DEPTH_STEP_ESTIMATE = {
     "ultra": 384,
 }
 
+# Hardware profiles — must match the values PT's /reconcile endpoint expects.
+HARDWARE_PROFILE_WIN = "win-rtx3080"
+HARDWARE_PROFILE_MAC = "mac-studio"
+
+# Model-id prefix → hardware profile (used by US to tell PT which GPU it's targeting)
+_MODEL_PROFILE_PREFIXES: list[tuple[str, str]] = [
+    ("qwen3.5:35b", HARDWARE_PROFILE_WIN),
+    ("qwen3-coder", HARDWARE_PROFILE_WIN),
+    ("qwen3-30b",   HARDWARE_PROFILE_WIN),
+    ("qwen3.5-27b", HARDWARE_PROFILE_WIN),
+    ("qwen3.5-9b",  HARDWARE_PROFILE_MAC),
+    ("qwen3:8b",    HARDWARE_PROFILE_MAC),
+]
+
+
+def model_to_hardware_profile(model_id: str) -> str:
+    """
+    Return the hardware profile string for a given model ID.
+    Falls back to HARDWARE_PROFILE_WIN (the primary GPU node) if unknown.
+    """
+    lower = model_id.lower()
+    for prefix, profile in _MODEL_PROFILE_PREFIXES:
+        if lower.startswith(prefix):
+            return profile
+    return HARDWARE_PROFILE_WIN
+
 
 def optimize_for_to_reasoning_depth(optimize_for: OptimizeFor | str) -> str:
     key = optimize_for.value if isinstance(optimize_for, OptimizeFor) else str(optimize_for)

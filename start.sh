@@ -111,7 +111,11 @@ wait_for_port() {
   while ! nc -z localhost "$port" 2>/dev/null; do
     sleep 0.5; tries=$((tries+1))
     printf "."
-    if [ $tries -ge 40 ]; then echo " TIMEOUT"; return 1; fi
+    # 150 tries = 75s — enough to outlast slow first-start tasks (e.g. ECC sync ~60s)
+    if [ $tries -ge 150 ]; then
+      echo " TIMEOUT (check .logs/${label,,}.log)"
+      return 0  # non-fatal: continue starting remaining services
+    fi
   done
   echo " UP"
 }

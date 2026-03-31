@@ -12,9 +12,12 @@ Design principles
   .state/agents.json before calling this server.
 * Graceful degradation - if Ollama is unreachable the endpoint returns an
   error JSON with status="error"; PT then falls back to local models.
-* Hardware-agnostic by default - ultrathink does NOT detect hardware itself.
-  PT's hardware/SKILL.md owns model assignment per machine profile.
-  PT MAY pass model_hint in the request to override the default selection.
+* Mac is the default orchestrator originator: PT + US api_server both run on Mac.
+  All heavy reasoning roles (coder, checker, refiner, executor, verifier) are
+  dispatched to Windows (win-rtx3080, OLLAMA_PRIMARY) by default.
+  Mac (OLLAMA_FALLBACK) is used only when Windows is busy or unreachable,
+  or when the task is explicitly routed to mac-studio via model_hint or PT reconcile.
+* PT MAY pass model_hint to override the default Windows-first selection.
 """
 from __future__ import annotations
 
@@ -36,6 +39,7 @@ from multi_agent.shared.bridge_contract import (
     OPTIMIZE_FOR_TO_REASONING_DEPTH,
     optimize_for_to_reasoning_depth,
     reasoning_depth_to_optimize_for,
+    model_to_hardware_profile,
 )
 
 load_dotenv()
@@ -53,6 +57,11 @@ CODE_MODEL = os.getenv("CODE_MODEL", "qwen3-coder:14b")
 
 _raw_timeout = int(os.getenv("OLLAMA_TIMEOUT", "120"))
 OLLAMA_TIMEOUT = max(1, min(_raw_timeout, 600))
+
+# PT reconcile endpoint — US calls this before spawning to check GPU contention.
+# If PT is unreachable the call is skipped (graceful degradation).
+PT_ENDPOINT = os.getenv("PERPLEXITY_ENDPOINT", "http://localhost:8000")
+PT_RECONCILE_TIMEOUT = float(os.getenv("PT_RECONCILE_TIMEOUT", "3"))
 
 VERSION = "0.9.9.0"
 
@@ -127,6 +136,8 @@ class HealthResponse(BaseModel):
     ollama_fallback_reachable: bool
     models: Dict[str, str]
     bridge_mode: str
+    orchestrator: str
+    execution_target: str
     primary_contract: str
     http_endpoint: str
     mapping: Dict[str, str]
@@ -205,6 +216,44 @@ async def _call_ollama(prompt: str, model: str, endpoint: str, max_tokens: int, 
         return data.get("response", "")
 
 
+async def _reconcile_with_pt(session_id: str, model_id: str) -> tuple[bool, Optional[str]]:
+    """
+    Call PT /reconcile before spawning a GPU session.
+    Returns (approved, suggested_model_or_None).
+    Gracefully skips (approved=True) if PT is unreachable — US stays stateless.
+    """
+    hardware_profile = model_to_hardware_profile(model_id)
+    payload = {
+        "session_id": session_id,
+        "model_id": model_id,
+        "hardware_profile": hardware_profile,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=PT_RECONCILE_TIMEOUT) as client:
+            resp = await client.post(
+                f"{PT_ENDPOINT.rstrip('/')}/reconcile", json=payload
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            approved: bool = data.get("approved", True)
+            suggested: Optional[str] = data.get("suggested_model")
+            if not approved:
+                log.warning(
+                    "PT reconcile denied session=%s model=%s profile=%s reason=%s suggested=%s",
+                    session_id, model_id, hardware_profile,
+                    data.get("reason", ""), suggested,
+                )
+            else:
+                log.info(
+                    "PT reconcile approved session=%s model=%s profile=%s",
+                    session_id, model_id, hardware_profile,
+                )
+            return approved, suggested
+    except Exception as exc:
+        log.debug("PT reconcile unreachable (%s); proceeding without contention check", exc)
+        return True, None
+
+
 async def _call_with_fallback(prompt: str, model: str, max_tokens: int, temperature: float) -> tuple[str, str]:
     """Try primary Ollama endpoint; fall back to secondary."""
     for endpoint in [OLLAMA_PRIMARY, OLLAMA_FALLBACK]:
@@ -243,7 +292,9 @@ async def health(request: Request):
             "fast": FAST_MODEL,
             "code": CODE_MODEL,
         },
-        bridge_mode="http_backup",
+        bridge_mode="http_primary",
+        orchestrator="mac-studio",
+        execution_target="win-rtx3080",
         primary_contract="mcp",
         http_endpoint="/ultrathink",
         mapping=OPTIMIZE_FOR_TO_REASONING_DEPTH,
@@ -254,18 +305,31 @@ async def health(request: Request):
 @limiter.limit("20/minute")
 async def ultrathink(req: UltraThinkRequest, request: Request):
     """Deep-reasoning endpoint called by Perplexity-Tools orchestrator."""
+    import uuid
     started_at = time.monotonic()
     reasoning_depth, optimize_for, mapping_source = _resolve_contract_fields(req)
     model = _select_model(req.task_type, reasoning_depth, req.model_hint)
+
+    # Close the loop: ask PT to check GPU contention before we spawn.
+    # PT may redirect to a lighter model (e.g. mac-studio) if win-rtx3080 is busy.
+    session_id = str(uuid.uuid4())
+    approved, suggested_model = await _reconcile_with_pt(session_id, model)
+    if not approved and suggested_model:
+        log.info("PT redirected model %s → %s", model, suggested_model)
+        model = suggested_model
+    elif not approved:
+        raise HTTPException(status_code=503, detail="GPU contention — PT reconcile denied, no fallback model provided")
+
     prompt = _build_prompt(req, reasoning_depth)
 
     log.info(
-        "ultrathink | depth=%s task_type=%s model=%s hint=%s tokens=%d mapping=%s",
+        "ultrathink | depth=%s task_type=%s model=%s hint=%s tokens=%d mapping=%s session=%s",
         reasoning_depth,
         req.task_type,
         model,
         req.model_hint or "none",
         req.max_tokens,
+        session_id,
         mapping_source,
     )
     try:
@@ -287,6 +351,9 @@ async def ultrathink(req: UltraThinkRequest, request: Request):
         metadata={
             "prompt_chars": len(prompt),
             "model_hint_used": req.model_hint is not None,
+            "reconcile_session_id": session_id,
+            "reconcile_approved": approved,
+            "reconcile_redirected": suggested_model is not None and not approved is False,
             "bridge_mode": "http_backup",
             "primary_contract": "mcp",
             "mapped_optimize_for": optimize_for,

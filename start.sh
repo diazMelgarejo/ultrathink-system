@@ -85,9 +85,9 @@ if [ ! -f "$PATHS_FILE" ] || [[ "${1:-}" == "--discover" ]]; then
 # Edit to override. See .paths.example for documentation.
 # Regenerate: rm .paths && ./start.sh
 
-PT_DIR=${PT_DIR}
-PT_PYTHON=${PT_PYTHON}
-US_PYTHON=${US_PYTHON}
+PT_DIR="${PT_DIR}"
+PT_PYTHON="${PT_PYTHON}"
+US_PYTHON="${US_PYTHON}"
 PATHSEOF
   echo "  Paths written to .paths (gitignored)"
   [[ "${1:-}" == "--discover" ]] && exit 0

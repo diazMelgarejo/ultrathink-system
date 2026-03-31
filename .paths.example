@@ -10,6 +10,7 @@
 #   - US_PYTHON: python binary with US's deps installed (its .venv preferred)
 #   - All paths are absolute. Env vars and ~ are NOT expanded here.
 
-# PT_DIR=/Users/you/projects/Perplexity-Tools
-# PT_PYTHON=/Users/you/projects/Perplexity-Tools/.venv/bin/python
-# US_PYTHON=/Users/you/projects/ultrathink-system/.venv/bin/python
+# Quote paths that contain spaces (common on macOS with "Terminal xCode" etc.)
+# PT_DIR="/Users/you/projects/Perplexity-Tools"
+# PT_PYTHON="/Users/you/projects/Perplexity-Tools/.venv/bin/python"
+# US_PYTHON="/Users/you/projects/ultrathink-system/.venv/bin/python"

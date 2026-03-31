@@ -35,7 +35,7 @@ wait_for_port() {
   while ! nc -z localhost "$port" 2>/dev/null; do
     sleep 0.5; tries=$((tries+1))
     printf "."
-    if [ $tries -ge 20 ]; then echo " TIMEOUT"; return 1; fi
+    if [ $tries -ge 40 ]; then echo " TIMEOUT"; return 1; fi
   done
   echo " UP"
 }
@@ -91,7 +91,8 @@ if [ -n "$PT_DIR" ] && [ -f "$PT_DIR/orchestrator.py" ]; then
     echo "  PT   :$PT_PORT already running"
   else
     echo "  PT   starting → $LOG_DIR/pt.log"
-    (cd "$PT_DIR" && python -m uvicorn orchestrator:app \
+    (cd "$PT_DIR" && PYTHONPATH="$PT_DIR" python -m uvicorn orchestrator:app \
+      --app-dir "$PT_DIR" \
       --host 0.0.0.0 --port "$PT_PORT" \
       >> "$LOG_DIR/pt.log" 2>&1) &
     wait_for_port "$PT_PORT" "PT"
@@ -105,7 +106,8 @@ if pid_on_port "$US_PORT" | grep -q .; then
   echo "  US   :$US_PORT already running"
 else
   echo "  US   starting → $LOG_DIR/us.log"
-  (cd "$SCRIPT_DIR" && python -m uvicorn api_server:app \
+  (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" python -m uvicorn api_server:app \
+    --app-dir "$SCRIPT_DIR" \
     --host 0.0.0.0 --port "$US_PORT" \
     >> "$LOG_DIR/us.log" 2>&1) &
   wait_for_port "$US_PORT" "US"
@@ -116,7 +118,8 @@ if pid_on_port "$PORTAL_PORT" | grep -q .; then
   echo "  Portal :$PORTAL_PORT already running"
 else
   echo "  Portal starting → $LOG_DIR/portal.log"
-  (cd "$SCRIPT_DIR" && python -m uvicorn portal_server:app \
+  (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" python -m uvicorn portal_server:app \
+    --app-dir "$SCRIPT_DIR" \
     --host 0.0.0.0 --port "$PORTAL_PORT" \
     >> "$LOG_DIR/portal.log" 2>&1) &
   wait_for_port "$PORTAL_PORT" "Portal"

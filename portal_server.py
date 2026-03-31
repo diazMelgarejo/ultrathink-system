@@ -147,33 +147,80 @@ async def root():
     """LAN dashboard HTML."""
     status = await api_status()
 
-    # Helper to render service status
-    def service_badge(service_data):
-        if isinstance(service_data, list):
-            # lmstudio_win is array
-            badges = ""
-            for item in service_data:
+    ROLE_LABELS = {
+        "perplexity_tools": ("PT", "router · budget gatekeeper · lifecycle owner"),
+        "ultrathink":       ("US", "reasoning executor · stateless · 5-stage pipeline"),
+        "lmstudio_mac":     ("MAC", "orchestrator · validator · Qwen3.5-9B-MLX-4bit · ctx 4096"),
+        "lmstudio_win":     ("WIN", "agent(s) · coder/checker/refiner/executor/verifier · ctx 16384"),
+        "ollama_mac":       ("MAC", "Ollama fallback · execution target when Win busy"),
+        "ollama_win":       ("WIN", "Ollama primary · default execution target · win-rtx3080"),
+    }
+
+    def render_card(name, data):
+        tag, role_text = ROLE_LABELS.get(name, ("", ""))
+        tag_html = f'<span class="tag">{tag}</span>' if tag else ""
+
+        if isinstance(data, list):
+            dots = ""
+            eps = ""
+            for item in data:
                 ok = item.get("ok", False)
-                color = "#4ade80" if ok else "#f87171"
+                dot_color = "#a3e635" if ok else "#f87171"
                 ep = item.get("endpoint", "?")
-                badges += f'<span style="color:{color};">● {ep}</span> '
-            return badges
+                dots += f'<span style="color:{dot_color};font-size:1.1rem;">●</span> '
+                eps += f'<code style="font-size:0.78rem;">{ep}</code> '
+            status_html = f'<span>{dots}</span><span style="color:#94a3b8;font-size:0.8rem;">{eps}</span>'
         else:
-            ok = service_data.get("ok", False)
-            color = "#4ade80" if ok else "#f87171"
-            return f'<span style="color:{color};">●</span> {ok}'
+            ok = data.get("ok", False)
+            dot_color = "#a3e635" if ok else "#f87171"
+            state = "UP" if ok else "DOWN"
+            ep = data.get("endpoint", "")
+            ver = data.get("version", "")
+            models = data.get("models", [])
+            detail_parts = []
+            if ep:
+                detail_parts.append(f'<code style="font-size:0.78rem;">{ep}</code>')
+            if ver:
+                detail_parts.append(f'<span style="color:#94a3b8;font-size:0.78rem;">v{ver}</span>')
+            if models:
+                m_str = ", ".join(str(m) for m in models[:2])
+                detail_parts.append(f'<span style="color:#94a3b8;font-size:0.75rem;">[{m_str}]</span>')
+            detail_html = " &nbsp; ".join(detail_parts)
+            status_html = (
+                f'<span style="color:{dot_color};font-size:1.1rem;">●</span>'
+                f'<span style="margin-left:0.4rem;font-weight:bold;">{state}</span>'
+                f'<span style="margin-left:0.8rem;">{detail_html}</span>'
+            )
+
+        return (
+            f'<div class="card">'
+            f'  <div class="card-left">'
+            f'    {tag_html}'
+            f'    <span class="svc-name">{name}</span>'
+            f'    <span class="role">{role_text}</span>'
+            f'  </div>'
+            f'  <div class="card-right">{status_html}</div>'
+            f'</div>'
+        )
 
     services_html = ""
     for name, data in status["services"].items():
-        badge = service_badge(data)
-        services_html += f'<div class="card"><strong>{name}</strong> {badge}</div>'
+        services_html += render_card(name, data)
 
-    # Default model hint (qwen3.5:35b-a3b-q4_K_M) + LAN agents link
     agents_hint = (
-        '<div class="card" style="font-size:0.85rem;color:#94a3b8;">'
-        '<span>Default agent model: <code>qwen3.5:35b-a3b-q4_K_M</code> (Ollama shared)</span>'
-        '&nbsp;·&nbsp;'
-        '<a href="/api/lan-agents" style="color:#93c5fd;">Discover LAN agents ↗</a>'
+        '<div class="card hint-card">'
+        '  <div class="card-left">'
+        '    <span class="tag" style="background:#1e293b;">CFG</span>'
+        '    <span class="svc-name">default model</span>'
+        '    <span class="role">Ollama shared · all roles unless overridden</span>'
+        '  </div>'
+        '  <div class="card-right">'
+        '    <code style="font-size:0.82rem;">qwen3.5:35b-a3b-q4&#95;K&#95;M</code>'
+        '    &nbsp;·&nbsp;'
+        '    <a href="/api/lan-agents" style="color:#7dd3fc;font-size:0.82rem;">discover LAN agents ↗</a>'
+        '    &nbsp;·&nbsp;'
+        '    <a href="/api/status" style="color:#7dd3fc;font-size:0.82rem;">JSON ↗</a>'
+        '  </div>'
         '</div>'
     )
 
@@ -186,57 +233,108 @@ async def root():
         <meta http-equiv="refresh" content="10">
         <title>ultrathink Portal v1.0 RC</title>
         <style>
+            *, *::before, *::after {{ box-sizing: border-box; }}
             body {{
-                background: #475569;
-                color: #f8fafc;
+                background: #6b7280;
+                color: #f5f5f0;
                 font-family: 'Courier New', monospace;
                 margin: 0;
-                padding: 2rem;
-                line-height: 1.6;
+                padding: 2rem 1rem;
+                line-height: 1.5;
+                font-size: 0.9rem;
             }}
-            .container {{
-                max-width: 800px;
-                margin: 0 auto;
-            }}
+            .container {{ max-width: 860px; margin: 0 auto; }}
             h1 {{
-                margin-top: 0;
-                font-size: 1.5rem;
-                border-bottom: 1px solid #64748b;
-                padding-bottom: 1rem;
+                margin: 0 0 0.25rem 0;
+                font-size: 1.2rem;
+                font-weight: normal;
+                letter-spacing: 0.05em;
+                color: #f5f5f0;
+            }}
+            .subtitle {{
+                font-size: 0.78rem;
+                color: #d1d5db;
+                margin-bottom: 1.5rem;
+                border-bottom: 1px solid #9ca3af;
+                padding-bottom: 0.75rem;
+            }}
+            .section-label {{
+                font-size: 0.72rem;
+                text-transform: uppercase;
+                letter-spacing: 0.1em;
+                color: #d1d5db;
+                margin: 1.2rem 0 0.4rem 0;
             }}
             .card {{
-                background: #334155;
-                border: 1px solid #64748b;
-                padding: 1rem;
-                margin: 0.5rem 0;
-                border-radius: 4px;
+                background: #4b5563;
+                border: 1px solid #9ca3af;
+                padding: 0.6rem 0.9rem;
+                margin: 0.3rem 0;
+                border-radius: 3px;
                 display: flex;
                 justify-content: space-between;
                 align-items: center;
+                gap: 1rem;
             }}
-            .ok {{ color: #4ade80; }}
-            .err {{ color: #f87171; }}
-            .role {{ color: #94a3b8; font-size: 0.85rem; }}
+            .hint-card {{ background: #374151; border-color: #6b7280; }}
+            .card-left {{
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+                flex-wrap: wrap;
+                min-width: 0;
+            }}
+            .card-right {{
+                display: flex;
+                align-items: center;
+                gap: 0.4rem;
+                flex-shrink: 0;
+                flex-wrap: wrap;
+            }}
+            .tag {{
+                background: #374151;
+                color: #d1d5db;
+                font-size: 0.68rem;
+                padding: 0.1rem 0.4rem;
+                border-radius: 2px;
+                letter-spacing: 0.08em;
+                border: 1px solid #6b7280;
+            }}
+            .svc-name {{ font-weight: bold; color: #f5f5f0; }}
+            .role {{ color: #d1d5db; font-size: 0.75rem; }}
             .timestamp {{
-                margin-top: 2rem;
-                font-size: 0.85rem;
-                color: #94a3b8;
-                border-top: 1px solid #64748b;
-                padding-top: 1rem;
+                margin-top: 1.5rem;
+                font-size: 0.75rem;
+                color: #d1d5db;
+                border-top: 1px solid #9ca3af;
+                padding-top: 0.75rem;
             }}
+            a {{ color: #7dd3fc; text-decoration: none; }}
+            a:hover {{ text-decoration: underline; }}
+            code {{ color: #e2e8f0; }}
         </style>
     </head>
     <body>
         <div class="container">
-            <h1>ultrathink Portal v1.0 RC</h1>
-            <p>Orchestrator: <span class="role">Mac Studio</span></p>
-            <div>
-                {services_html}
-                {agents_hint}
+            <h1>ultrathink · v1.0 RC</h1>
+            <div class="subtitle">
+                orchestrator: <strong>mac-studio</strong>
+                &nbsp;·&nbsp;
+                execution: <strong>win-rtx3080</strong> (primary) / mac-studio (fallback)
+                &nbsp;·&nbsp;
+                <a href="/api/status">JSON status</a>
+                &nbsp;·&nbsp;
+                <a href="/api/lan-agents">LAN scan</a>
             </div>
+
+            <div class="section-label">services</div>
+            {services_html}
+
+            <div class="section-label">config</div>
+            {agents_hint}
+
             <div class="timestamp">
-                Last updated: {status['timestamp']}<br>
-                (Auto-refresh: 10s)
+                {status['timestamp']} UTC &nbsp;·&nbsp; auto-refresh 10s
             </div>
         </div>
     </body>

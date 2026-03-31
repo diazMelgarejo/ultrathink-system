@@ -12,9 +12,12 @@ Design principles
   .state/agents.json before calling this server.
 * Graceful degradation - if Ollama is unreachable the endpoint returns an
   error JSON with status="error"; PT then falls back to local models.
-* Hardware-agnostic by default - ultrathink does NOT detect hardware itself.
-  PT's hardware/SKILL.md owns model assignment per machine profile.
-  PT MAY pass model_hint in the request to override the default selection.
+* Mac is the default orchestrator originator: PT + US api_server both run on Mac.
+  All heavy reasoning roles (coder, checker, refiner, executor, verifier) are
+  dispatched to Windows (win-rtx3080, OLLAMA_PRIMARY) by default.
+  Mac (OLLAMA_FALLBACK) is used only when Windows is busy or unreachable,
+  or when the task is explicitly routed to mac-studio via model_hint or PT reconcile.
+* PT MAY pass model_hint to override the default Windows-first selection.
 """
 from __future__ import annotations
 
@@ -133,6 +136,8 @@ class HealthResponse(BaseModel):
     ollama_fallback_reachable: bool
     models: Dict[str, str]
     bridge_mode: str
+    orchestrator: str
+    execution_target: str
     primary_contract: str
     http_endpoint: str
     mapping: Dict[str, str]
@@ -287,7 +292,9 @@ async def health(request: Request):
             "fast": FAST_MODEL,
             "code": CODE_MODEL,
         },
-        bridge_mode="http_backup",
+        bridge_mode="http_primary",
+        orchestrator="mac-studio",
+        execution_target="win-rtx3080",
         primary_contract="mcp",
         http_endpoint="/ultrathink",
         mapping=OPTIMIZE_FOR_TO_REASONING_DEPTH,

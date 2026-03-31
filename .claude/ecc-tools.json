@@ -159,12 +159,12 @@
     {
       "moduleId": "runtime-core",
       "path": ".claude/skills/ultrathink-system/SKILL.md",
-      "description": "Repository-specific Claude Code skill generated from git history. References mother skill single_agent/SKILL.md (v0.9.8.0)."
+      "description": "Repository-specific Claude Code skill generated from git history. References mother skill single_agent/SKILL.md (v0.9.9.0)."
     },
     {
       "moduleId": "runtime-core",
       "path": ".agents/skills/ultrathink-system/SKILL.md",
-      "description": "Codex-facing copy of the generated repository skill. References mother skill single_agent/SKILL.md (v0.9.8.0)."
+      "description": "Codex-facing copy of the generated repository skill. References mother skill single_agent/SKILL.md (v0.9.9.0)."
     },
     {
       "moduleId": "runtime-core",

@@ -1,0 +1,15 @@
+# .paths — machine-local path configuration for ultrathink start.sh
+# This file is gitignored. Copy to .paths and edit for your install.
+# Auto-generated on first ./start.sh run using git-based discovery.
+#
+# Regenerate: rm .paths && ./start.sh --discover
+#
+# Rules:
+#   - PT_DIR:    directory containing orchestrator/fastapi_app.py
+#   - PT_PYTHON: python binary with PT's deps installed (its .venv preferred)
+#   - US_PYTHON: python binary with US's deps installed (its .venv preferred)
+#   - All paths are absolute. Env vars and ~ are NOT expanded here.
+
+# PT_DIR=/Users/you/projects/Perplexity-Tools
+# PT_PYTHON=/Users/you/projects/Perplexity-Tools/.venv/bin/python
+# US_PYTHON=/Users/you/projects/ultrathink-system/.venv/bin/python

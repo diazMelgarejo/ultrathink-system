@@ -30,7 +30,10 @@ class _FakeAsyncClient:
     async def __aexit__(self, exc_type, exc, tb):
         return False
 
-    async def get(self, url: str):
+    async def get(self, url: str, **kwargs):
+        return _FakeHTTPResponse(200)
+
+    async def post(self, url: str, **kwargs):
         return _FakeHTTPResponse(200)
 
 
@@ -74,7 +77,7 @@ def test_http_bridge_maps_optimize_for_to_reasoning_depth(monkeypatch):
     assert body["model_used"] == api_server.DEFAULT_MODEL
     assert body["metadata"]["mapped_optimize_for"] == "reliability"
     assert body["metadata"]["mapping_source"] == "optimize_for"
-    assert body["metadata"]["bridge_mode"] == "http_backup"
+    assert body["metadata"]["bridge_mode"] == "http_primary"
     assert "ultra-depth reasoning" in captured["prompt"]
 
 
@@ -162,12 +165,14 @@ def test_http_health_endpoint(monkeypatch):
     assert response.status_code == 200
     body = response.json()
     assert body["status"] == "ok"
+    assert body["lmstudio_win_reachable"] is True
+    assert body["lmstudio_mac_reachable"] is True
     assert body["ollama_primary_reachable"] is True
     assert body["ollama_fallback_reachable"] is True
     assert body["bridge_mode"] == "http_primary"
     assert body["orchestrator"] == "mac-studio"
     assert body["execution_target"] == "win-rtx3080"
-    assert body["primary_contract"] == "mcp"
+    assert body["primary_contract"] == "lmstudio"
     assert body["mapping"] == {
         "reliability": "ultra",
         "creativity": "deep",

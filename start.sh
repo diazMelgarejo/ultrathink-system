@@ -101,6 +101,61 @@ PORTAL_URL="http://localhost:${PORTAL_PORT}"
 LOG_DIR="$SCRIPT_DIR/.logs"
 mkdir -p "$LOG_DIR"
 
+# ── IP auto-detection ─────────────────────────────────────────────────────────
+# Detect real LAN IPs via network_autoconfig.py (netifaces-backed).
+# Sets MAC_IP and WIN_IP, then exports the env vars all services read.
+# Already-set env vars (e.g. from .env) are preserved — detection only fills gaps.
+
+_detect_ips() {
+  "$US_PYTHON" - << 'PYEOF'
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else '.')
+try:
+    from network_autoconfig import NetworkAutoConfig
+    cfg = NetworkAutoConfig()
+    mac_ip = cfg.get_working_local_ip()   # runs on Mac — this IS the Mac
+    import platform
+    win_fallback = cfg.preferred_ips.get('Windows', '192.168.254.101')
+    print(f"MAC_IP={mac_ip}")
+    print(f"WIN_IP={win_fallback}")
+except Exception as e:
+    print(f"MAC_IP=192.168.254.105")
+    print(f"WIN_IP=192.168.254.101")
+PYEOF
+}
+
+# Run detection inside the US venv so netifaces is available
+_IP_VARS="$(cd "$SCRIPT_DIR" && "$US_PYTHON" -c "
+import sys, io, contextlib
+sys.path.insert(0, '.')
+try:
+    from network_autoconfig import NetworkAutoConfig
+    cfg = NetworkAutoConfig()
+    # suppress print() calls inside get_working_local_ip
+    with contextlib.redirect_stdout(io.StringIO()):
+        mac_ip = cfg.get_working_local_ip()
+    win_ip = cfg.preferred_ips.get('Windows', '192.168.254.101')
+    print('MAC_IP=' + mac_ip)
+    print('WIN_IP=' + win_ip)
+except Exception:
+    print('MAC_IP=192.168.254.105')
+    print('WIN_IP=192.168.254.101')
+" 2>/dev/null)"
+
+eval "$_IP_VARS"
+MAC_IP="${MAC_IP:-192.168.254.105}"
+WIN_IP="${WIN_IP:-192.168.254.101}"
+
+# Export as the env vars all services read — only if not already set by user
+export OLLAMA_MAC_ENDPOINT="${OLLAMA_MAC_ENDPOINT:-http://${MAC_IP}:11434}"
+export OLLAMA_WINDOWS_ENDPOINT="${OLLAMA_WINDOWS_ENDPOINT:-http://${WIN_IP}:11434}"
+export LM_STUDIO_MAC_ENDPOINT="${LM_STUDIO_MAC_ENDPOINT:-http://${MAC_IP}:1234}"
+export LM_STUDIO_WIN_ENDPOINTS="${LM_STUDIO_WIN_ENDPOINTS:-http://${WIN_IP}:1234}"
+export WINDOWS_IP="${WINDOWS_IP:-${WIN_IP}}"
+export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
+
+echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 pid_on_port() { lsof -ti "tcp:$1" 2>/dev/null | head -1 || true; }

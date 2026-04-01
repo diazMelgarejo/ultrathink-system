@@ -10,21 +10,23 @@ Design principles
 * This server is the active HTTP bridge for v1.0 RC (not a backup — it is the transport).
 * Stateless - no agent registry, no Redis. PT owns lifecycle/dedup via
   .state/agents.json before calling this server.
-* Graceful degradation - if Ollama is unreachable the endpoint returns an
+* Graceful degradation - if all backends are unreachable the endpoint returns an
   error JSON with status="error"; PT then falls back to local models.
 * Mac is the default orchestrator originator: PT + US api_server both run on Mac.
   All heavy reasoning roles (coder, checker, refiner, executor, verifier) are
-  dispatched to Windows (win-rtx3080, OLLAMA_PRIMARY) by default.
-  Mac (OLLAMA_FALLBACK) is used only when Windows is busy or unreachable,
+  dispatched to Windows (LM Studio Win or OLLAMA_PRIMARY) by default.
+  Mac (LM Studio Mac or OLLAMA_FALLBACK) is used only when Windows is busy or unreachable,
   or when the task is explicitly routed to mac-studio via model_hint or PT reconcile.
 * PT MAY pass model_hint to override the default Windows-first selection.
+* Backend priority: LM Studio Win → LM Studio Mac → Ollama Win → Ollama Mac.
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import httpx
 from dotenv import load_dotenv
@@ -63,7 +65,21 @@ OLLAMA_TIMEOUT = max(1, min(_raw_timeout, 600))
 PT_ENDPOINT = os.getenv("PERPLEXITY_ENDPOINT", "http://localhost:8000")
 PT_RECONCILE_TIMEOUT = float(os.getenv("PT_RECONCILE_TIMEOUT", "3"))
 
-VERSION = "0.9.9.0"
+# ── LM Studio (v1.0 RC primary backend) ──────────────────────────────────────
+LMS_WIN_ENDPOINTS: List[str] = [
+    ep.strip()
+    for ep in os.getenv("LM_STUDIO_WIN_ENDPOINTS", "http://192.168.1.100:1234").split(",")
+    if ep.strip()
+]
+LMS_MAC_ENDPOINT: str = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://localhost:1234")
+LMS_API_TOKEN: str = os.getenv("LM_STUDIO_API_TOKEN", "")
+LMS_WIN_MODEL: str = os.getenv("LMS_WIN_MODEL", "Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2")
+LMS_MAC_MODEL: str = os.getenv("LMS_MAC_MODEL", "Qwen3.5-9B-MLX-4bit")
+LMS_MAC_CONTEXT: int = int(os.getenv("LMS_MAC_CONTEXT", "4096"))
+_raw_lms_timeout = int(os.getenv("LM_STUDIO_TIMEOUT", "120"))
+LMS_TIMEOUT: float = max(1, min(_raw_lms_timeout, 600))
+
+VERSION = "1.0.0-rc"
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("ultrathink.api")
@@ -74,7 +90,7 @@ app = FastAPI(
     title="UltraThink API",
     version=VERSION,
     description=(
-        "Backup compatibility HTTP bridge for Perplexity-Tools. "
+        "HTTP bridge for Perplexity-Tools. "
         "HTTP bridge is the v1.0 RC transport. MCP-optional planned for v1.1+."
     ),
 )
@@ -132,6 +148,9 @@ class UltraThinkResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     version: str
+    lmstudio_win_reachable: bool
+    lmstudio_win_count: int
+    lmstudio_mac_reachable: bool
     ollama_primary_reachable: bool
     ollama_fallback_reachable: bool
     models: Dict[str, str]
@@ -162,7 +181,7 @@ def _resolve_contract_fields(req: UltraThinkRequest) -> tuple[str, str, str]:
 
 
 def _select_model(task_type: str, reasoning_depth: str, model_hint: Optional[str] = None) -> str:
-    """Pick the best local Ollama model for this task."""
+    """Pick the best local model for this task."""
     if model_hint:
         log.info("_select_model: using PT model_hint=%s", model_hint)
         return model_hint
@@ -216,6 +235,22 @@ async def _call_ollama(prompt: str, model: str, endpoint: str, max_tokens: int, 
         return data.get("response", "")
 
 
+async def _call_lmstudio(prompt: str, model: str, endpoint: str, max_tokens: int) -> str:
+    """POST to LM Studio /api/v1/chat; extract first message-type content."""
+    headers = {"Content-Type": "application/json"}
+    if LMS_API_TOKEN:
+        headers["Authorization"] = f"Bearer {LMS_API_TOKEN}"
+    payload: Dict[str, Any] = {"model": model, "input": prompt, "context_length": max_tokens}
+    async with httpx.AsyncClient(timeout=LMS_TIMEOUT) as client:
+        resp = await client.post(f"{endpoint}/api/v1/chat", json=payload, headers=headers)
+        resp.raise_for_status()
+        output = resp.json().get("output", [])
+    for item in output:
+        if item.get("type") == "message":
+            return item.get("content", "")
+    return " ".join(item.get("content", "") for item in output if item.get("content"))
+
+
 async def _reconcile_with_pt(session_id: str, model_id: str) -> tuple[bool, Optional[str]]:
     """
     Call PT /reconcile before spawning a GPU session.
@@ -255,39 +290,68 @@ async def _reconcile_with_pt(session_id: str, model_id: str) -> tuple[bool, Opti
 
 
 async def _call_with_fallback(prompt: str, model: str, max_tokens: int, temperature: float) -> tuple[str, str]:
-    """Try primary Ollama endpoint; fall back to secondary."""
+    """Try LM Studio Win → LM Studio Mac → Ollama primary → Ollama fallback."""
+    for ep in LMS_WIN_ENDPOINTS:
+        try:
+            text = await _call_lmstudio(prompt, LMS_WIN_MODEL, ep, max_tokens)
+            return text, ep
+        except Exception as exc:
+            log.warning("LM Studio Win %s failed: %s", ep, exc)
+    try:
+        text = await _call_lmstudio(prompt, LMS_MAC_MODEL, LMS_MAC_ENDPOINT, min(max_tokens, LMS_MAC_CONTEXT))
+        return text, LMS_MAC_ENDPOINT
+    except Exception as exc:
+        log.warning("LM Studio Mac failed: %s", exc)
     for endpoint in [OLLAMA_PRIMARY, OLLAMA_FALLBACK]:
         try:
             text = await _call_ollama(prompt, model, endpoint, max_tokens, temperature)
             return text, endpoint
         except Exception as exc:
             log.warning("Ollama endpoint %s failed: %s", endpoint, exc)
-    raise RuntimeError("All Ollama endpoints unreachable")
+    raise RuntimeError("All backends unreachable")
 
 
 @app.get("/health", response_model=HealthResponse)
 @limiter.limit("30/minute")
 async def health(request: Request):
-    """Health check for the backup HTTP bridge."""
-    primary_ok = False
-    fallback_ok = False
-    async with httpx.AsyncClient(timeout=3) as client:
+    """Health check — probes LM Studio (primary) and Ollama (fallback)."""
+
+    async def _lms_ok(endpoint: str) -> bool:
         try:
-            response = await client.get(f"{OLLAMA_PRIMARY}/api/tags")
-            primary_ok = response.status_code == 200
+            headers = {"Authorization": f"Bearer {LMS_API_TOKEN}"} if LMS_API_TOKEN else {}
+            async with httpx.AsyncClient(timeout=3) as c:
+                r = await c.get(f"{endpoint}/v1/models", headers=headers)
+                return r.status_code == 200
         except Exception:
-            pass
+            return False
+
+    async def _ollama_ok(endpoint: str) -> bool:
         try:
-            response = await client.get(f"{OLLAMA_FALLBACK}/api/tags")
-            fallback_ok = response.status_code == 200
+            async with httpx.AsyncClient(timeout=3) as c:
+                r = await c.get(f"{endpoint}/api/tags")
+                return r.status_code == 200
         except Exception:
-            pass
+            return False
+
+    win_checks, mac_ok, primary_ok, fallback_ok = await asyncio.gather(
+        asyncio.gather(*[_lms_ok(ep) for ep in LMS_WIN_ENDPOINTS]),
+        _lms_ok(LMS_MAC_ENDPOINT),
+        _ollama_ok(OLLAMA_PRIMARY),
+        _ollama_ok(OLLAMA_FALLBACK),
+    )
+    win_ok = any(win_checks)
+
     return HealthResponse(
         status="ok",
         version=VERSION,
+        lmstudio_win_reachable=win_ok,
+        lmstudio_win_count=sum(1 for v in win_checks if v),
+        lmstudio_mac_reachable=mac_ok,
         ollama_primary_reachable=primary_ok,
         ollama_fallback_reachable=fallback_ok,
         models={
+            "lms_win": LMS_WIN_MODEL,
+            "lms_mac": LMS_MAC_MODEL,
             "default": DEFAULT_MODEL,
             "fast": FAST_MODEL,
             "code": CODE_MODEL,
@@ -295,7 +359,7 @@ async def health(request: Request):
         bridge_mode="http_primary",
         orchestrator="mac-studio",
         execution_target="win-rtx3080",
-        primary_contract="mcp",
+        primary_contract="lmstudio",
         http_endpoint="/ultrathink",
         mapping=OPTIMIZE_FOR_TO_REASONING_DEPTH,
     )
@@ -329,8 +393,8 @@ async def ultrathink(req: UltraThinkRequest, request: Request):
         model,
         req.model_hint or "none",
         req.max_tokens,
-        session_id,
         mapping_source,
+        session_id,
     )
     try:
         result, _ = await _call_with_fallback(
@@ -354,8 +418,8 @@ async def ultrathink(req: UltraThinkRequest, request: Request):
             "reconcile_session_id": session_id,
             "reconcile_approved": approved,
             "reconcile_redirected": suggested_model is not None and not approved is False,
-            "bridge_mode": "http_backup",
-            "primary_contract": "mcp",
+            "bridge_mode": "http_primary",
+            "primary_contract": "lmstudio",
             "mapped_optimize_for": optimize_for,
             "mapping_source": mapping_source,
             "endpoint_used": "redacted",

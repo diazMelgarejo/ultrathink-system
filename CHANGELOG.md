@@ -32,12 +32,6 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ---
 
-# Changelog
-
-All notable changes to ultrathink System are documented here.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
-Versioning follows [Semantic Versioning](https://semver.org/).
-
 ---
 
 ## [1.0-rc] - 2026-03-30 [SYNC]

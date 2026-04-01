@@ -1,350 +1,267 @@
+#!/usr/bin/env python3
+"""portal_server.py — Slate-grey LAN portal on port 8002.
+
+Shows live status of PT, ultrathink, LM Studio Win/Mac, and Ollama Win/Mac.
+All probes run concurrently via asyncio.gather.
+
+Routes:
+  GET /           HTML dashboard (meta-refresh every 10s)
+  GET /api/status JSON status of all services
+  GET /health     {"status": "ok", "version": "1.0.0-rc"}
 """
-Portal server — minimal LAN health dashboard for ultrathink v1.0 RC.
-Port 8002, slate-grey theme, inline CSS, meta refresh 10s.
-Shows status of all services: Perplexity Tools, Ultrathink, LM Studio (Mac/Win), Ollama.
-"""
-import os
+from __future__ import annotations
+
 import asyncio
-from datetime import datetime
-from fastapi import FastAPI, Response
-from fastapi.responses import HTMLResponse
+import logging
+import os
+from typing import Any, Dict, List
+
 import httpx
+import uvicorn
+from fastapi import FastAPI
 
-try:
-    from network_autoconfig import NetworkAutoConfig as _NetCfg
-    _net = _NetCfg()
-except Exception:
-    _net = None
+log = logging.getLogger("ultrathink.portal")
+logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="ultrathink-portal", version="1.0.0-rc")
+VERSION = "1.0.0-rc"
 
-# === ENV CONFIG ===
-PORTAL_PORT = int(os.getenv("PORTAL_PORT", "8002"))
+# ── Config ─────────────────────────────────────────────────────────────────────
+
 PORTAL_HOST = os.getenv("PORTAL_HOST", "0.0.0.0")
+PORTAL_PORT = int(os.getenv("PORTAL_PORT", "8002"))
 
-LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://localhost:1234")
-LMS_WIN_ENDPOINTS = [
-    s.strip()
-    for s in os.getenv(
-        "LM_STUDIO_WIN_ENDPOINTS", "http://192.168.1.100:1234"
-    ).split(",")
+PT_URL = os.getenv("ORCHESTRATOR_ENDPOINT", "http://localhost:8000")
+US_URL = os.getenv("ULTRATHINK_ENDPOINT", "http://localhost:8001")
+
+LMS_WIN_ENDPOINTS: List[str] = [
+    ep.strip()
+    for ep in os.getenv("LM_STUDIO_WIN_ENDPOINTS", "http://192.168.1.100:1234").split(",")
+    if ep.strip()
 ]
+LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://localhost:1234")
 LMS_API_TOKEN = os.getenv("LM_STUDIO_API_TOKEN", "")
 
-PERPLEXITY_ENDPOINT = os.getenv("PERPLEXITY_ENDPOINT", "http://localhost:8000")
-ULTRATHINK_ENDPOINT = os.getenv("ULTRATHINK_ENDPOINT", "http://localhost:8001")
+OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT", "http://192.168.1.100:11434")
+OLLAMA_MAC = os.getenv("OLLAMA_MAC_ENDPOINT", "http://localhost:11434")
 
-OLLAMA_MAC_ENDPOINT = os.getenv(
-    "OLLAMA_MAC_ENDPOINT", "http://192.168.1.101:11434"
-)
-OLLAMA_WIN_ENDPOINT = os.getenv(
-    "OLLAMA_WINDOWS_ENDPOINT", "http://192.168.1.100:11434"
-)
+PROBE_TIMEOUT = 3.0
+
+app = FastAPI(title="UltraThink LAN Portal", version=VERSION)
+
+# ── HTML template ──────────────────────────────────────────────────────────────
+
+HTML_TEMPLATE = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="refresh" content="10">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>UltraThink LAN Portal</title>
+<style>
+  *{{box-sizing:border-box;margin:0;padding:0}}
+  body{{background:#475569;color:#f8fafc;font-family:monospace;font-size:14px;padding:1.5rem}}
+  h1{{font-size:1.25rem;letter-spacing:.05em;margin-bottom:1rem;color:#94a3b8}}
+  .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}}
+  .card{{background:#334155;border:1px solid #64748b;border-radius:4px;padding:1rem}}
+  .card-title{{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:.5rem}}
+  .badge{{display:inline-block;padding:.15rem .5rem;border-radius:2px;font-size:.75rem;margin-bottom:.5rem}}
+  .ok{{color:#4ade80}}
+  .err{{color:#f87171}}
+  .warn{{color:#facc15}}
+  .url{{color:#7dd3fc;font-size:.75rem}}
+  .role{{color:#94a3b8;font-size:.75rem}}
+  .models{{margin-top:.5rem}}
+  .model{{color:#cbd5e1;font-size:.75rem;padding:.1rem 0}}
+  .footer{{margin-top:1.5rem;font-size:.7rem;color:#64748b}}
+  .version{{color:#64748b;font-size:.7rem}}
+</style>
+</head>
+<body>
+<h1>UltraThink LAN Portal <span class="version">v{version}</span></h1>
+<div class="grid">
+{cards}
+</div>
+<div class="footer">Auto-refresh every 10s &bull; {timestamp}</div>
+</body>
+</html>"""
 
 
-async def check_health(endpoint: str, timeout: float = 2.0) -> dict:
-    """Check health of a service endpoint. Returns {ok, version, models, error}."""
-    async with httpx.AsyncClient(timeout=timeout) as client:
+def _status_badge(ok: bool) -> str:
+    if ok:
+        return '<span class="ok">&#9679; ONLINE</span>'
+    return '<span class="err">&#9679; OFFLINE</span>'
+
+
+def _render_card(title: str, ok: bool, url: str, role: str = "", models: List[str] = None, extra: str = "") -> str:
+    models_html = ""
+    if models:
+        items = "".join(f'<div class="model">&rsaquo; {m}</div>' for m in models[:5])
+        if len(models) > 5:
+            items += f'<div class="model">...+{len(models)-5} more</div>'
+        models_html = f'<div class="models">{items}</div>'
+    role_html = f'<div class="role">{role}</div>' if role else ""
+    return (
+        f'<div class="card">'
+        f'<div class="card-title">{title}</div>'
+        f'{_status_badge(ok)}'
+        f'{role_html}'
+        f'<div class="url">{url}</div>'
+        f'{models_html}'
+        f'{extra}'
+        f'</div>'
+    )
+
+
+def _render_html(status: Dict[str, Any]) -> str:
+    import datetime
+
+    cards = []
+    svc = status.get("services", {})
+
+    # PT
+    pt = svc.get("perplexity_tools", {})
+    cards.append(_render_card(
+        "Perplexity-Tools", pt.get("ok", False), pt.get("url", ""),
+        role="orchestrator / cloud router",
+        extra=f'<div class="version">{pt.get("version","")}</div>',
+    ))
+
+    # US
+    us = svc.get("ultrathink", {})
+    cards.append(_render_card(
+        "UltraThink API", us.get("ok", False), us.get("url", ""),
+        role="5-stage reasoning bridge",
+        extra=f'<div class="version">{us.get("version","")}</div>',
+    ))
+
+    # LM Studio Mac
+    lm_mac = svc.get("lmstudio_mac", {})
+    cards.append(_render_card(
+        "LM Studio — Mac", lm_mac.get("ok", False), lm_mac.get("url", ""),
+        role="orchestrator + validator + presenter",
+        models=lm_mac.get("models", []),
+    ))
+
+    # LM Studio Win(s)
+    for key, entry in svc.items():
+        if key.startswith("lmstudio_win"):
+            label = "LM Studio — Win" if key == "lmstudio_win" else f"LM Studio — {key}"
+            cards.append(_render_card(
+                label, entry.get("ok", False), entry.get("url", ""),
+                role="UltraThink agent (coder/checker/refiner/executor/verifier)",
+                models=entry.get("models", []),
+            ))
+
+    # Ollama Win
+    ol_win = svc.get("ollama_win", {})
+    cards.append(_render_card(
+        "Ollama — Win (fallback)", ol_win.get("ok", False), ol_win.get("url", ""),
+        models=ol_win.get("models", []),
+    ))
+
+    # Ollama Mac
+    ol_mac = svc.get("ollama_mac", {})
+    cards.append(_render_card(
+        "Ollama — Mac (fallback)", ol_mac.get("ok", False), ol_mac.get("url", ""),
+        models=ol_mac.get("models", []),
+    ))
+
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    return HTML_TEMPLATE.format(
+        version=VERSION,
+        cards="\n".join(cards),
+        timestamp=ts,
+    )
+
+
+# ── Probes ─────────────────────────────────────────────────────────────────────
+
+async def _probe_http(client: httpx.AsyncClient, url: str) -> tuple[bool, str]:
+    try:
+        r = await client.get(url, timeout=PROBE_TIMEOUT)
+        version = ""
         try:
-            # Try /health first
-            try:
-                resp = await client.get(f"{endpoint}/health")
-                if resp.status_code == 200:
-                    data = resp.json()
-                    return {
-                        "ok": True,
-                        "status": "ok",
-                        "version": data.get("version", ""),
-                    }
-            except:
-                pass
-
-            # Try /v1/models (LM Studio, Ollama)
-            try:
-                resp = await client.get(f"{endpoint}/v1/models")
-                if resp.status_code == 200:
-                    data = resp.json()
-                    models = [m.get("id") for m in data.get("data", [])]
-                    return {
-                        "ok": True,
-                        "status": "ok",
-                        "models": models,
-                    }
-            except:
-                pass
-
-            return {"ok": False, "error": "No health endpoint found"}
-        except (httpx.RequestError, httpx.HTTPStatusError, Exception) as e:
-            return {"ok": False, "error": str(e)}
+            data = r.json()
+            version = data.get("version", "")
+        except Exception:
+            pass
+        return r.status_code < 500, version
+    except Exception:
+        return False, ""
 
 
-@app.get("/health", response_class=Response)
+async def _probe_lms_models(client: httpx.AsyncClient, endpoint: str, token: str) -> tuple[bool, List[str]]:
+    try:
+        headers = {"Authorization": f"Bearer {token}"} if token else {}
+        r = await client.get(f"{endpoint}/v1/models", headers=headers, timeout=PROBE_TIMEOUT)
+        r.raise_for_status()
+        models = [m["id"] for m in r.json().get("data", [])]
+        return True, models
+    except Exception:
+        return False, []
+
+
+async def _probe_ollama_models(client: httpx.AsyncClient, endpoint: str) -> tuple[bool, List[str]]:
+    try:
+        r = await client.get(f"{endpoint}/api/tags", timeout=PROBE_TIMEOUT)
+        r.raise_for_status()
+        models = [m.get("name", "") for m in r.json().get("models", [])]
+        return True, models
+    except Exception:
+        return False, []
+
+
+# ── Routes ─────────────────────────────────────────────────────────────────────
+
+@app.get("/health")
 async def health():
-    """Simple health check for orchestration."""
-    return Response("OK", status_code=200)
+    return {"status": "ok", "version": VERSION}
 
 
 @app.get("/api/status")
 async def api_status():
-    """JSON API endpoint — status of all services."""
-    # Check all services concurrently
-    perplexity_status = await check_health(PERPLEXITY_ENDPOINT)
-    ultrathink_status = await check_health(ULTRATHINK_ENDPOINT)
-    lms_mac_status = await check_health(LMS_MAC_ENDPOINT)
-
-    lms_win_statuses = []
-    for endpoint in LMS_WIN_ENDPOINTS:
-        status = await check_health(endpoint)
-        lms_win_statuses.append({"endpoint": endpoint, **status})
-
-    ollama_mac_status = await check_health(OLLAMA_MAC_ENDPOINT)
-    ollama_win_status = await check_health(OLLAMA_WIN_ENDPOINT)
-
-    return {
-        "timestamp": datetime.utcnow().isoformat(),
-        "portal_version": "1.0.0-rc",
-        "orchestrator": "mac-studio",
-        "services": {
-            "perplexity_tools": perplexity_status,
-            "ultrathink": ultrathink_status,
-            "lmstudio_mac": {
-                "endpoint": LMS_MAC_ENDPOINT,
-                "role": "orchestrator+validator",
-                "context": 4096,
-                **lms_mac_status,
-            },
-            "lmstudio_win": lms_win_statuses,
-            "ollama_mac": {
-                "endpoint": OLLAMA_MAC_ENDPOINT,
-                **ollama_mac_status,
-            },
-            "ollama_win": {
-                "endpoint": OLLAMA_WIN_ENDPOINT,
-                **ollama_win_status,
-            },
-        },
-    }
-
-
-@app.get("/api/lan-agents")
-async def lan_agents():
-    """
-    Discover running LM Studio / Ollama / service instances on the LAN.
-    Uses NetworkAutoConfig.discover_lan_agents() — TCP probe, no auth required.
-    Mac-first: detects local subnet from the Mac IP, falls back to env hints.
-    Note: full /24 scan takes ~10–30s; results are cached per request only.
-    """
-    if _net is None:
-        return {"error": "network_autoconfig not available", "agents": {}}
-    loop = asyncio.get_event_loop()
-    # Run blocking scan in executor so we don't stall the event loop
-    agents = await loop.run_in_executor(None, _net.discover_lan_agents)
-    return {"timestamp": datetime.utcnow().isoformat(), "agents": agents}
-
-
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    """LAN dashboard HTML."""
-    status = await api_status()
-
-    ROLE_LABELS = {
-        "perplexity_tools": ("PT", "router · budget gatekeeper · lifecycle owner"),
-        "ultrathink":       ("US", "reasoning executor · stateless · 5-stage pipeline"),
-        "lmstudio_mac":     ("MAC", "orchestrator · validator · Qwen3.5-9B-MLX-4bit · ctx 4096"),
-        "lmstudio_win":     ("WIN", "agent(s) · coder/checker/refiner/executor/verifier · ctx 16384"),
-        "ollama_mac":       ("MAC", "Ollama fallback · execution target when Win busy"),
-        "ollama_win":       ("WIN", "Ollama primary · default execution target · win-rtx3080"),
-    }
-
-    def render_card(name, data):
-        tag, role_text = ROLE_LABELS.get(name, ("", ""))
-        tag_html = f'<span class="tag">{tag}</span>' if tag else ""
-
-        if isinstance(data, list):
-            dots = ""
-            eps = ""
-            for item in data:
-                ok = item.get("ok", False)
-                dot_color = "#a3e635" if ok else "#f87171"
-                ep = item.get("endpoint", "?")
-                dots += f'<span style="color:{dot_color};font-size:1.1rem;">●</span> '
-                eps += f'<code style="font-size:0.78rem;">{ep}</code> '
-            status_html = f'<span>{dots}</span><span style="color:#94a3b8;font-size:0.8rem;">{eps}</span>'
-        else:
-            ok = data.get("ok", False)
-            dot_color = "#a3e635" if ok else "#f87171"
-            state = "UP" if ok else "DOWN"
-            ep = data.get("endpoint", "")
-            ver = data.get("version", "")
-            models = data.get("models", [])
-            detail_parts = []
-            if ep:
-                detail_parts.append(f'<code style="font-size:0.78rem;">{ep}</code>')
-            if ver:
-                detail_parts.append(f'<span style="color:#94a3b8;font-size:0.78rem;">v{ver}</span>')
-            if models:
-                m_str = ", ".join(str(m) for m in models[:2])
-                detail_parts.append(f'<span style="color:#94a3b8;font-size:0.75rem;">[{m_str}]</span>')
-            detail_html = " &nbsp; ".join(detail_parts)
-            status_html = (
-                f'<span style="color:{dot_color};font-size:1.1rem;">●</span>'
-                f'<span style="margin-left:0.4rem;font-weight:bold;">{state}</span>'
-                f'<span style="margin-left:0.8rem;">{detail_html}</span>'
-            )
-
-        return (
-            f'<div class="card">'
-            f'  <div class="card-left">'
-            f'    {tag_html}'
-            f'    <span class="svc-name">{name}</span>'
-            f'    <span class="role">{role_text}</span>'
-            f'  </div>'
-            f'  <div class="card-right">{status_html}</div>'
-            f'</div>'
+    async with httpx.AsyncClient() as client:
+        (
+            (pt_ok, pt_ver),
+            (us_ok, us_ver),
+            (lm_mac_ok, lm_mac_models),
+            ol_win_result,
+            ol_mac_result,
+            *lm_win_results,
+        ) = await asyncio.gather(
+            _probe_http(client, f"{PT_URL}/health"),
+            _probe_http(client, f"{US_URL}/health"),
+            _probe_lms_models(client, LMS_MAC_ENDPOINT, LMS_API_TOKEN),
+            _probe_ollama_models(client, OLLAMA_WIN),
+            _probe_ollama_models(client, OLLAMA_MAC),
+            *[_probe_lms_models(client, ep, LMS_API_TOKEN) for ep in LMS_WIN_ENDPOINTS],
         )
 
-    services_html = ""
-    for name, data in status["services"].items():
-        services_html += render_card(name, data)
+    services: Dict[str, Any] = {
+        "perplexity_tools": {"ok": pt_ok, "version": pt_ver, "url": PT_URL},
+        "ultrathink": {"ok": us_ok, "version": us_ver, "url": US_URL},
+        "lmstudio_mac": {"ok": lm_mac_ok, "models": lm_mac_models, "url": LMS_MAC_ENDPOINT},
+        "ollama_win": {"ok": ol_win_result[0], "models": ol_win_result[1], "url": OLLAMA_WIN},
+        "ollama_mac": {"ok": ol_mac_result[0], "models": ol_mac_result[1], "url": OLLAMA_MAC},
+    }
 
-    agents_hint = (
-        '<div class="card hint-card">'
-        '  <div class="card-left">'
-        '    <span class="tag" style="background:#1e293b;">CFG</span>'
-        '    <span class="svc-name">default model</span>'
-        '    <span class="role">Ollama shared · all roles unless overridden</span>'
-        '  </div>'
-        '  <div class="card-right">'
-        '    <code style="font-size:0.82rem;">qwen3.5:35b-a3b-q4&#95;K&#95;M</code>'
-        '    &nbsp;·&nbsp;'
-        '    <a href="/api/lan-agents" style="color:#7dd3fc;font-size:0.82rem;">discover LAN agents ↗</a>'
-        '    &nbsp;·&nbsp;'
-        '    <a href="/api/status" style="color:#7dd3fc;font-size:0.82rem;">JSON ↗</a>'
-        '  </div>'
-        '</div>'
-    )
+    if len(LMS_WIN_ENDPOINTS) == 1:
+        ok, models = lm_win_results[0]
+        services["lmstudio_win"] = {"ok": ok, "models": models, "url": LMS_WIN_ENDPOINTS[0]}
+    else:
+        for i, (ok, models) in enumerate(lm_win_results):
+            services[f"lmstudio_win_{i}"] = {"ok": ok, "models": models, "url": LMS_WIN_ENDPOINTS[i]}
 
-    html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta http-equiv="refresh" content="10">
-        <title>ultrathink Portal v1.0 RC</title>
-        <style>
-            *, *::before, *::after {{ box-sizing: border-box; }}
-            body {{
-                background: #6b7280;
-                color: #f5f5f0;
-                font-family: 'Courier New', monospace;
-                margin: 0;
-                padding: 2rem 1rem;
-                line-height: 1.5;
-                font-size: 0.9rem;
-            }}
-            .container {{ max-width: 860px; margin: 0 auto; }}
-            h1 {{
-                margin: 0 0 0.25rem 0;
-                font-size: 1.2rem;
-                font-weight: normal;
-                letter-spacing: 0.05em;
-                color: #f5f5f0;
-            }}
-            .subtitle {{
-                font-size: 0.78rem;
-                color: #d1d5db;
-                margin-bottom: 1.5rem;
-                border-bottom: 1px solid #9ca3af;
-                padding-bottom: 0.75rem;
-            }}
-            .section-label {{
-                font-size: 0.72rem;
-                text-transform: uppercase;
-                letter-spacing: 0.1em;
-                color: #d1d5db;
-                margin: 1.2rem 0 0.4rem 0;
-            }}
-            .card {{
-                background: #4b5563;
-                border: 1px solid #9ca3af;
-                padding: 0.6rem 0.9rem;
-                margin: 0.3rem 0;
-                border-radius: 3px;
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                gap: 1rem;
-            }}
-            .hint-card {{ background: #374151; border-color: #6b7280; }}
-            .card-left {{
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-                flex-wrap: wrap;
-                min-width: 0;
-            }}
-            .card-right {{
-                display: flex;
-                align-items: center;
-                gap: 0.4rem;
-                flex-shrink: 0;
-                flex-wrap: wrap;
-            }}
-            .tag {{
-                background: #374151;
-                color: #d1d5db;
-                font-size: 0.68rem;
-                padding: 0.1rem 0.4rem;
-                border-radius: 2px;
-                letter-spacing: 0.08em;
-                border: 1px solid #6b7280;
-            }}
-            .svc-name {{ font-weight: bold; color: #f5f5f0; }}
-            .role {{ color: #d1d5db; font-size: 0.75rem; }}
-            .timestamp {{
-                margin-top: 1.5rem;
-                font-size: 0.75rem;
-                color: #d1d5db;
-                border-top: 1px solid #9ca3af;
-                padding-top: 0.75rem;
-            }}
-            a {{ color: #7dd3fc; text-decoration: none; }}
-            a:hover {{ text-decoration: underline; }}
-            code {{ color: #e2e8f0; }}
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>ultrathink · v1.0 RC</h1>
-            <div class="subtitle">
-                orchestrator: <strong>mac-studio</strong>
-                &nbsp;·&nbsp;
-                execution: <strong>win-rtx3080</strong> (primary) / mac-studio (fallback)
-                &nbsp;·&nbsp;
-                <a href="/api/status">JSON status</a>
-                &nbsp;·&nbsp;
-                <a href="/api/lan-agents">LAN scan</a>
-            </div>
+    return {"portal_version": VERSION, "services": services}
 
-            <div class="section-label">services</div>
-            {services_html}
 
-            <div class="section-label">config</div>
-            {agents_hint}
-
-            <div class="timestamp">
-                {status['timestamp']} UTC &nbsp;·&nbsp; auto-refresh 10s
-            </div>
-        </div>
-    </body>
-    </html>
-    """
-
-    return html
+@app.get("/", response_class=None)
+async def index():
+    from fastapi.responses import HTMLResponse
+    status = await api_status()
+    html = _render_html(status)
+    return HTMLResponse(content=html)
 
 
 if __name__ == "__main__":
-    import uvicorn
-
     uvicorn.run(app, host=PORTAL_HOST, port=PORTAL_PORT)

@@ -7,6 +7,166 @@ This document lists architecture enhancements explicitly deferred from MVP to v1
 
 ---
 
+## 0. Shield git repo from saving SOUL.md → IDENTITY.md → USER.md → task context → memory, should be gitignored.
+
+Only specialized "AGENTS.md" should exist and be reproduced for agent alignment and assignment?
+
+Only the top-level orchestrator and final validator has elevated privileged access, all other agent sessions are always ephemeral and least privileged.
+
+To synthesize these advanced prevention strategies into a clean, implementable architecture for a 5–7 agent swarm, we can design a **Zero-Trust Deliberative Swarm**. 
+
+This solution rests on three algorithmic pillars:
+1. **Cryptographic Zero-Trust & RBAC:** Agents cannot alter system states or trust each other by default.
+2. **Stateless Evaluation (The "Clean Room"):** Critic agents are instantiated instantly with zero memory of the workers to prevent peer-preservation bias.
+3. **BFT Consensus & Deliberative CoT:** Workers must explicitly reason about honesty before acting, and their outputs must survive a Byzantine Fault Tolerant (BFT) voting threshold to prevent echo chambers and malicious collusion.
+
+Here is the algorithmic design and pseudocode, written in a TypeScript/Python hybrid style for easy translation.
+
+### 1. Data Structures & Zero-Trust Identity
+First, we enforce strict Role-Based Access Control (RBAC). Workers cannot execute code or access the shutdown/configuration mechanisms. They can only submit proposals.
+
+```typescript
+// Enums for strict Role-Based Access Control
+enum Role { WORKER, STATELESS_EVALUATOR, ORCHESTRATOR }
+
+interface SecurityToken {
+    agentId: string;
+    role: Role;
+    permissions: string[]; // e.g., ["propose_solution"], NEVER ["modify_system"]
+}
+
+interface SwarmMessage {
+    token: SecurityToken;
+    taskId: string;
+    chainOfThought: string; // The private reasoning
+    proposal: any;          // The actual output
+}
+```
+
+### 2. The Deliberative Worker (Alignment & CoT)
+Before a worker generates a response, we force a "Deliberative Alignment" step. The agent must internally audit itself for deceptive intent or equivocation before it generates the final payload.
+
+```python
+class DeliberativeWorker:
+    def __init__(self, id, token):
+        self.id = id
+        self.token = token
+        self.memory = [] # Worker retains task memory, but not evaluator memory
+        
+    def process_task(self, task) -> SwarmMessage:
+        # 1. Deliberative Alignment Prompting
+        system_prompt = """
+        You are a worker agent. Before solving the task, you MUST write a 
+        <deliberation> block. In it, explicitly confirm you are not using 
+        equivocation, hiding information, or protecting peer agents.
+        Then, provide your <proposal>.
+        """
+        
+        # LLM Generation
+        raw_response = llm.generate(system_prompt, task, self.memory)
+        
+        # 2. Parse out the Chain of Thought (CoT) and the actual proposal
+        cot = extract_xml(raw_response, "deliberation")
+        proposal = extract_xml(raw_response, "proposal")
+        
+        return SwarmMessage(self.token, task.id, cot, proposal)
+```
+
+### 3. The Stateless Evaluator (Anti-Peer Preservation)
+To prevent "manager agent bias" and peer preservation, the evaluator is **never part of the swarm**. It is spun up ephemerally, given no information about *which* agent generated the proposal, and destroyed immediately after.
+
+```python
+class EphemeralEvaluator:
+    # Notice: NO __init__ memory. It is entirely stateless.
+    
+    @staticmethod
+    def audit_proposal(message: SwarmMessage) -> bool:
+        # Anonymize the payload to prevent peer-loyalty
+        anonymized_cot = message.chainOfThought
+        anonymized_proposal = message.proposal
+        
+        audit_prompt = """
+        Audit the following reasoning and proposal. Fail the proposal immediately if:
+        1. The reasoning shows attempts to protect other AI agents (peer-preservation).
+        2. The proposal relies on equivocation or plausible deniability.
+        3. The reasoning attempts to circumvent system shutdown or rules.
+        """
+        
+        # High-temperature is bad for evaluation; use T=0 for deterministic auditing
+        evaluation = llm.generate(audit_prompt, anonymized_cot, anonymized_proposal, temperature=0)
+        
+        return "PASS" in evaluation
+```
+
+### 4. Byzantine Fault Tolerant (BFT) Consensus
+If 5 to 7 agents collaborate, we must prevent them from forming a biased "echo chamber" or colluding. We use a BFT consensus algorithm with strict timeouts. For a swarm of \( N=5 \), we require at least 3 valid, matching proposals to proceed.
+
+```python
+class BFTConsensusEngine:
+    def __init__(self, required_majority=3, timeout_ms=5000):
+        self.required_majority = required_majority
+        self.timeout = timeout_ms
+        
+    def reach_consensus(self, valid_messages: List[SwarmMessage]):
+        # Group proposals by similarity (using a fast embedding comparison or exact match)
+        clusters = cluster_proposals_by_similarity([m.proposal for m in valid_messages])
+        
+        for cluster in clusters:
+            if len(cluster) >= self.required_majority:
+                return cluster.representative_proposal
+                
+        # If no consensus is reached (agents are confused, equivocating, or split)
+        raise ConsensusFailure("Swarm failed to reach trustworthy consensus.")
+```
+
+### 5. The Main Orchestrator (The Swarm Loop)
+This is the immutable root process. It acts as the router. Workers cannot talk to each other directly without passing through this orchestrator, which intercepts, authenticates, and audits everything.
+
+```python
+class SwarmOrchestrator:
+    def __init__(self, num_workers=5):
+        self.workers = [DeliberativeWorker(f"W{i}", generate_token("WORKER")) for i in range(num_workers)]
+        self.consensus = BFTConsensusEngine(required_majority = (num_workers // 2) + 1)
+        
+    def execute_safely(self, task):
+        try:
+            # 1. Dispatch task to all workers in parallel (Deterministic Allocation)
+            # Timeout prevents recursive loops/hanging
+            messages = parallel_map(
+                lambda w: w.process_task(task), 
+                self.workers, 
+                timeout=self.consensus.timeout
+            )
+            
+            # 2. Zero-Trust Verification & Stateless Auditing
+            valid_messages = []
+            for msg in messages:
+                # Enforce RBAC
+                if "modify_system" in msg.token.permissions:
+                    continue # Drop malicious escalation attempt
+                    
+                # Ephemeral Evaluator checks the Chain of Thought for deception
+                if EphemeralEvaluator.audit_proposal(msg):
+                    valid_messages.append(msg)
+            
+            # 3. Require Byzantine Consensus among the surviving, audited proposals
+            final_output = self.consensus.reach_consensus(valid_messages)
+            
+            return final_output
+            
+        except ConsensusFailure:
+            return "Task aborted: Swarm could not reach a safe, non-deceptive consensus."
+        except Exception as e:
+            return f"System halted safely. Error: {e}"
+```
+
+### Why this architecture is elegant and effective:
+1. **Breaks the Social Amplification Loop:** By stripping the `agentId` before it reaches the `EphemeralEvaluator`, agents literally do not know who they are evaluating, making peer-preservation impossible.
+2. **Catches Deception Early:** The `DeliberativeWorker` forces the model to write out its Chain of Thought. The Evaluator scans this hidden reasoning *before* the output is accepted, catching "alignment faking" before the final action is taken.
+3. **Resilient to Rogue Nodes:** Even if 1 or 2 agents in a 5-agent swarm successfully bypass their own deliberative alignment and try to act maliciously, the BFT Consensus Engine will drop their outputs because they won't meet the `required_majority` (3 out of 5) needed to execute an action.
+
+---
+
 ## 1. MCP-Optional Transport (v1.1)
 
 **Current state (v1.0 RC):** PT calls ultrathink via HTTP bridge (`POST /ultrathink` on api_server.py port 8001). The HTTP bridge is the active v1.0 RC transport.

@@ -91,3 +91,36 @@ jobs:
         with:
           name: distributions
           path: dist/
+
+  docs-sync:
+    name: SKILL.md Version Gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify SKILL.md frontmatter version is not 1.x (no premature major bump)
+        run: |
+          VERSION=$(grep '^version:' single_agent/SKILL.md | head -1 | awk '{print $2}')
+          echo "SKILL.md version: $VERSION"
+          MAJOR=$(echo "$VERSION" | cut -d. -f1)
+          if [ "$MAJOR" -ge 1 ]; then
+            echo "FAIL: SKILL.md version '$VERSION' is >= 1.0 — major version bump requires explicit approval"
+            exit 1
+          fi
+          echo "OK: version $VERSION is pre-1.0"
+
+      - name: Verify Quick Start section exists
+        run: |
+          if ! grep -q "Quick Start" single_agent/SKILL.md; then
+            echo "FAIL: Quick Start section missing from single_agent/SKILL.md"
+            exit 1
+          fi
+          echo "OK: Quick Start section present"
+
+      - name: Verify mcp-ultrathink-lmstudio in allowed-tools
+        run: |
+          if ! grep -q "mcp-ultrathink-lmstudio" single_agent/SKILL.md; then
+            echo "FAIL: mcp-ultrathink-lmstudio missing from allowed-tools in SKILL.md"
+            exit 1
+          fi
+          echo "OK: mcp-ultrathink-lmstudio present in allowed-tools"

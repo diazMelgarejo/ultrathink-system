@@ -2,12 +2,12 @@
   "version": "1.3",
   "schemaVersion": "1.0",
   "generatedBy": "ecc-tools",
-  "generatedAt": "2026-03-29T00:00:00.000Z",
+  "generatedAt": "2026-04-04T12:57:52.721Z",
   "repo": "https://github.com/diazMelgarejo/ultrathink-system",
   "profiles": {
     "requested": "full",
     "recommended": "full",
-    "effective": "standard",
+    "effective": "developer",
     "requestedAlias": "full",
     "recommendedAlias": "full",
     "effectiveAlias": "developer"
@@ -118,8 +118,7 @@
     ".codex/agents/explorer.toml",
     ".codex/agents/reviewer.toml",
     ".codex/agents/docs-researcher.toml",
-    ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml",
-    ".claude/commands/feature-development.md"
+    ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml"
   ],
   "packageFiles": {
     "runtime-core": [
@@ -133,9 +132,6 @@
       ".codex/agents/reviewer.toml",
       ".codex/agents/docs-researcher.toml",
       ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml"
-    ],
-    "workflow-pack": [
-      ".claude/commands/feature-development.md"
     ]
   },
   "moduleFiles": {
@@ -150,21 +146,18 @@
       ".codex/agents/reviewer.toml",
       ".codex/agents/docs-researcher.toml",
       ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml"
-    ],
-    "workflow-pack": [
-      ".claude/commands/feature-development.md"
     ]
   },
   "files": [
     {
       "moduleId": "runtime-core",
       "path": ".claude/skills/ultrathink-system/SKILL.md",
-      "description": "Repository-specific Claude Code skill generated from git history. References mother skill single_agent/SKILL.md (v0.9.9.0)."
+      "description": "Repository-specific Claude Code skill generated from git history."
     },
     {
       "moduleId": "runtime-core",
       "path": ".agents/skills/ultrathink-system/SKILL.md",
-      "description": "Codex-facing copy of the generated repository skill. References mother skill single_agent/SKILL.md (v0.9.9.0)."
+      "description": "Codex-facing copy of the generated repository skill."
     },
     {
       "moduleId": "runtime-core",
@@ -205,26 +198,14 @@
       "moduleId": "runtime-core",
       "path": ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml",
       "description": "Continuous-learning instincts derived from repository patterns."
-    },
-    {
-      "moduleId": "workflow-pack",
-      "path": ".claude/commands/feature-development.md",
-      "description": "Workflow command scaffold for feature-development."
     }
   ],
-  "workflows": [
-    {
-      "command": "feature-development",
-      "path": ".claude/commands/feature-development.md"
-    }
-  ],
+  "workflows": [],
   "adapters": {
     "claudeCode": {
       "skillPath": ".claude/skills/ultrathink-system/SKILL.md",
       "identityPath": ".claude/identity.json",
-      "commandPaths": [
-        ".claude/commands/feature-development.md"
-      ]
+      "commandPaths": []
     },
     "codex": {
       "configPath": ".codex/config.toml",

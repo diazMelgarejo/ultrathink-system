@@ -16,3 +16,4 @@ build/
 # Copy .paths.example → .paths to override
 .paths
 .env
+PR_BODY.md

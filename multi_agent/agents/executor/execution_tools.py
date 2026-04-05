@@ -30,7 +30,7 @@ def cidf_insert(
     """
     CIDF-compliant content insertion wrapper for executor agents.
 
-    ALL content insertion in the multi_agent network goes through here.
+    ALL content insertion in the multi-agent network goes through here.
     Never call a write/insert directly — always use this wrapper.
 
     Args:

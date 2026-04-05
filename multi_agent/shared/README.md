@@ -1,7 +1,5 @@
 # Shared Utilities
 
-> **Architecture Note:** ultrathink-system is stateless by design. The Redis backend option in these shared modules is provided for compatibility with future Perplexity-Tools distributed deployments (v1.1+). For MVP, use the default in-memory backend.
-
 Core shared modules used by all ultrathink agents.
 
 ## Files

@@ -119,4 +119,4 @@ Lessons captured this task:
 
 ---
 
-*Template: ultrathink-system v0.9.9.0 | Directive #1: Plan Node Default*
+*Template: ultrathink-system v1.0.0 | Directive #1: Plan Node Default*

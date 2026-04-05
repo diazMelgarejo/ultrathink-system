@@ -11,7 +11,7 @@ chk_d() { [ -d "$1" ] && echo -e "  ${GREEN}✓${RESET} $1/" || { echo -e "  ${R
 echo -e "${BOLD}🔍 ultrathink System — Package Integrity Check${RESET}\n"
 
 echo "📄 Root:";    chk_f LICENSE; chk_f README.md; chk_f CONTRIBUTING.md; chk_f CHANGELOG.md
-chk_f api_server.py; chk_f install-single-agent.sh; chk_f install-multi-agent.sh; chk_f verify-package.sh
+chk_f install-single-agent.sh; chk_f install-multi-agent.sh; chk_f verify-package.sh
 
 echo -e "\n📦 Single-agent:"; chk_f single_agent/SKILL.md; chk_f single_agent/README.md
 chk_d single_agent/references; chk_d single_agent/scripts; chk_d single_agent/templates
@@ -25,21 +25,6 @@ chk_f single_agent/scripts/create_task_plan.sh
 chk_f single_agent/templates/task-plan.md
 chk_f single_agent/templates/lessons-log.md
 chk_f single_agent/templates/verification-checklist.md
-
-echo -e "\n🔧 CIDF Package:"
-chk_d single_agent/cidf
-chk_d single_agent/cidf/core
-chk_d single_agent/cidf/linter
-chk_d single_agent/cidf/tests
-chk_f single_agent/cidf/README.md
-chk_f single_agent/cidf/FRAMEWORK.md
-chk_f single_agent/cidf/core/content_insertion_framework.py
-chk_f single_agent/cidf/core/content_insertion_policy.json
-chk_f single_agent/cidf/core/contentInsertionFramework.ts
-chk_f single_agent/cidf/linter/policy_linter.py
-chk_f single_agent/cidf/linter/policyLinter.ts
-chk_f single_agent/cidf/tests/test_conformance.py
-chk_f single_agent/cidf/tests/conformance.test.ts
 
 echo -e "\n🤖 Multi-agent:"; chk_d multi_agent/agents
 for a in orchestrator context architect refiner executor verifier crystallizer; do
@@ -55,7 +40,7 @@ chk_f multi_agent/mcp_servers/agent_communication_server.py
 
 echo -e "\n📚 Examples:"; chk_d examples/financial-validator; chk_d examples/api-integration; chk_d examples/architecture-refactor
 echo -e "\n📖 Docs:";    chk_f docs/installation.md; chk_f docs/quick-start.md; chk_f docs/faq.md; chk_f docs/troubleshooting.md; chk_f docs/api-reference.md
-echo -e "\n🧪 Tests:";   chk_f tests/test_single_agent.py; chk_f tests/test_multi_agent.py; chk_f tests/test_orchestrator.py; chk_f tests/test_api_server.py
+echo -e "\n🧪 Tests:";   chk_f tests/test_single_agent.py; chk_f tests/test_multi_agent.py; chk_f tests/test_orchestrator.py
 
 echo ""
 if [ "$errors" -eq 0 ]; then
@@ -65,3 +50,31 @@ else
     echo -e "${RED}${BOLD}❌ Package integrity: FAILED — $errors file(s) missing${RESET}"
     exit 1
 fi
+
+echo -e "\n🔧 CIDF Package:"
+chk_f single_agent/cidf/README.md
+chk_f single_agent/cidf/FRAMEWORK.md
+chk_f single_agent/cidf/core/content_insertion_framework.py
+chk_f single_agent/cidf/core/content_insertion_policy.json
+chk_f single_agent/cidf/core/contentInsertionFramework.ts
+chk_f single_agent/cidf/linter/policy_linter.py
+chk_f single_agent/cidf/linter/policyLinter.ts
+chk_f single_agent/cidf/tests/test_conformance.py
+chk_f single_agent/cidf/tests/conformance.test.ts
+
+echo -e "\n🔌 AFRP + API:"
+chk_f "single_agent/afrp/SKILL.md"
+chk_f "single_agent/cidf/SKILL.md"
+chk_f "api_server.py"
+
+echo -e "\n🧠 ECC/Codex meta-files:"
+chk_f ".claude/ecc-tools.json"
+chk_f ".claude/identity.json"
+chk_f ".claude/lessons/LESSONS.md"
+chk_f ".claude/commands/ecc-sync.md"
+chk_f ".claude/commands/feature-development.md"
+chk_f ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml"
+chk_f ".agents/skills/ultrathink-system/agents/openai.yaml"
+chk_f ".codex/config.toml"
+chk_f ".codex/AGENTS.md"
+chk_f ".github/workflows/ci.yml"

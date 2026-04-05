@@ -301,3 +301,6 @@ tasks/
 ---
 
 *References: `cidf/FRAMEWORK.md` · `references/content-insertion-framework.md` · `references/ultrathink-5-stages.md` · `references/core-operational-directives.md`*
+
+---
+Note: The backup HTTP `/ultrathink` is implemented via `api_server.py` (v1.0 RC).

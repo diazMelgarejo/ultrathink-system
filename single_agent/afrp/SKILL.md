@@ -96,6 +96,7 @@ Scope: Implement CIDF-compliant content insertion for the form submission flow.
 
 AFRP is the first step in `single_agent/SKILL.md` Mode Router.
 It runs before the complexity signals are evaluated.
+The router is compatible with Perplexity-Tools via the current bridge, OR via the implemented backup HTTP `/ultrathink` path.
 
 ```
 Query arrives → AFRP Gate → Mode Router → MODE 1 / 2 / 3

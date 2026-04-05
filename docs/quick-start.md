@@ -4,7 +4,7 @@
 
 ### 1. Install
 ```bash
-./install-single-agent.sh
+./install.sh
 ```
 
 ### 2. Activate in Claude

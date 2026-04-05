@@ -7,3 +7,12 @@ __pycache__/
 *.log
 PR_BODY.md
 .env
+dist/
+build/
+.venv*/
+*.whl
+*.tar.gz
+*.egg-info/
+.idea/
+.vscode/
+.antigravity/

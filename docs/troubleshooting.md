@@ -17,8 +17,7 @@
 **Solutions**:
 1. Create `pytest.ini` or add `[tool.pytest.ini_options]` to `pyproject.toml`
 2. Install pytest: `pip install pytest`
-3. From the repository root, use `python single_agent/scripts/verify_before_done.py --no-interact`
-4. From the installed skill directory, use `python scripts/verify_before_done.py --no-interact`
+3. Use `--no-interact` flag to skip interactive checks: `python verify_before_done.py --no-interact`
 
 ---
 
@@ -27,7 +26,7 @@
 **Symptom**: Claude loses track of earlier context.
 **Solutions**:
 1. Use Directive #2 (Subagent Strategy) — offload research to subagents
-2. For multi_agent mode: use the orchestration server to distribute work
+2. For multi-agent mode: use the orchestration server to distribute work
 3. Break large tasks into smaller sub-tasks, each with their own `todo.md`
 
 ---
@@ -38,7 +37,7 @@
 **Solutions**:
 1. Ensure you're running from `multi_agent/mcp_servers/` directory (or set PYTHONPATH)
 2. Check Python 3.8+: `python --version`
-3. Note: Redis is NOT required for ultrathink-system. If you see Redis connection errors, they originate from Perplexity-Tools (the orchestrator layer), not from ultrathink.
+3. Install optional deps: `pip install redis` (only needed for Redis backend)
 4. Fallback: the server runs with in-memory backend automatically
 
 ---
@@ -47,7 +46,6 @@
 
 **Symptom**: `capture_lesson.py` can't find `tasks/lessons.md`
 **Solutions**:
-1. From the repository root, run `./single_agent/scripts/create_task_plan.sh "Task"` first
+1. Run `./scripts/create_task_plan.sh "Task"` first — creates the tasks/ directory
 2. Or: `mkdir -p tasks && touch tasks/lessons.md`
-3. From the installed skill directory, run `./scripts/create_task_plan.sh "Task"`
-4. Use `--dir /path/to/project` flag to specify project directory
+3. Use `--dir /path/to/project` flag to specify project directory

@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.9.9.2] - 2026-04-06
+### Fixed
+- CI: restored missing dependencies (`fastapi`, `httpx`) in runner environment
+- Docs: restored required transport markers for `test_bridge_docs.py` regression tests
+- api_server.py: restored missing attributes and legacy logic to passing `test_api_server.py`
+- Version: synchronized all files to 0.9.9.2
+
+## [0.9.9.1] - 2026-04-06
+### Added
+- 7 Claude Code native subagent files at `.claude/agents/ultrathink-*.md`
+- Harness path map in `CLAUDE.md` (section 7) — source→runtime→global paths
+- CIDF v1.2 canonical source in `single_agent/cidf/`; install scripts copy idempotently
+- Reference docs in `.agents/skills/ultrathink-system/references/`
+### Changed
+- `install-multi-agent.sh`: deploy to `.claude/agents/` + `~/.claude/agents/` + platform dirs
+- `install-single-agent.sh`: harness path map; CIDF installed idempotently to all runtime locations
+- `CLAUDE.md`: section 7 (Harness Path Map) added; AutoResearcher Integration (section 4) preserved
+- `agent_registry.json`: version bumped to 0.9.9.1; all routing and autoresearch_agents preserved
+### Fixed
+- Install scripts: agents now correctly deployed to `.claude/agents/` (Claude Code native path)
+
+---
+
+
 All notable changes to ultrathink System are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).

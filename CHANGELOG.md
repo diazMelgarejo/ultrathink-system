@@ -207,7 +207,7 @@ Versioning follows [Semantic Versioning](https://semver.org/).
 
 ### Added
 - Initial public release
-- **Single-agent package**: Complete ultrathink SKILL.md for Claude Code, Cowork, and Open
+- **Single-agent package**: Complete ultrathink SKILL.md for Claude Code, coworker, and OpenClaw
 - **Multi-agent network**: 7 specialized agents (Orchestrator, Context, Architect, Refiner, Executor, Verifier, Crystallizer)
 - **References**: 4 deep-dive documents (5-stages, directives, content-insertion, skill-architecture)
 - **Scripts**: `verify_before_done.py`, `capture_lesson.py`, `create_task_plan.sh`

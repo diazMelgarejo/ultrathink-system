@@ -1,5 +1,5 @@
 # ultrathink Single-Agent Skill
-**Quick Start for Claude Code, Cowork, and Open**
+**Quick Start for Claude Code, coworker, and OpenClaw**
 
 ---
 

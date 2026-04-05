@@ -10,7 +10,6 @@ Run this immediately after merging any ECC Tools PR.
 ## Steps
 
 ```bash
-# 1. Pull latest main
 git pull origin main
 ```
 
@@ -21,19 +20,13 @@ Then in Claude Code:
 /instinct-status
 ```
 
-Then commit any changes the import produced:
+Then commit:
 
 ```bash
 git add -A
 git commit -m "chore(ecc): post-merge instinct import sync $(date +%Y-%m-%d)"
 git push origin main
 ```
-
-## What this does
-
-- Loads the 15+ repo-specific continuous-learning-v2 instincts into your local homunculus
-- Makes ECC-learned patterns available for the current session and all future sessions
-- Keeps the instinct store in sync with the repo's ECC bundle version
 
 ## Related
 

@@ -1,26 +1,15 @@
-# ECC for Codex CLI
+# ultrathink-system — Codex Agent Guide
 
-This supplements the root `AGENTS.md` with a repo-local ECC baseline.
+Skills are auto-loaded from `.agents/skills/`.
 
-## Repo Skill
+## ultrathink System Skill
+- Path: `.agents/skills/ultrathink-system/SKILL.md`
+- Mother skill: `single_agent/SKILL.md` (v0.9.9.0)
+- AFRP gate: `single_agent/afrp/SKILL.md`
+- CIDF: `single_agent/cidf/SKILL.md`
 
-- Repo-generated Codex skill: `.agents/skills/ultrathink-system/SKILL.md`
-- Claude-facing companion skill: `.claude/skills/ultrathink-system/SKILL.md`
-- Keep user-specific credentials and private MCPs in `~/.codex/config.toml`, not in this repo.
+## Agent Roles
+See `.codex/agents/` for role configs (explorer, reviewer, docs-researcher).
 
-## MCP Baseline
-
-Treat `.codex/config.toml` as the default ECC-safe baseline for work in this repository.
-The generated baseline enables GitHub, Context7, Exa, Memory, Playwright, and Sequential Thinking.
-
-## Multi-Agent Support
-
-- Explorer: read-only evidence gathering
-- Reviewer: correctness, security, and regression review
-- Docs researcher: API and release-note verification
-
-## Workflow Files
-
-- `.claude/commands/feature-development.md`
-
-Use these workflow files as reusable task scaffolds when the detected repository workflows recur.
+## API
+`POST /ultrathink` on port 8001 — see `api_server.py`.

@@ -14,10 +14,9 @@ pytest tests/test_orchestrator.py -v   # Core types + orchestrator logic
 
 ## Requirements
 ```bash
-pip install . pytest
+pip install pytest
 ```
-No external services are required, but the full suite imports the HTTP bridge modules,
-so install the package runtime dependencies before running all tests.
+No external services needed — all tests use file system and Python stdlib only.
 
 ## CI
 See `.github/workflows/test.yml` for automated test runs on every push.

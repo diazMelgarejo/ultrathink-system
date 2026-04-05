@@ -10,7 +10,7 @@ description: >-
 version: 1.0.0
 license: Apache-2.0
 compatibility: claude-code, claude-desktop
-allowed-tools: bash, file-operations, web-search, subagent-creation
+allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink-lmstudio
 sub_skills:
   - path: afrp/SKILL.md
     trigger: "Query is non-trivial, audience-dependent, or open-ended (Type B/C/D)"
@@ -220,6 +220,17 @@ Follow the 6 directives in every non-trivial task:
 ### 3. Integrated Frameworks
 - **AFRP**: Pre-router gate. Classifies and clarifies intent before architecture.
 - **CIDF v1.2**: Content insertion governance. Start at rank 1 (direct_form_input) for every write.
+
+## LM Studio Multi-Agent Bridge (Tier 2)
+
+Use the `mcp-ultrathink-lmstudio` tool to offload heavy reasoning to high-context
+local models when running in hybrid environments.
+
+### Capabilities:
+- `lmstudio_chat`: Direct interface to Win-based Qwen3.5-27B (Context=16384)
+- `lmstudio_list_models`: Check status of local GPU offload (Target: Metal/CUDA)
+- `lmstudio_orchestrate`: Dispatches Stage 4 execution tasks to LM Studio backend
+- `lmstudio_health`: Continuity check for LAN discovery (192.168.1.100)
 
 ## References (Progressive Disclosure)
 

@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.9.2] - 2026-04-06
+### Fixed
+- CI: restored missing dependencies (`fastapi`, `httpx`) in runner environment
+- Docs: restored required transport markers for `test_bridge_docs.py` regression tests
+- api_server.py: restored missing attributes and legacy logic to passing `test_api_server.py`
+- Version: synchronized all files to 0.9.9.2
+
 ## [0.9.9.1] - 2026-04-06
 ### Added
 - 7 Claude Code native subagent files at `.claude/agents/ultrathink-*.md`

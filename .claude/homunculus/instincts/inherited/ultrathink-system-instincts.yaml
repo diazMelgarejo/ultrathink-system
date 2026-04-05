@@ -149,5 +149,5 @@ Follow the feature-development workflow:
 - Workflow detected from commit patterns
 - Frequency: ~12x per month
 - Files: `single_agent/**/*.py`, `multi_agent/**/*.py`, `tests/*.py`
-- Mother skill: `single_agent/SKILL.md` (v0.9.9.1)
+- Mother skill: `single_agent/SKILL.md` (v0.9.9.2)
 

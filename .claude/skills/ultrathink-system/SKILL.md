@@ -6,7 +6,7 @@ description: Development conventions and patterns for ultrathink-system. Python 
 # Ultrathink System Conventions
 
 > Generated from [diazMelgarejo/ultrathink-system](https://github.com/diazMelgarejo/ultrathink-system) on 2026-03-29
-> Mother skill: [`single_agent/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/SKILL.md) (v0.9.9.1)
+> Mother skill: [`single_agent/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/SKILL.md) (v0.9.9.2)
 
 ## Overview
 
@@ -14,7 +14,7 @@ This skill teaches Claude the development patterns and conventions used in ultra
 
 ## Mother Skill
 
-The canonical system skill lives at `single_agent/SKILL.md` (v0.9.9.1). Always load it when working on this repository for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
+The canonical system skill lives at `single_agent/SKILL.md` (v0.9.9.2). Always load it when working on this repository for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
 
 Sub-skills (load on demand):
 - `single_agent/afrp/SKILL.md` — Audience-First Response Protocol (mandatory pre-router gate)
@@ -39,7 +39,7 @@ Sub-skills (load on demand):
 
 ```
 ultrathink-system/
-├── single_agent/SKILL.md      ← mother skill (v0.9.9.1)
+├── single_agent/SKILL.md      ← mother skill (v0.9.9.2)
 ├── single_agent/afrp/         ← AFRP sub-skill
 ├── single_agent/cidf/         ← CIDF v1.2 sub-skill
 ├── multi_agent/               ← 7-agent network

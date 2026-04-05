@@ -8,7 +8,7 @@ POST /ultrathink on port 8001
 This is a stateless execution endpoint. No Redis dependency.
 Durable state is owned by the Perplexity-Tools orchestrator (Repo #1).
 
-Version: 0.9.9.1 | License: Apache 2.0
+Version: 0.9.9.2 | License: Apache 2.0
 """
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ CODE_MODEL = os.getenv("CODE_MODEL", "qwen3-coder:14b")
 class UltraThinkRequest(BaseModel):
     """
     POST /ultrathink request body.
-    model_hint selects execution mode (ADR-001, v0.9.9.1).
+    model_hint selects execution mode (ADR-001, v0.9.9.2).
     """
     task_description: str = Field(..., min_length=1, max_length=MAX_TASK_LENGTH)
     optimize_for:     str = Field(default="reliability",
@@ -89,7 +89,7 @@ async def _call_with_fallback(prompt: str, model: str, max_tokens: int, temperat
 app = FastAPI(
     title="ultrathink System API",
     description="Stateless POST /ultrathink endpoint. State owned by Perplexity-Tools.",
-    version="0.9.9.1",
+    version="0.9.9.2",
 )
 
 @app.post("/ultrathink", response_model=UltraThinkResponse)
@@ -141,7 +141,7 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
 async def health():
     return {
         "status": "ok",
-        "version": "0.9.9.1",
+        "version": "0.9.9.2",
         "lmstudio_win_reachable": True,
         "lmstudio_mac_reachable": True,
         "ollama_primary_reachable": True,

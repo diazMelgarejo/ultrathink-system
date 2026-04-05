@@ -3,7 +3,7 @@
 agent_communication_server.py
 ==============================
 MCP Server: ultrathink Agent-to-Agent Communication
-Version: 0.9.9.1 | License: Apache 2.0
+Version: 0.9.9.2 | License: Apache 2.0
 
 Provides direct inter-agent messaging tools for sub-agent delegation
 within the ultrathink network.

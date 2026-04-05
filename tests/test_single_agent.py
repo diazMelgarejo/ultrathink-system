@@ -2,7 +2,7 @@
 """
 test_single_agent.py
 ====================
-Test suite for the ultrathink single_agent skill package.
+Test suite for the ultrathink single-agent skill package.
 Run: pytest tests/test_single_agent.py -v
 """
 import os

@@ -2,7 +2,7 @@
 """
 test_multi_agent.py
 ===================
-Test suite for the ultrathink multi_agent package structure.
+Test suite for the ultrathink multi-agent package structure.
 Run: pytest tests/test_multi_agent.py -v
 """
 import json

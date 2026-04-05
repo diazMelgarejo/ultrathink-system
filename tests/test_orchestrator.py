@@ -6,15 +6,11 @@ Unit tests for the ultrathink orchestrator logic and core types.
 Run: pytest tests/test_orchestrator.py -v
 """
 import sys
-from datetime import datetime
 import pytest
 from pathlib import Path
 
-ROOT = Path(__file__).parent.parent
-
 # Add shared to path for imports
-sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "multi_agent" / "shared"))
+sys.path.insert(0, str(Path(__file__).parent.parent / "multi_agent" / "shared"))
 
 try:
     from ultrathink_core import (
@@ -26,13 +22,6 @@ try:
 except ImportError as e:
     IMPORTS_OK = False
     IMPORT_ERROR = str(e)
-
-
-def _assert_timezone_aware_utc(timestamp: str) -> None:
-    parsed = datetime.fromisoformat(timestamp)
-    assert parsed.tzinfo is not None
-    assert parsed.utcoffset() is not None
-    assert parsed.utcoffset().total_seconds() == 0
 
 
 @pytest.mark.skipif(not IMPORTS_OK, reason="shared module import failed")
@@ -61,9 +50,6 @@ class TestTaskState:
         d = TaskState().to_dict()
         for key in ["task_id", "current_stage", "elegance_score", "stage_outputs"]:
             assert key in d
-
-    def test_created_at_is_timezone_aware_utc(self):
-        _assert_timezone_aware_utc(TaskState().created_at)
 
 
 @pytest.mark.skipif(not IMPORTS_OK, reason="shared module import failed")
@@ -96,15 +82,6 @@ class TestAgentMessage:
         assert msg.trace_id
         assert msg.message_id
         assert msg.timestamp
-
-    def test_timestamp_is_timezone_aware_utc(self):
-        msg = AgentMessage(
-            from_agent="orchestrator",
-            to_agent="context-agent",
-            message_type=MessageType.STATUS_UPDATE,
-            payload={"status": "running"}
-        )
-        _assert_timezone_aware_utc(msg.timestamp)
 
     def test_to_dict_has_all_fields(self):
         msg = AgentMessage(

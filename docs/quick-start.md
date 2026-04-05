@@ -39,18 +39,6 @@ python single_agent/scripts/capture_lesson.py
 
 ## Common Commands
 
-### From the repository root
-
-| What you want | Command |
-|--------------|---------|
-| Create task plan | `./single_agent/scripts/create_task_plan.sh "Task name"` |
-| Verify completion | `python single_agent/scripts/verify_before_done.py` |
-| Capture a lesson | `python single_agent/scripts/capture_lesson.py` |
-| Review lessons | `python single_agent/scripts/capture_lesson.py --review` |
-| Stats on mistakes | `python single_agent/scripts/capture_lesson.py --stats` |
-
-### From the installed skill directory
-
 | What you want | Command |
 |--------------|---------|
 | Create task plan | `./scripts/create_task_plan.sh "Task name"` |

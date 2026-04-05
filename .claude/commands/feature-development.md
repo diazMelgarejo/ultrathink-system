@@ -14,7 +14,7 @@ Standard feature implementation workflow following the ultrathink 5-stage method
 
 ## Mother Skill
 
-Always load `single_agent/SKILL.md` (v0.9.9.0) first for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
+Always load `single_agent/SKILL.md` (v0.9.9.1) first for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
 
 ## Common Files
 

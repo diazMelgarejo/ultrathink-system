@@ -5,7 +5,7 @@
 - Bash 4+ (for shell scripts)
 - Claude Code, Cowork, Clawdbot, MoltBot, or OpenClaw installed
 - Git (optional, for cloning)
-- Redis: NOT required. ultrathink-system is stateless. Redis is a future PT-only dependency (v1.1+)
+- Redis (optional, for multi-agent production mode)
 
 ---
 
@@ -19,21 +19,21 @@
 ### Manual
 ```bash
 # Claude Code
-cp -r single_agent ~/.claude/skills/ultrathink-system-skill
+cp -r single-agent ~/.claude/skills/ultrathink-system-skill
 
 # Cowork
-cp -r single_agent ~/.cowork/skills/ultrathink-system-skill
+cp -r single-agent ~/.cowork/skills/ultrathink-system-skill
 
 # Any Claude platform — place in skills dir
-cp -r single_agent /path/to/your/skills/ultrathink-system-skill
+cp -r single-agent /path/to/your/skills/ultrathink-system-skill
 ```
 
 ### ECC Tools / everything-claude-code
 ```bash
 # Drop into existing skill library
-cp -r single_agent ~/.claude/skills/ultrathink-system-skill
+cp -r single-agent ~/.claude/skills/ultrathink-system-skill
 # or if using ecc-tools profile
-cp -r single_agent ~/.ecc/skills/ultrathink-system-skill
+cp -r single-agent ~/.ecc/skills/ultrathink-system-skill
 ```
 
 ---
@@ -47,9 +47,9 @@ cp -r single_agent ~/.ecc/skills/ultrathink-system-skill
 
 ### Manual
 ```bash
-cp -r multi_agent ~/.clawdbot/agents/ultrathink-network
+cp -r multi-agent ~/.clawdbot/agents/ultrathink-network
 # or
-cp -r multi_agent ~/.openclaw/agents/ultrathink-network
+cp -r multi-agent ~/.openclaw/agents/ultrathink-network
 ```
 
 ### Start the MCP Server

@@ -26,6 +26,7 @@ import re
 from pathlib import Path
 from datetime import datetime
 from collections import Counter
+from typing import Optional
 
 # ─── Colour output ────────────────────────────────────────────────────────────
 GREEN  = "\033[92m"

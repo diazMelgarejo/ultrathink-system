@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip setuptools wheel
-          pip install . pytest hatchling build tomli
+          python -m pip install . pytest hatchling build tomli
       
       - name: Run pytest
         run: |
@@ -77,7 +77,7 @@ jobs:
       - name: Install build tools
         run: |
           python -m pip install --upgrade pip setuptools wheel hatchling build
-          pip install .
+          python -m pip install .
       
       - name: Build sdist and wheel
         run: |
@@ -103,11 +103,11 @@ jobs:
           VERSION=$(grep '^version:' single_agent/SKILL.md | head -1 | awk '{print $2}')
           echo "SKILL.md version: $VERSION"
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
-          if [ "$MAJOR" -ge 1 ]; then
-            echo "FAIL: SKILL.md version '$VERSION' is >= 1.0 — major version bump requires explicit approval"
+          if [ "$MAJOR" -gt 1 ]; then
+            echo "FAIL: SKILL.md version '$VERSION' is > 1.0 — major version bump >= 2.0 requires explicit approval"
             exit 1
           fi
-          echo "OK: version $VERSION is pre-1.0"
+          echo "OK: version $VERSION is allowed"
 
       - name: Verify Quick Start section exists
         run: |

@@ -10,7 +10,9 @@ Use this when working on **feature-development** in `ultrathink-system`.
 
 ## Mother Skill
 
-Load `single_agent/SKILL.md` (v0.9.9.0) first.
+Always load `single_agent/SKILL.md` (v0.9.9.1) first for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
+
+## Common Files
 
 ## Steps
 

@@ -7,9 +7,9 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![SKILL.md Standard](https://img.shields.io/badge/SKILL.md-Compatible-green)](https://ecc.tools/skills)
 [![ECC Tools](https://img.shields.io/badge/ECC_Tools-Compatible-brightgreen)](https://ecc.tools)
-[![Version](https://img.shields.io/badge/version-0.9.9.0-orange)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-orange)](CHANGELOG.md)
 
-**Compatible with**: Claude Code · Cowork · Clawdbot · MoltBot · OpenClaw · ECC-Tools (everything-claude-code)
+**Compatible with**: Claude Code · Cowork · Open · Clawdbot · MoltBot · OpenClaw · ECC Tools · everything-claude-code
 
 ---
 
@@ -21,7 +21,7 @@ A production-ready, self-improving agent skill package that synthesizes:
 |-----------|-----------------|
 | **ultrathink 5-Stage Methodology** | Context → Architecture → Refinement → Execution → Crystallization |
 | **6 Core Operational Directives** | Plan · Subagents · Self-Improvement · Verification · Elegance · Autonomous Bug Fixing |
-| **Content Insertion Framework v1.2** | Simplicity-first ranked approach to data/content operations |
+| **Content Insertion Framework v2** | Simplicity-first ranked approach to data/content operations |
 | **SKILL.md Architecture Standard** | How to author production-grade agent skills |
 | **Multi-Agent Network** | 7 specialized agents for distributed parallel problem solving |
 
@@ -34,9 +34,7 @@ Clear methodology → clear output. Vague intent → scaled ambiguity.
 ## Quick Start (3 Minutes)
 
 ```bash
-# From the repository root:
-
-# 1. Install single_agent (Claude Code / Cowork / Open)
+# 1. Install single-agent (Claude Code / Cowork / Open)
 ./install-single-agent.sh
 
 # 2. Activate in Claude
@@ -115,11 +113,13 @@ python multi_agent/mcp_servers/ultrathink_orchestration_server.py
 
 ## The 5-Stage Process
 
+```
 1. Context Immersion    — Scan git, docs, patterns, constraints. Understand before acting.
 2. Visionary Architecture — Design the most elegant solution. Decompose modularly.
 3. Ruthless Refinement — Eliminate everything non-essential. Elegance = nothing left to remove.
 4. Masterful Execution — Plan → Craft (TDD) → Verify (programmatic, not visual).
 5. Crystallize Vision  — Assumptions ledger, simplification story, inevitability argument.
+```
 
 ---
 
@@ -129,12 +129,12 @@ Always active, regardless of which stage you're in:
 
 | # | Directive | Trigger |
 |---|-----------|---------|
-| 1 | 📋 **Plan Node Default** | Any task with 3+ steps |
-| 2 | 🤖 **Subagent Strategy** | When context window is crowded |
-| 3 | 🔄 **Self-Improvement Loop** | After ANY user correction |
-| 4 | ✅ **Verification Before Done** | Before marking any task complete |
-| 5 | ✨ **Demand Elegance** | When a solution feels hacky |
-| 6 | 🔧 **Autonomous Bug Fixing** | On any bug report |
+| 1 | **Plan Node Default** 📋 | Any task with 3+ steps |
+| 2 | **Subagent Strategy** 🤖 | When context window is crowded |
+| 3 | **Self-Improvement Loop** 🔄 | After ANY user correction |
+| 4 | **Verification Before Done** ✅ | Before marking any task complete |
+| 5 | **Demand Elegance** ✨ | When a solution feels hacky |
+| 6 | **Autonomous Bug Fixing** 🔧 | On any bug report |
 
 ---
 
@@ -149,15 +149,15 @@ User → Orchestrator
            ↓
      Refiner Agent           ← Stage 3 (loops until elegance ≥ 0.8)
            ↓
-  ┌───────────────────┐
-  │ Executor Agent ×5 │       ← Stage 4 (parallel)
-  └───────────────────┘
+  ┌──────────────────┐
+  │ Executor Agent × 5│       ← Stage 4 (parallel)
+  └──────────────────┘
            ↓
      Verifier Agent          ← Stage 4.5 (blocks until PASS)
            ↓
      Crystallizer Agent      ← Stage 5 (documents + captures lessons)
            ↓
-      Result + Lessons
+       Result + Lessons
 ```
 
 ---
@@ -165,19 +165,17 @@ User → Orchestrator
 ## Self-Improvement System
 
 ```bash
-# From the repository root, after any mistake or user correction:
-python single_agent/scripts/capture_lesson.py
+# After any mistake or user correction:
+python scripts/capture_lesson.py
 
 # Review before starting work:
-python single_agent/scripts/capture_lesson.py --review
+python scripts/capture_lesson.py --review
 
 # Analyze your mistake patterns:
-python single_agent/scripts/capture_lesson.py --stats
+python scripts/capture_lesson.py --stats
 ```
 
 Lessons compound over time. Mistake rate measurably declines.
-After installation into a skill directory, run the same commands from inside that
-installed directory with `scripts/...` instead of `single_agent/scripts/...`.
 
 ---
 
@@ -188,7 +186,7 @@ This skill follows the SKILL.md open standard and is compatible with
 
 ```bash
 # Add to your ECC profile
-cp -r single_agent ~/.claude/skills/ultrathink-system-skill
+cp -r single-agent ~/.claude/skills/ultrathink-system-skill
 
 # Then use with any ECC-compatible harness
 ```

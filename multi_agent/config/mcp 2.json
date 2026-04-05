@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ultrathink-lmstudio": {
+      "command": "python",
+      "args": ["multi_agent/mcp_servers/lmstudio_mcp_server.py"],
+      "id": "mcp/ultrathink-lmstudio"
+    }
+  }
+}

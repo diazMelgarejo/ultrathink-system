@@ -3,7 +3,7 @@
 ultrathink_orchestration_server.py
 ====================================
 MCP Server: ultrathink Multi-Agent Orchestration
-Version: 2.0.0 | License: Apache 2.0
+Version: 0.9.9.1 | License: Apache 2.0
 
 Exposes the ultrathink agent network as MCP tools.
 Compatible with: Clawdbot, MoltBot, OpenClaw, Claude Code MCP client.

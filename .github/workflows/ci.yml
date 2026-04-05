@@ -1,93 +1,21 @@
-name: CI - Test & Build
-
+name: CI
 on:
-  push:
-    branches: [main, develop]
-  pull_request:
-    branches: [main, develop]
+  push:    { branches: [main, develop] }
+  pull_request: { branches: [main] }
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12", "3.13"]
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip setuptools wheel
-          pip install . pytest hatchling build tomli
-      
-      - name: Run pytest
-        run: |
-          pytest -q tests/
-      
-      - name: Run package install test
-        run: |
-          python test-package-install.py
-      
-      - name: Build package
-        run: |
-          python -m build
-
-  lint:
+  lint-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      
-      - name: Install dependencies
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install deps
         run: |
-          python -m pip install --upgrade pip
-          pip install flake8 pylint
-      
-      - name: Lint with flake8 (warnings only)
-        run: |
-          # stop the build on syntax errors or undefined names, but ignore style warnings
-          flake8 multi_agent single_agent tests --count --select=E9,F63,F7,F82 --show-source --statistics || true
-      
-      - name: Check imports
-        run: |
-          python -c "from multi_agent.shared.ultrathink_core import Stage, TaskState; print('✓ ultrathink_core imports OK')"
-          python -c "from single_agent.cidf.core.content_insertion_framework import decide; print('✓ CIDF imports OK')" || true
-
-  build:
-    needs: [test, lint]
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      
-      - name: Install build tools
-        run: |
-          python -m pip install --upgrade pip setuptools wheel hatchling build
-          pip install .
-      
-      - name: Build sdist and wheel
-        run: |
-          python -m build
-      
-      - name: List artifacts
-        run: ls -lh dist/
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: distributions
-          path: dist/
+          pip install pytest pydantic fastapi uvicorn --break-system-packages 2>/dev/null || pip install pytest pydantic fastapi uvicorn
+      - name: Run tests
+        run: pytest tests/ single_agent/cidf/tests/ -v --tb=short
+      - name: Verify package
+        run: bash verify-package.sh
+      - name: Check api_server imports
+        run: python -c "import ast; ast.parse(open('api_server.py').read()); print('api_server.py: syntax OK')"

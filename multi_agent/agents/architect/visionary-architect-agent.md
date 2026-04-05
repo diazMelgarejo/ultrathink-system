@@ -1,7 +1,7 @@
 ---
 name: visionary-architect-agent
 description: Designs elegant modular solutions with clear boundaries and interfaces. Activates when orchestrator delegates architecture stage.
-version: 2.0.0
+version: 0.9.9.1
 license: Apache 2.0
 compatibility: clawdbot, moltbot, openclaw
 allowed-tools: module-decomposer interface-designer diagram-generator edge-case-enumerator

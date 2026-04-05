@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling>=1.27.0"]
+requires = ["hatchling>=1.26.0"]
 build-backend = "hatchling.build"
 
 [project]
@@ -27,20 +27,20 @@ managed = true
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "/api_server.py",
-    "/multi_agent",
-    "/single_agent",
-    "/examples",
-    "/docs",
-    "/tests",
-    "/LICENSE",
-    "/README.md",
-    "/CONTRIBUTING.md",
-    "/CHANGELOG.md",
-    "/install-single-agent.sh",
-    "/install-multi-agent.sh",
-    "/verify-package.sh",
-    "/test-package-install.py",
+    "api_server.py",
+    "multi_agent",
+    "single_agent",
+    "examples",
+    "docs",
+    "tests",
+    "LICENSE",
+    "README.md",
+    "CONTRIBUTING.md",
+    "CHANGELOG.md",
+    "install.sh",
+    "install-multi-agent.sh",
+    "verify-package.sh",
+    "test-package-install.py",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -55,7 +55,7 @@ packages = ["multi_agent", "single_agent"]
 "README.md" = "README.md"
 "CONTRIBUTING.md" = "CONTRIBUTING.md"
 "CHANGELOG.md" = "CHANGELOG.md"
-"install-single-agent.sh" = "install-single-agent.sh"
+"install.sh" = "install.sh"
 "install-multi-agent.sh" = "install-multi-agent.sh"
 "verify-package.sh" = "verify-package.sh"
 "test-package-install.py" = "test-package-install.py"

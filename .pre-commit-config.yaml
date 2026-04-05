@@ -1,0 +1,40 @@
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.0
+    hooks:
+      - id: ruff
+        files: \.py$
+      - id: ruff-format
+        files: \.py$
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: check-merge-conflict
+      - id: check-toml
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        exclude: \.md$
+
+  - repo: local
+    hooks:
+      - id: no-major-version-bump
+        name: "Block premature major version bump in SKILL.md"
+        entry: bash -c "VER=$(grep '^version:' single_agent/SKILL.md | head -1 | awk '{print $2}'); MAJOR=$(echo \"$VER\" | cut -d. -f1); [ \"$MAJOR\" -lt 1 ] || (echo \"FAIL: SKILL.md version $VER is >= 1.0 — major bump requires explicit approval\" && exit 1)"
+        language: system
+        pass_filenames: false
+
+      - id: registry-validator
+        name: "Probe live agents (non-blocking — report only)"
+        entry: python scripts/validate_registry.py --quiet
+        language: system
+        pass_filenames: false
+        types: [python]
+
+      - id: pytest-gate
+        name: "Run tests before commit (Python changes only)"
+        entry: pytest -q tests/
+        language: system
+        pass_filenames: false
+        types: [python]

@@ -1,10 +1,10 @@
 ---
 name: ultrathink-system-skill
-description: Master methodology for elegant problem solving. Unifies single-agent and multi-agent execution under the ultrathink 5-stage process. Routes automatically — runs inline for simple tasks (using CIDF v1.2 for any content insertion), escalates to the 7-agent network only when parallelism or scope demands it. Activates for any task requiring architectural thinking, systematic verification, content insertion decisions, or self-improvement.
-version: 0.9.9.1
+description: Master methodology for elegant problem solving. Unifies single_agent and multi_agent execution under the ultrathink 5-stage process. Routes automatically – runs inline for simple tasks (using CIDF v1.2 for any content insertion), escalates to the 7-agent network only when parallelism or scope demands it. Activates for any task requiring architectural thinking, systematic verification, content insertion decisions, or self-improvement.
+version: 0.9.9.2
 license: Apache 2.0
-compatibility: claude-code, cowork, open, clawdbot, moltbot, openclaw, ecc-tools
-allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink
+compatibility: claude-code, cowork, clawdbot, moltbot, openclaw, ecc-tools
+allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink, mcp-ultrathink-lmstudio
 ---
 
 # ultrathink System Skill
@@ -55,6 +55,47 @@ ultrathink network: [task]
 ```
 
 ---
+
+## Quick Start (v0.9.9.2)
+
+Minimum viable LAN setup with LM Studio as the primary backend:
+
+**Step 1 — Windows (UltraThink agent):**
+```bash
+# In LM Studio UI: load Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2-Q4_K_M.gguf
+# Settings: GPU offload = 40 layers, context = 16384, server port = 1234
+# Start LM Studio server
+```
+
+**Step 2 — Mac (orchestrator + validator):**
+```bash
+# In LM Studio UI: load Qwen3.5-9B-MLX-4bit (MLX tab)
+# Settings: context = 4096 (conservative for M2), server port = 1234
+# Start LM Studio server
+```
+
+**Step 3 — Environment:**
+```bash
+export LMS_WIN_ENDPOINTS=http://192.168.254.101:1234
+export LMS_MAC_ENDPOINT=http://localhost:1234
+export LMS_WIN_MODEL=Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2
+export LMS_MAC_MODEL=Qwen3.5-9B-MLX-4bit
+```
+
+**Step 4 — Start services:**
+```bash
+python api_server.py      # ultrathink HTTP bridge on port 8001
+python portal_server.py   # LAN dashboard on port 8002 (auto-refresh 10s)
+```
+
+**Step 5 — Verify:**
+```bash
+open http://localhost:8002   # portal shows all service statuses
+curl http://localhost:8001/health  # api_server health check
+```
+
+> **Backend-agnostic note**: The GGUF/MLX model files loaded in LM Studio are compatible
+> with Ollama, koboldcpp, and llama.cpp. Switching backends requires only an env var change.
 
 ## Content Insertion — CIDF v1.2 (All Modes, Always Active)
 

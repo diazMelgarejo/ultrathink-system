@@ -25,7 +25,7 @@ Only the frontmatter is loaded during agent startup. This keeps discovery overhe
 ---
 name: skill-name
 description: Third-person description with specific activation triggers
-version: 0.9.9.0
+version: 1.0.0
 license: Apache 2.0
 compatibility: claude-code, cowork, python>=3.8
 allowed-tools: bash, file-operations, web-search
@@ -224,7 +224,7 @@ description: Validates structured data (JSON, CSV, YAML) against schemas and
 
 ## Integration Notes for OpenClaw / Clawdbot / MoltBot
 
-Skills in multi_agent environments follow the same standard with one addition: the `allowed-tools` field becomes critical for sandboxing.
+Skills in multi-agent environments follow the same standard with one addition: the `allowed-tools` field becomes critical for sandboxing.
 
 ```yaml
 allowed-tools: bash read-only-filesystem web-search

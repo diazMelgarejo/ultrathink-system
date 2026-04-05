@@ -2,8 +2,8 @@
 """
 ultrathink_core.py
 ==================
-Shared types, constants, and base classes for the ultrathink multi_agent system.
-Version: 0.9.9.0 | License: Apache 2.0
+Shared types, constants, and base classes for the ultrathink multi-agent system.
+Version: 2.0.0 | License: Apache 2.0
 
 This is the single source of truth for data contracts between agents.
 """
@@ -11,14 +11,8 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
-
-# ── Timestamp helpers ────────────────────────────────────────────────────────
-
-def _utc_now_iso() -> str:
-    """Return an ISO 8601 timestamp with an explicit UTC offset."""
-    return datetime.now(timezone.utc).isoformat()
 
 
 # ── Enumerations ──────────────────────────────────────────────────────────────
@@ -61,7 +55,7 @@ class AgentMessage:
     payload:      dict[str, Any]
     trace_id:     str = field(default_factory=lambda: str(uuid.uuid4()))
     message_id:   str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp:    str = field(default_factory=_utc_now_iso)
+    timestamp:    str = field(default_factory=lambda: datetime.utcnow().isoformat())
     priority:     str = "medium"  # high | medium | low
     metadata:     dict = field(default_factory=dict)
 
@@ -93,7 +87,7 @@ class TaskState:
     stage_outputs:     dict[str, Any] = field(default_factory=dict)
     agents_active:     list[dict] = field(default_factory=list)
     lessons_learned:   list[dict] = field(default_factory=list)
-    created_at:        str = field(default_factory=_utc_now_iso)
+    created_at:        str = field(default_factory=lambda: datetime.utcnow().isoformat())
     completed_at:      Optional[str] = None
 
     def needs_refinement(self) -> bool:

@@ -6,44 +6,26 @@ allowed_tools: ["Bash", "Read", "Write", "Grep", "Glob"]
 
 # /feature-development
 
-Use this workflow when working on **feature-development** in `ultrathink-system`.
-
-## Goal
-
-Standard feature implementation workflow following the ultrathink 5-stage methodology.
+Use this when working on **feature-development** in `ultrathink-system`.
 
 ## Mother Skill
 
-Always load `single_agent/SKILL.md` (v0.9.9.0) first for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
+Load `single_agent/SKILL.md` (v0.9.9.0) first.
 
-## Common Files
+## Steps
 
-- `single_agent/**/*.py`, `multi_agent/**/*.py`
-- `tests/*.py`
-- `CHANGELOG.md`, `docs/`
-
-## Suggested Sequence
-
-1. Load `single_agent/SKILL.md` — understand the ultrathink methodology before editing.
-2. Run AFRP gate — classify query (A/B/C/D), declare scope, calibrate abstraction level.
-3. Make the smallest coherent change that satisfies the workflow goal.
+1. Load `single_agent/SKILL.md` — understand ultrathink before editing.
+2. Run AFRP gate — classify query (A/B/C/D), declare scope.
+3. Make smallest coherent change satisfying the goal.
 4. Use CIDF `decide()` before any content insertion.
-5. Run the most relevant verification: `python scripts/verify_before_done.py`
-6. Summarize what changed and what still needs review.
-
-## Typical Commit Signals
-
-- `feat(component): Add feature implementation`
-- `fix(component): Fix edge case in feature`
-- `docs(component): Update documentation for feature`
+5. Verify: `python single_agent/scripts/verify_before_done.py`
+6. Summarize changes and open review items.
 
 ## Commit Style
 
-Use conventional commits with scope: `feat(x):`, `fix(x):`, `sec(x):`, `docs(x):`, `arch:`, `chore(x):`
+`feat(x):`, `fix(x):`, `sec(x):`, `docs(x):`, `arch:`, `chore(x):`
 
 ## Notes
 
-- Treat this as a scaffold, not a hard-coded script.
-- Write `tasks/todo.md` before implementing any task with 3+ steps.
-- Never mark complete without running `scripts/verify_before_done.py`.
-- Update the command if the workflow evolves materially.
+- Write `tasks/todo.md` before any 3+ step task.
+- Never mark complete without running verify script.

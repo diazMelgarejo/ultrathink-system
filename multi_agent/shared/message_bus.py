@@ -3,7 +3,7 @@
 message_bus.py
 ==============
 Async message bus for inter-agent communication.
-Version: 0.9.9.0 | License: Apache 2.0
+Version: 2.0.0 | License: Apache 2.0
 
 Supports:
 - In-memory asyncio queue (development/testing)
@@ -19,11 +19,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any, Callable, Optional, TYPE_CHECKING
+from typing import Any, Callable, Optional
 from dataclasses import asdict
-
-if TYPE_CHECKING:
-    import redis.asyncio as aioredis
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +32,7 @@ class MessageBus:
         self.backend = backend
         self._queues:    dict[str, asyncio.Queue] = {}
         self._handlers:  dict[str, list[Callable]] = {}
-        self._client:    Optional[Any] = None
+        self._client = None
 
         if backend == "redis":
             self._init_redis(**kwargs)
@@ -57,9 +54,8 @@ class MessageBus:
             target = message.to_agent
             payload = message.to_dict() if hasattr(message, "to_dict") else message
 
-            client = self._client
-            if self.backend == "redis" and client is not None:
-                await client.publish(f"agent:{target}", json.dumps(payload))
+            if self.backend == "redis" and self._client:
+                await self._client.publish(f"agent:{target}", json.dumps(payload))
             else:
                 if target not in self._queues:
                     self._queues[target] = asyncio.Queue()
@@ -104,13 +100,7 @@ class MessageBus:
         tasks: list of (agent_id, payload) tuples
         Returns: list of results in same order as tasks
         """
-        # Relative import for sibling module
-        try:
-            # Try absolute import first (if added to path)
-            from ultrathink_core import AgentMessage, MessageType
-        except ImportError:
-            # Fallback to absolute path-based import or relative
-            from .ultrathink_core import AgentMessage, MessageType
+        from ultrathink_core import AgentMessage, MessageType
 
         futures = []
         trace_ids = []
@@ -127,13 +117,8 @@ class MessageBus:
             futures.append(self.subscribe(f"result:{msg.trace_id}"))
 
         results = await asyncio.gather(*futures, return_exceptions=True)
-        # Ensure returned type is list[dict]
-        return [
-            r if (isinstance(r, dict) and not isinstance(r, Exception)) 
-            else {"error": str(r)} for r in results
-        ]
+        return [r if not isinstance(r, Exception) else {"error": str(r)} for r in results]
 
     async def close(self):
-        client = self._client
-        if self.backend == "redis" and client is not None:
-            await client.close()
+        if self.backend == "redis" and self._client:
+            await self._client.close()

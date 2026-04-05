@@ -3,7 +3,7 @@
 ultrathink_core.py
 ==================
 Shared types, constants, and base classes for the ultrathink multi-agent system.
-Version: 2.0.0 | License: Apache 2.0
+Version: 0.9.9.1 | License: Apache 2.0
 
 This is the single source of truth for data contracts between agents.
 """

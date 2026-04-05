@@ -200,7 +200,26 @@ Config: `config/agent_registry.json` + `config/routing_rules.json`
 | CIDF compliance           | 100%   |
 | Mode selection accuracy   | Mode 3 only when genuinely needed |
 | Verification before done  | 100%   |
-| Repeat mistake rate       | < 5%   |
+| Repeat mistake rate       | <5%   |
+
+## Quick Start (Usage Guide)
+
+### 1. Activation
+Trigger the full 5-stage process with:
+- `ultrathink this`
+- `apply the system to: [your task]`
+- `production-ready [task]`
+
+### 2. Mandatory Workflow
+Follow the 6 directives in every non-trivial task:
+1. **Plan**: `./scripts/create_task_plan.sh "Build feature"`
+2. **Execute**: Build stage-by-stage (Context -> Architect -> Refine -> Execute -> Crystallize)
+3. **Verify**: `python scripts/verify_before_done.py` (Must PASS before done)
+4. **Learn**: `python scripts/capture_lesson.py` (Run after any correction)
+
+### 3. Integrated Frameworks
+- **AFRP**: Pre-router gate. Classifies and clarifies intent before architecture.
+- **CIDF v1.2**: Content insertion governance. Start at rank 1 (direct_form_input) for every write.
 
 ## References (Progressive Disclosure)
 

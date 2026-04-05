@@ -35,7 +35,7 @@ Clear methodology → clear output. Vague intent → scaled ambiguity.
 
 ```bash
 # 1. Install single-agent (Claude Code / Cowork / Open)
-./install-single-agent.sh
+./install.sh
 
 # 2. Activate in Claude
 # "ultrathink this"
@@ -92,8 +92,9 @@ ultrathink-system/
 ## Installation
 
 ### Single-Agent (Most Users)
+
 ```bash
-./install-single-agent.sh
+./install.sh
 ```
 
 | Platform | Directory |
@@ -186,7 +187,7 @@ This skill follows the SKILL.md open standard and is compatible with
 
 ```bash
 # Add to your ECC profile
-cp -r single-agent ~/.claude/skills/ultrathink-system-skill
+cp -r single_agent ~/.claude/skills/ultrathink-system-skill
 
 # Then use with any ECC-compatible harness
 ```

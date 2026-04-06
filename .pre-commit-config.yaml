@@ -38,3 +38,10 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+
+      - id: ci-deps-guard
+        name: "CI dependency guard — block missing .[test] extras and bad install patterns"
+        entry: python scripts/check_ci_deps.py
+        language: system
+        pass_filenames: false
+        types: [python, yaml, toml]

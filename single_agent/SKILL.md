@@ -1,5 +1,5 @@
 ---
-name: ultrathink
+name: ultrathink-system-skill
 description: >-
   Elegant problem-solving methodology with 5-stage process, AFRP pre-router gate,
   CIDF v1.2 content insertion framework, and 7-agent execution network. Activates
@@ -8,7 +8,7 @@ description: >-
   Triggers on: "ultrathink", "think deeply", "5-stage", "systematic approach",
   "elegant solution", "verify before done", "content insertion", "AFRP", "CIDF".
 version: 1.0.0
-license: Apache-2.0
+license: Apache 2.0
 compatibility: claude-code, claude-desktop
 allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink-lmstudio
 sub_skills:
@@ -238,6 +238,8 @@ Follow the 6 directives in every non-trivial task:
 
 - **AFRP**: Pre-router gate. Classifies and clarifies intent before architecture.
 - **CIDF v1.2**: Content insertion governance. Start at rank 1 (direct_form_input) for every write.
+
+> **Historical Note:** The legacy backup HTTP `/ultrathink` is implemented via `api_server.py` for v1.0 compatibility.
 
 ## LM Studio Multi-Agent Bridge (Tier 2)
 

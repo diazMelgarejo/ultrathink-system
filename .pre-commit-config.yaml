@@ -45,3 +45,10 @@ repos:
         language: system
         pass_filenames: false
         types: [python, yaml, toml]
+
+      - id: simulate-ci
+        name: "Simulate CI (quick) — catch import errors before push"
+        entry: bash scripts/simulate_ci.sh --quick
+        language: system
+        pass_filenames: false
+        stages: [pre-push]

@@ -81,9 +81,11 @@ Task arrives (post-AFRP)
 No exceptions. Start at rank 1 every time.
 
 ### The One Rule
+>
 > Use the simplest tool that works. Complexity is a cost, not a feature.
 
 ### Method Priority
+
 | Rank | Method             | Eligible When                      | Complexity |
 |------|--------------------|------------------------------------|------------|
 | 1    | `direct_form_input`| Field accessible, content < 10k    | 1          |
@@ -93,6 +95,7 @@ No exceptions. Start at rank 1 every time.
 | 5    | `scripting`        | Automation gate OPEN only           | 5          |
 
 ### Verification Protocol (mandatory)
+
 ```
 execute_method() -> visual_ok? --no--> refresh_page()
                        |                     |
@@ -116,18 +119,22 @@ Full CIDF details: `cidf/SKILL.md`
 ## MODE 2: Single-Agent + Subagents (Standard Tasks)
 
 ### Stage 1 — Context Immersion
+
 Scan project structure, git history, skill files. Identify constraints, patterns,
 historical lessons. Output: 2-3 paragraph context summary.
 
 ### Stage 2 — Visionary Architecture
+
 Design modular breakdown with clean interfaces. If content insertion -> run CIDF
 `decide()` here. Ask: "What would the most elegant solution look like?"
 
 ### Stage 3 — Ruthless Refinement
+
 Quality rubric: simplicity 5/5, readability 5/5, robustness 5/5.
 Remove everything non-essential. Elegance = nothing left to take away.
 
 ### Stage 4 — Masterful Execution
+
 ```
 Plan   -> tasks/todo.md with checkable items
 Craft  -> TDD, naming poetry, edge cases handled
@@ -136,10 +143,12 @@ Verify -> scripts/verify_before_done.py -> must PASS
 ```
 
 ### Stage 5 — Crystallize the Vision
+
 Assumptions ledger, simplification story, inevitability argument.
 Run `scripts/capture_lesson.py` if any corrections occurred.
 
 ### Subagent Delegation (Directive #2)
+
 ```
 When context > 70% -- offload, one task per subagent:
   subagent("Research best library for X. Return: comparison table.")
@@ -149,6 +158,7 @@ When context > 70% -- offload, one task per subagent:
 ## MODE 3: Full Multi-Agent Network (Complex Tasks)
 
 ### Agent Network
+
 ```
 Orchestrator
 +-> Context Agent       Stage 1 -- parallel: doc scanner + git historian
@@ -175,18 +185,21 @@ Config: `config/agent_registry.json` + `config/routing_rules.json`
 ## Boundaries
 
 ### Always Do
+
 - Run CIDF `decide()` before any content insertion (all modes, no exceptions)
 - Verify programmatically after every insertion
 - Write `tasks/todo.md` before implementing anything with 3+ steps
 - Start at CIDF rank 1 — never jump directly to scripting
 
 ### Ask First
+
 - Deleting files or directories
 - Deploying to any live environment
 - Modifying config, vendor, or .env files
 - Switching from Mode 2 -> Mode 3 (resource cost)
 
 ### Never Do
+
 - Mark complete without programmatic verification
 - Skip CIDF for any content insertion (even "quick" writes)
 - Trust visual confirmation alone
@@ -205,19 +218,24 @@ Config: `config/agent_registry.json` + `config/routing_rules.json`
 ## Quick Start (Usage Guide)
 
 ### 1. Activation
+
 Trigger the full 5-stage process with:
+
 - `ultrathink this`
 - `apply the system to: [your task]`
 - `production-ready [task]`
 
 ### 2. Mandatory Workflow
+
 Follow the 6 directives in every non-trivial task:
+
 1. **Plan**: `./scripts/create_task_plan.sh "Build feature"`
 2. **Execute**: Build stage-by-stage (Context -> Architect -> Refine -> Execute -> Crystallize)
 3. **Verify**: `python scripts/verify_before_done.py` (Must PASS before done)
 4. **Learn**: `python scripts/capture_lesson.py` (Run after any correction)
 
 ### 3. Integrated Frameworks
+
 - **AFRP**: Pre-router gate. Classifies and clarifies intent before architecture.
 - **CIDF v1.2**: Content insertion governance. Start at rank 1 (direct_form_input) for every write.
 
@@ -226,7 +244,8 @@ Follow the 6 directives in every non-trivial task:
 Use the `mcp-ultrathink-lmstudio` tool to offload heavy reasoning to high-context
 local models when running in hybrid environments.
 
-### Capabilities:
+### Capabilities
+
 - `lmstudio_chat`: Direct interface to Win-based Qwen3.5-27B (Context=16384)
 - `lmstudio_list_models`: Check status of local GPU offload (Target: Metal/CUDA)
 - `lmstudio_orchestrate`: Dispatches Stage 4 execution tasks to LM Studio backend
@@ -235,6 +254,7 @@ local models when running in hybrid environments.
 ## References (Progressive Disclosure)
 
 Load on demand for deeper context:
+
 - `afrp/SKILL.md` — Audience-First Response Protocol (pre-router gate)
 - `cidf/SKILL.md` — Content Insertion Decision Framework v1.2
 - `references/amplifier-principle.md` — foundational essay on intent-driven development

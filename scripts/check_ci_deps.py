@@ -30,6 +30,8 @@ REQUIRED_MODULES = [
     "pydantic",
     "slowapi",
     "pytest",
+    "hatchling",  # required for `python -m build` and editable installs
+    "build",
 ]
 
 # ── Patterns that MUST appear in every workflow install step ──────────────────

@@ -168,7 +168,7 @@ wait_for_port() {
     printf "."
     # 150 tries = 75s — enough to outlast slow first-start tasks (e.g. ECC sync ~60s)
     if [ $tries -ge 150 ]; then
-      echo " TIMEOUT (check .logs/${label,,}.log)"
+      echo " TIMEOUT (check .logs/$(echo "$label" | tr '[:upper:]' '[:lower:]').log)"
       return 0  # non-fatal: continue starting remaining services
     fi
   done

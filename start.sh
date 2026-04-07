@@ -157,7 +157,7 @@ export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
 echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
 
 # ── 2a. Probe backends via Perplexity-Tools ───────────────────────────────────
-# PT detects which backends are live and writes .state/agents.json.
+# PT detects which backends are live and writes .state/routing.json.
 # UTS reads that file to generate a correctly-targeted openclaw.json.
 if [ -n "${PT_DIR:-}" ] && [ -f "$PT_DIR/agent_launcher.py" ]; then
   echo "  Probe   detecting backends…"
@@ -166,7 +166,7 @@ if [ -n "${PT_DIR:-}" ] && [ -f "$PT_DIR/agent_launcher.py" ]; then
     OLLAMA_MAC_ENDPOINT="http://${MAC_IP}:11434" \
     "$PT_PYTHON" agent_launcher.py --write-state 2>/dev/null) \
     || echo "  Probe   non-fatal — no routing state written"
-  export PT_AGENTS_STATE="${PT_DIR}/.state/agents.json"
+  export PT_AGENTS_STATE="${PT_DIR}/.state/routing.json"
 fi
 
 # ── 2b. Bootstrap OpenClaw gateway ───────────────────────────────────────────

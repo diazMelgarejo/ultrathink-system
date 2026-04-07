@@ -157,3 +157,34 @@ The pattern: replacing `pip install pkg1 pkg2 pkg3` with `pip install ".[extras]
 - `8af62f5` (PT) — feat(routing): one-role-per-device guard + GPU crash recovery cooldown
 
 ---
+
+## 2026-04-07 — Claude — Idempotent gateway discovery (commandeer-first bootstrap)
+
+### What was learned
+
+**Never start a new daemon if a compatible one is already running**
+- The old bootstrap only checked `127.0.0.1:18789` (OpenClaw default) — if AlphaClaw or any other fork was running on a different port, it would start a second daemon, potentially conflicting with loaded agents
+- The correct pattern: probe ALL known candidate ports FIRST; if any gateway responds to `/health` or `/v1/models`, commandeer it and skip the entire install/start flow
+- AlphaClaw (chrysb/alphaclaw) and other OpenClaw-compatible gateways expose the same `/health` + `/v1/chat/completions` interface — they are indistinguishable at the protocol level and can be used transparently
+
+**Commandeer = use existing + update config, never restart**
+- When commandeering: write/refresh `openclaw.json` and agent workspaces (routing stays current), but DO NOT call `openclaw onboard --install-daemon` — this would restart the daemon and could evict loaded models
+- Set `OPENCLAW_GATEWAY_URL` env var to the discovered URL so all downstream consumers (orchestrator, researchers) target the right port without hardcoding
+
+**Candidate port list should be configurable**
+- Hardcoding only the default port is fragile; users may run AlphaClaw on 11435, dev proxies on 8080, etc.
+- `OPENCLAW_CANDIDATE_PORTS` defines the probe order; `OPENCLAW_EXTRA_PORTS` env var extends it at runtime
+- `OPENCLAW_GATEWAY_PORT` itself should be env-overridable (not a hardcoded constant)
+
+### Prevention Rules
+
+1. **All bootstrap scripts must probe before install** — check if the target service is already running across ALL known ports before touching npm/brew/apt
+2. **Commandeer-first, install-last** — if a compatible service exists anywhere on localhost, use it; do not start a duplicate
+3. **Never stop/restart a running daemon during bootstrap** — `onboard --install-daemon` and similar "start" commands should only run when nothing is listening
+4. **Always set a discoverable env var** (`*_URL`, `*_ENDPOINT`) pointing to the live gateway URL so downstream code doesn't need to repeat the discovery logic
+5. **Protocol compatibility > implementation identity** — probe by interface (`/health`, `/v1/models`), not by process name; this works across forks and versions
+
+### Commits
+- `6bc40d0` (UTS) — feat(bootstrap): probe all candidate ports and commandeer any running gateway
+
+---

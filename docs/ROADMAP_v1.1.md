@@ -189,7 +189,7 @@ class SwarmOrchestrator:
 
 #### Tier 2 — MCP server pipeline (real Ollama backend, ultrathink-system side)
 
-- [ ] Extract Ollama pipeline into `multi_agent/shared/ollama_client.py`
+- [ ] Extract Ollama pipeline into `bin/shared/ollama_client.py`
   - Move `_build_prompt()`, `_call_ollama()`, `_call_with_fallback()`, `_select_model()` out of `api_server.py`
   - Both `api_server.py` and `ultrathink_orchestration_server.py` import from this shared module
   - No behavior change to `api_server.py` — just moves code, all tests still pass
@@ -254,6 +254,6 @@ The `bridge_contract.py` module already handles the mapping — both transports 
 ## References
 - Architecture decision: ultrathink stateless, PT owns state (locked v0.9.7.0)
 - Canonical MVP wording in PT SKILL.md "State Ownership & Redis Strategy" section
-- Bridge contract: `multi_agent/shared/bridge_contract.py`
-- MCP server (stubs): `multi_agent/mcp_servers/ultrathink_orchestration_server.py`
+- Bridge contract: `bin/shared/bridge_contract.py`
+- MCP server (stubs): `bin/mcp_servers/ultrathink_orchestration_server.py`
 - HTTP server (live): `api_server.py`

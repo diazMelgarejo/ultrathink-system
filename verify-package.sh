@@ -56,7 +56,7 @@ chk_f api_server.py
 
 echo -e "\n📚 Examples:"; chk_d examples/financial-validator; chk_d examples/api-integration; chk_d examples/architecture-refactor
 echo -e "\n📖 Docs:";    chk_f docs/installation.md; chk_f docs/quick-start.md; chk_f docs/faq.md; chk_f docs/troubleshooting.md; chk_f docs/api-reference.md
-echo -e "\n🧪 Tests:";   chk_f tests/test_single_agent.py; chk_f tests/test_multi_agent.py; chk_f tests/test_orchestrator.py
+echo -e "\n🧪 Tests:";   chk_f tests/test_single_agent.py; chk_f tests/test_bin.py; chk_f tests/test_orchestrator.py
 
 echo ""
 if [ "$errors" -eq 0 ]; then

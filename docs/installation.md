@@ -53,15 +53,15 @@ cp -r bin/skills ~/.ecc/skills/ultrathink-system-skill
 ### Manual
 
 ```bash
-cp -r multi-agent ~/.clawdbot/agents/ultrathink-network
+cp -r bin ~/.clawdbot/agents/ultrathink-network
 # or
-cp -r multi-agent ~/.openclaw/agents/ultrathink-network
+cp -r bin ~/.openclaw/agents/ultrathink-network
 ```
 
 ### Start the MCP Server
 
 ```bash
-cd multi_agent/mcp_servers
+cd bin/mcp_servers
 python ultrathink_orchestration_server.py
 ```
 
@@ -74,7 +74,7 @@ Add to `.claude/settings.json`:
   "mcpServers": {
     "ultrathink": {
       "command": "python",
-      "args": ["/path/to/multi_agent/mcp_servers/ultrathink_orchestration_server.py"]
+      "args": ["/path/to/bin/mcp_servers/ultrathink_orchestration_server.py"]
     }
   }
 }

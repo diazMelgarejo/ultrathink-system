@@ -224,7 +224,7 @@ description: Validates structured data (JSON, CSV, YAML) against schemas and
 
 ## Integration Notes for OpenClaw / Clawdbot / MoltBot
 
-Skills in multi_agent environments follow the same standard with one addition: the `allowed-tools` field becomes critical for sandboxing.
+Skills in multi-agent environments follow the same standard with one addition: the `allowed-tools` field becomes critical for sandboxing.
 
 ```yaml
 allowed-tools: bash read-only-filesystem web-search

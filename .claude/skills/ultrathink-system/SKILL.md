@@ -23,7 +23,7 @@ Sub-skills (load on demand):
 ## Tech Stack
 
 - **Primary Language**: Python
-- **Architecture**: dual-module (`bin/skills/` + `multi_agent/`), API server (`api_server.py`)
+- **Architecture**: unified `bin/` package (skills/, agents/, mcp_servers/, shared/), API server (`api_server.py`)
 - **Package Manager**: uv / hatchling
 - **Validation**: Pydantic V2 (`@field_validator`)
 - **Test Location**: `tests/`
@@ -42,7 +42,7 @@ ultrathink-system/
 ├── bin/skills/SKILL.md      ← mother skill (v0.9.9.3)
 ├── bin/skills/afrp/         ← AFRP sub-skill
 ├── bin/skills/cidf/         ← CIDF v1.2 sub-skill
-├── multi_agent/               ← 7-agent network
+├── bin/                   ← unified package (agents/, mcp_servers/, shared/)
 ├── api_server.py              ← POST /ultrathink (port 8001, stateless)
 └── tests/
 ```

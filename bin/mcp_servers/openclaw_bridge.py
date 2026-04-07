@@ -1,7 +1,7 @@
 """
 openclaw_bridge.py — async HTTP bridge for the OpenClaw gateway.
 
-Replaces multi_agent/mcp_servers/lmstudio_bridge.py. Same Python interface,
+Replaces bin/mcp_servers/lmstudio_bridge.py. Same Python interface,
 different backend. All model calls are routed through the OpenClaw gateway
 at 127.0.0.1:18789 (OpenAI-compatible). The agent_id field maps to an agent
 declared in ~/.openclaw/openclaw.json; OpenClaw resolves it to the correct

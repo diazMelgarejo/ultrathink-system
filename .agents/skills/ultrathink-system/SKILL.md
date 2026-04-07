@@ -6,7 +6,7 @@ description: Development conventions and patterns for ultrathink-system. Python 
 # Ultrathink System Conventions
 
 > Generated from [diazMelgarejo/ultrathink-system](https://github.com/diazMelgarejo/ultrathink-system) on 2026-03-29
-> Mother skill: [`single_agent/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/SKILL.md) (v0.9.9.2)
+> Mother skill: [`bin/skills/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/bin/skills/SKILL.md) (v0.9.9.3)
 
 ## Overview
 

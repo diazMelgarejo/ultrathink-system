@@ -26,7 +26,15 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-OPENCLAW_GATEWAY_PORT = 18789
+OPENCLAW_GATEWAY_PORT = int(os.getenv("OPENCLAW_GATEWAY_PORT", "18789"))
+
+# Candidate ports to probe for any running OpenClaw-compatible gateway.
+# Includes OpenClaw default (18789) and AlphaClaw (chrysb/alphaclaw) which
+# may run on 11435 or other ports. Add more via OPENCLAW_EXTRA_PORTS env var.
+_extra = [int(p) for p in os.getenv("OPENCLAW_EXTRA_PORTS", "").split(",") if p.strip()]
+OPENCLAW_CANDIDATE_PORTS: list[int] = list(dict.fromkeys(
+    [OPENCLAW_GATEWAY_PORT, 11435, 8080, 3000, 4000, 9000] + _extra
+))
 
 # ── env-var defaults (all exported by start.sh) ───────────────────────────────
 
@@ -58,6 +66,41 @@ def _lms_base_url(raw: str) -> str:
     """Ensure LM Studio baseUrl ends with /v1 (OpenAI-compat requirement)."""
     raw = raw.rstrip("/")
     return raw if raw.endswith("/v1") else f"{raw}/v1"
+
+
+# ── gateway discovery ─────────────────────────────────────────────────────────
+
+async def _probe_url(url: str, client) -> bool:
+    """Return True if url responds with HTTP < 400 on /health or /v1/models."""
+    for path in ("/health", "/v1/models"):
+        try:
+            r = await client.get(f"{url.rstrip('/')}{path}")
+            if r.status_code < 400:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+async def _find_any_gateway() -> str | None:
+    """
+    Probe all candidate ports for a running OpenClaw-compatible gateway.
+
+    Compatible gateways (OpenClaw, AlphaClaw, or any proxy exposing /health
+    or /v1/models) are detected without discriminating on implementation.
+    Returns the base URL of the first responsive gateway, or None.
+    """
+    try:
+        import httpx
+    except ImportError:
+        return None
+
+    async with httpx.AsyncClient(timeout=1.5) as client:
+        for port in OPENCLAW_CANDIDATE_PORTS:
+            url = f"http://127.0.0.1:{port}"
+            if await _probe_url(url, client):
+                return url
+    return None
 
 
 def _write_openclaw_config(config_dir: Path, config_file: Path) -> None:
@@ -94,7 +137,8 @@ def _write_openclaw_config(config_dir: Path, config_file: Path) -> None:
     agents_root = str(Path.home() / ".openclaw" / "agents")
 
     config = {
-        "gateway": {"mode": "local", "port": OPENCLAW_GATEWAY_PORT, "bind": "loopback"},
+        "gateway": {"mode": "local", "port": OPENCLAW_GATEWAY_PORT,
+                    "bind": "loopback", "commandeered": False},
         "agents": {
             "defaults": {
                 "model": {"primary": manager_primary},
@@ -205,22 +249,54 @@ async def bootstrap_openclaw(force: bool = False) -> bool:
     """
     Idempotent OpenClaw gateway bootstrap. Safe to call on every start.sh run.
 
+    First probes all known candidate ports for ANY running OpenClaw-compatible
+    gateway (including AlphaClaw or other forks).  If one is found it is
+    commandeered — no daemon is started and no loaded models are disturbed.
+    Only when no gateway is reachable does it install / start a new one.
+
     Steps:
-      1. Verify npm is available
-      2. Install openclaw@latest if missing
+      0. Discover any running compatible gateway (commandeer if found)
+      1. Verify npm is available          ← skipped when commandeering
+      2. Install openclaw@latest if missing ← skipped when commandeering
       3. Write ~/.openclaw/openclaw.json (skipped if exists and not forced)
-      4. Create agent workspaces from openclaw/agents/*/SOUL.md
-      5. Start OpenClaw daemon (openclaw onboard --install-daemon) — reuses if running
+      4. Create agent workspaces from bin/agents/*/SOUL.md
+      5. Start OpenClaw daemon            ← skipped when commandeering
       6. Ensure ~/autoresearch is cloned and synced
     """
     try:
-        import httpx
+        import httpx  # noqa: F401 — checked early so later uses don't need try/except
     except ImportError:
         print("[openclaw] ✗ httpx not installed — run: pip install httpx")
         return False
 
     config_dir  = Path.home() / ".openclaw"
     config_file = config_dir  / "openclaw.json"
+
+    # ── Step 0: discover any already-running compatible gateway ──────────────
+    print(f"[openclaw] → Probing {len(OPENCLAW_CANDIDATE_PORTS)} candidate ports for"
+          f" a running gateway: {OPENCLAW_CANDIDATE_PORTS}")
+    existing_url = await _find_any_gateway()
+
+    if existing_url:
+        existing_port = int(existing_url.rsplit(":", 1)[-1])
+        if existing_port != OPENCLAW_GATEWAY_PORT:
+            print(f"[openclaw] ✓ Found gateway at {existing_url}"
+                  f" (not default :{OPENCLAW_GATEWAY_PORT})"
+                  f" — commandeering, skipping daemon start")
+        else:
+            print(f"[openclaw] ✓ Gateway already running at {existing_url}"
+                  f" — commandeering, no restart needed")
+        # Persist the discovered URL so consumers always target the right port
+        os.environ["OPENCLAW_GATEWAY_URL"] = existing_url
+        # Still write config + workspaces so routing is up to date; skip daemon
+        if not config_file.exists() or force:
+            _write_openclaw_config(config_dir, config_file)
+        _ensure_agent_workspaces(config_dir)
+        _ensure_autoresearch()
+        return True
+    # ─────────────────────────────────────────────────────────────────────────
+
+    print("[openclaw] No running gateway found — proceeding with full bootstrap")
 
     # 1. npm check
     if not shutil.which("npm"):
@@ -253,22 +329,12 @@ async def bootstrap_openclaw(force: bool = False) -> bool:
     # 4. Agent workspaces
     _ensure_agent_workspaces(config_dir)
 
-    # 5. Gateway — idempotent health check first
-    try:
-        async with httpx.AsyncClient(timeout=2.0) as c:
-            r = await c.get(f"http://127.0.0.1:{OPENCLAW_GATEWAY_PORT}/health")
-            if r.status_code == 200:
-                print(f"[openclaw] ✓ gateway already running :{OPENCLAW_GATEWAY_PORT}")
-                _ensure_autoresearch()
-                return True
-    except Exception:
-        pass  # not running — fall through to start it
-
+    # 5. Start gateway
     print("[openclaw] → Starting OpenClaw gateway…")
     try:
-        # onboard --install-daemon: configures defaults, registers daemon, starts gateway
         subprocess.run(["openclaw", "onboard", "--install-daemon"], check=True)
         print(f"[openclaw] ✓ gateway started :{OPENCLAW_GATEWAY_PORT}")
+        os.environ["OPENCLAW_GATEWAY_URL"] = f"http://127.0.0.1:{OPENCLAW_GATEWAY_PORT}"
     except PermissionError as e:
         _oclaw_path = shutil.which("openclaw") or "openclaw"
         print(f"[openclaw] ✗ permission denied running openclaw: {e}")

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-test_bin.py
+test_multi_agent.py
 ===================
 Test suite for the ultrathink multi-agent package structure.
-Run: pytest tests/test_bin.py -v
+Run: pytest tests/test_multi_agent.py -v
 """
 import json
 import pytest

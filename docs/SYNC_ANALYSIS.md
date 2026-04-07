@@ -26,7 +26,7 @@
 | **Tests** | ✅ RESOLVED | PT now has 6 test files (56+ tests); ultrathink has 86+ tests |
 | **routing.yml** | ✅ IN SYNC | PT `config/routing.yml` has `deep_reasoning` + `code_analysis` ultrathink routes |
 | **HAL doc cross-ref** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md HAL section complete; 
-| **PT hardware cross-link (OPT 1)** | ✅ RESOLVED | ultrathink `single_agent/SKILL.md` references PT `hardware/SKILL.md`; `orchestrator/__init__.py` has `__version__` |
+| **PT hardware cross-link (OPT 1)** | ✅ RESOLVED | ultrathink `bin/skills/SKILL.md` references PT `hardware/SKILL.md`; `orchestrator/__init__.py` has `__version__` |
 | **PT `pyproject.toml` (OPT 2)** | ✅ RESOLVED | PT now pip-installable as `perplexity-tools`; `[tool.pytest.ini_options]` + dev extras included |
 | **Integration test suite (OPT 3)** | ✅ RESOLVED | `tests/test_ultrathink_integration.py` — 12 tests verifying routing.yml ↔ ultrathink | **Integration test suite (OPT 3)** | ✅ RESOLVED | `tests/test_ultrathink_integration.py` — 12 tests verifying routing.yml ↔ ultrathink contract |
 
@@ -59,7 +59,7 @@ Aligned same day (2026-03-28). Releases match.
 
 Both agree:
 - PT SKILL.md = top-level model selection runs **first**
-- ultrathink single_agent/SKILL.md = reasoning methodology, called **by** PT when deep reasoning needed
+- ultrathink bin/skills/SKILL.md = reasoning methodology, called **by** PT when deep reasoning needed
 - ECC Tools = sub-agent selection for Stage-4 parallel executors
 
 ### 5. Fallback Chain — Documented and Consistent
@@ -123,9 +123,9 @@ Architecture decision locked: ultrathink remains **stateless** with no Redis req
 
 **Status:** ✅ RESOLVED (rolling — pre-v1.0 RC)
 
-**Implemented:** ultrathink `single_agent/SKILL.md` updated (commit `ac292db`) with hardware-aware routing section referencing PT `hardware/SKILL.md`. `orchestrator/__init__.py` also updated with `__version__` for package metadata consistency.
+**Implemented:** ultrathink `bin/skills/SKILL.md` updated (commit `ac292db`) with hardware-aware routing section referencing PT `hardware/SKILL.md`. `orchestrator/__init__.py` also updated with `__version__` for package metadata consistency.
 
-ultrathink-system's `single_agent/SKILL.md` should reference PT's hardware profiles so that when running inside PT orchestration, ultrathink knows to respect PT's hardware-aware routing.
+ultrathink-system's `bin/skills/SKILL.md` should reference PT's hardware profiles so that when running inside PT orchestration, ultrathink knows to respect PT's hardware-aware routing.
 
 **Suggested addition to ultrathink SKILL.md:**
 ```

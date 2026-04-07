@@ -1,6 +1,6 @@
 # AFRP Failure Mode Taxonomy — Extended Reference
 
-**Parent skill:** [`afrp/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/afrp/SKILL.md)
+**Parent skill:** [`afrp/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/bin/skills/afrp/SKILL.md)
 
 This document provides extended examples and recovery procedures for each AFRP failure mode. Load on demand when diagnosing a response quality issue.
 

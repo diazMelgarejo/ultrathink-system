@@ -34,7 +34,7 @@ Clear methodology → clear output. Vague intent → scaled ambiguity.
 ## Quick Start (3 Minutes)
 
 ```bash
-# 1. Install single-agent (Claude Code / Cowork / Open)
+# 1. Install bin/skills (Claude Code / Cowork / Open)
 ./install.sh
 
 # 2. Activate in Claude

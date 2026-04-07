@@ -9,7 +9,7 @@ allowed-tools: bash, file-operations
 
 # CIDF Sub-Skill — Content Insertion Decision Framework v1.2
 
-**Sub-skill of `single_agent/SKILL.md`. Load on demand for any content insertion task.**
+**Sub-skill of `bin/skills/SKILL.md`. Load on demand for any content insertion task.**
 
 ---
 
@@ -21,8 +21,8 @@ allowed-tools: bash, file-operations
 ## Quick API
 
 ```python
-from single_agent.cidf.core.content_insertion_framework import Task, Env, decide
-from single_agent.cidf.linter.policy_linter import lint_strict
+from bin.skills.cidf.core.content_insertion_framework import Task, Env, decide
+from bin.skills.cidf.linter.policy_linter import lint_strict
 
 decision = decide(task, env)      # always starts at rank 1
 lint_strict(decision, task, env)  # raises LintError on LINT-001–005
@@ -81,7 +81,7 @@ execute → visual_ok? ──no──→ refresh() → verify_programmatically(s
 ## Package Contents
 
 ```
-single_agent/cidf/
+bin/skills/cidf/
 ├── SKILL.md                          ← this file (sub-skill)
 ├── FRAMEWORK.md                      ← canonical v1.2 spec
 ├── core/
@@ -114,5 +114,5 @@ single_agent/cidf/
 ## Run Conformance Tests
 
 ```bash
-pytest single_agent/cidf/tests/test_conformance.py -v   # must be 30 passed, 0 failed
+pytest bin/skills/cidf/tests/test_conformance.py -v   # must be 30 passed, 0 failed
 ```

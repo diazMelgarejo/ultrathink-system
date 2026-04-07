@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.9.3] - 2026-04-07
+### Changed
+- Docs: all `single_agent/` path references updated to `bin/skills/` across README, docs/, .claude/, .agents/, .codex/, .github/, bin/skills/ skills files
+- Docs: `install-single-agent.sh` references updated to `install.sh`
+- Docs: all `single-agent` concept labels updated to `bin/skills`
+- Version: synchronized to 0.9.9.3 across all agent.md frontmatter, SKILL.md, CLAUDE.md, INSTALL.md
+- CHANGELOG.md: historical entries for pre-0.9.9.3 versions intentionally preserved as-is
+
 ## [0.9.9.2] - 2026-04-06
 ### Fixed
 - CI: restored missing dependencies (`fastapi`, `httpx`) in runner environment

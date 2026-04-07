@@ -22,22 +22,22 @@
 
 ```bash
 # Claude Code
-cp -r single_agent ~/.claude/skills/ultrathink-system-skill
+cp -r bin/skills ~/.claude/skills/ultrathink-system-skill
 
 # Cowork
-cp -r single_agent ~/.cowork/skills/ultrathink-system-skill
+cp -r bin/skills ~/.cowork/skills/ultrathink-system-skill
 
 # Any Claude platform — place in skills dir
-cp -r single_agent /path/to/your/skills/ultrathink-system-skill
+cp -r bin/skills /path/to/your/skills/ultrathink-system-skill
 ```
 
 ### ECC Tools / everything-claude-code
 
 ```bash
 # Drop into existing skill library
-cp -r single_agent ~/.claude/skills/ultrathink-system-skill
+cp -r bin/skills ~/.claude/skills/ultrathink-system-skill
 # or if using ecc-tools profile
-cp -r single_agent ~/.ecc/skills/ultrathink-system-skill
+cp -r bin/skills ~/.ecc/skills/ultrathink-system-skill
 ```
 
 ---
@@ -92,7 +92,7 @@ Expected output:
 
 ```
 ✓ LICENSE found
-✓ single_agent/SKILL.md found
+✓ bin/skills/SKILL.md found
 ✓ All 7 agent files found
 ✅ Package integrity: VERIFIED
 ```

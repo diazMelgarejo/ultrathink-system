@@ -32,5 +32,5 @@ git push origin main
 
 - Lessons file: `.claude/lessons/LESSONS.md`
 - Instincts YAML: `.claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml`
-- Mother skill: `single_agent/SKILL.md` (load this before and after any major merge)
+- Mother skill: `bin/skills/SKILL.md` (load this before and after any major merge)
 - Companion repo sync: run the same command in Perplexity-Tools after merging PT ECC PRs

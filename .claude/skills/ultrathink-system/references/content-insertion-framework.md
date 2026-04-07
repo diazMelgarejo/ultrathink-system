@@ -253,7 +253,7 @@ This document is the **human-readable reference** for CIDF v1.2.
 The **executable source of truth** lives in the `cidf/` package alongside this file:
 
 ```
-single_agent/
+bin/skills/
 ├── references/
 │   └── content-insertion-framework.md   ← you are here (human reference)
 └── cidf/                                 ← runnable implementation
@@ -302,5 +302,5 @@ lint_strict(decision, task, env)       # raises LintError if any of LINT-001–0
 
 ```bash
 # From repo root — must all pass before any policy change ships
-pytest single_agent/cidf/tests/test_conformance.py -v   # 30 tests
+pytest bin/skills/cidf/tests/test_conformance.py -v   # 30 tests
 ```

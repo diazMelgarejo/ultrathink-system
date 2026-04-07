@@ -24,7 +24,7 @@ Optimize for: reliability
 ### 3. Create a Task Plan
 
 ```bash
-./single_agent/scripts/create_task_plan.sh "Build my feature"
+./bin/skills/scripts/create_task_plan.sh "Build my feature"
 ```
 
 ### 4. Build It
@@ -34,13 +34,13 @@ Work through the 5 stages. Claude will guide you.
 ### 5. Verify Before Done
 
 ```bash
-python single_agent/scripts/verify_before_done.py --task "Build my feature"
+python bin/skills/scripts/verify_before_done.py --task "Build my feature"
 ```
 
 ### 6. Capture Lessons
 
 ```bash
-python single_agent/scripts/capture_lesson.py
+python bin/skills/scripts/capture_lesson.py
 ```
 
 ---

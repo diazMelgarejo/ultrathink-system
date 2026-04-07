@@ -6,7 +6,7 @@ description: Development conventions and patterns for ultrathink-system. Python 
 # Ultrathink System Conventions
 
 > Generated from [diazMelgarejo/ultrathink-system](https://github.com/diazMelgarejo/ultrathink-system) on 2026-03-29
-> Mother skill: [`single_agent/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/single_agent/SKILL.md) (v0.9.9.2)
+> Mother skill: [`bin/skills/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/bin/skills/SKILL.md) (v0.9.9.3)
 
 ## Overview
 
@@ -14,16 +14,16 @@ This skill teaches Claude the development patterns and conventions used in ultra
 
 ## Mother Skill
 
-The canonical system skill lives at `single_agent/SKILL.md` (v0.9.9.2). Always load it when working on this repository for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
+The canonical system skill lives at `bin/skills/SKILL.md` (v0.9.9.3). Always load it when working on this repository for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
 
 Sub-skills (load on demand):
-- `single_agent/afrp/SKILL.md` — Audience-First Response Protocol (mandatory pre-router gate)
-- `single_agent/cidf/SKILL.md` — Content Insertion Decision Framework v1.2
+- `bin/skills/afrp/SKILL.md` — Audience-First Response Protocol (mandatory pre-router gate)
+- `bin/skills/cidf/SKILL.md` — Content Insertion Decision Framework v1.2
 
 ## Tech Stack
 
 - **Primary Language**: Python
-- **Architecture**: dual-module (`single_agent/` + `multi_agent/`), API server (`api_server.py`)
+- **Architecture**: dual-module (`bin/skills/` + `multi_agent/`), API server (`api_server.py`)
 - **Package Manager**: uv / hatchling
 - **Validation**: Pydantic V2 (`@field_validator`)
 - **Test Location**: `tests/`
@@ -39,9 +39,9 @@ Sub-skills (load on demand):
 
 ```
 ultrathink-system/
-├── single_agent/SKILL.md      ← mother skill (v0.9.9.2)
-├── single_agent/afrp/         ← AFRP sub-skill
-├── single_agent/cidf/         ← CIDF v1.2 sub-skill
+├── bin/skills/SKILL.md      ← mother skill (v0.9.9.3)
+├── bin/skills/afrp/         ← AFRP sub-skill
+├── bin/skills/cidf/         ← CIDF v1.2 sub-skill
 ├── multi_agent/               ← 7-agent network
 ├── api_server.py              ← POST /ultrathink (port 8001, stateless)
 └── tests/
@@ -49,7 +49,7 @@ ultrathink-system/
 
 ## Best Practices
 
-- Load `single_agent/SKILL.md` before any significant change
+- Load `bin/skills/SKILL.md` before any significant change
 - Run AFRP gate before generating non-trivial output
 - Use CIDF `decide()` before any content insertion
 - Use `@field_validator` (Pydantic V2), never `@validator`

@@ -11,7 +11,7 @@ labels: enhancement
 [How would you like ultrathink to solve it?]
 
 ## Which Component
-- [ ] SKILL.md (single-agent)
+- [ ] SKILL.md (bin/skills)
 - [ ] References documentation
 - [ ] Scripts (verify/capture/plan)
 - [ ] Templates

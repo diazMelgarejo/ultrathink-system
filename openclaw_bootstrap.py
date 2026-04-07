@@ -231,11 +231,10 @@ async def bootstrap_openclaw(force: bool = False) -> bool:
     if not shutil.which("openclaw"):
         print("[openclaw] → Installing openclaw@latest…")
         try:
-            subprocess.run(["npm", "install", "-g", "openclaw@latest"],
-                           check=True, capture_output=True)
+            subprocess.run(["npm", "install", "-g", "openclaw@latest"], check=True)
             print("[openclaw] ✓ openclaw installed")
         except subprocess.CalledProcessError as e:
-            print(f"[openclaw] ✗ install failed: {e.stderr.decode()[:200]}")
+            print(f"[openclaw] ✗ install failed: {e}")
             return False
 
     # 3. Write config (first run or forced)
@@ -259,8 +258,7 @@ async def bootstrap_openclaw(force: bool = False) -> bool:
     print("[openclaw] → Starting OpenClaw gateway…")
     try:
         # onboard --install-daemon: configures defaults, registers daemon, starts gateway
-        subprocess.run(["openclaw", "onboard", "--install-daemon"],
-                       check=True, capture_output=True)
+        subprocess.run(["openclaw", "onboard", "--install-daemon"], check=True)
         print(f"[openclaw] ✓ gateway started :{OPENCLAW_GATEWAY_PORT}")
     except subprocess.CalledProcessError as e:
         print(f"[openclaw] ✗ gateway start failed: {e}")

@@ -67,3 +67,57 @@ The pattern: replacing `pip install pkg1 pkg2 pkg3` with `pip install ".[extras]
 - `710fc47` — added hatchling+build to [test] extras (final fix)
 
 ---
+
+## 2026-04-07 — Claude — Idempotent installs: subprocess permissions + model auto-discovery
+
+### What Went Wrong
+
+**1. `capture_output=True` hides all subprocess output**
+- `openclaw_bootstrap.py` used `capture_output=True` on both `npm install -g openclaw@latest` and `openclaw onboard --install-daemon`
+- This silenced all stdout/stderr, making the bootstrap appear frozen with no feedback
+- Fix: remove `capture_output=True` entirely — let output stream through
+
+**2. npm global install does not guarantee execute bits**
+- `npm install -g` on some Node/macOS/nvm setups installs the binary without `+x` permissions
+- `shutil.which("openclaw")` may still return a path (finds it in PATH by name), but `subprocess.run(["openclaw", ...])` raises `PermissionError: [Errno 13] Permission denied`
+- This `PermissionError` is an `OSError`, NOT a `subprocess.CalledProcessError` — catching only `CalledProcessError` leaves it unhandled and propagates as a crash
+- Fix: after npm install, explicitly check `stat().st_mode & S_IXUSR` and `chmod +x` if missing; also add a separate `except PermissionError` block that prints the exact fix command
+
+**3. LM Studio model names must be discovered at runtime, not hardcoded**
+- Hardcoded model names (e.g. `qwen3:8b-instruct`) cause `404` (Ollama) or `400` (LM Studio) on every inference call when that model isn't loaded
+- LM Studio returns its currently-loaded model via `GET /v1/models` → `data[0].id`
+- Ollama returns available models via `GET /api/tags` → `models[].name`
+- Fix: add `_resolve_ollama_model()` and `_resolve_lmstudio_model()` that query the backend first and remap to the first available model if the preferred one is absent
+
+**4. Hardware isolation: Windows GPU models cannot run on Mac**
+- Windows LM Studio (RTX 3080) is at `192.168.254.103:1234` — calls must go there over the LAN
+- Mac LM Studio is at `192.168.254.101:1234` — completely separate instance
+- When Windows detection fails, coder falls back to `mac-degraded` (Mac endpoint) — win-researcher is then correctly skipped via `coder_backend != "mac-degraded"` guard
+
+**5. AgentTracker `agents.json` collides with old `routing.json` format**
+- Before the rename (`agents.json` → `routing.json` in agent_launcher), the tracker loaded flat routing dicts (`{"mac_ollama_ok": true, ...}`) instead of `AgentRecord` dicts
+- `AgentRecord(**v)` raises `TypeError: argument after ** must be a mapping, not str` when `v` is a bool or string
+- Fix: `_load()` must check `isinstance(v, dict)` before constructing `AgentRecord`; prune and rewrite the file on first load if stale entries are found
+
+### Prevention Rules for All Idempotent Installs
+
+1. **Never use `capture_output=True` in bootstrap scripts** — output should always stream to the user
+2. **After any `npm install -g`, verify and fix execute bits** before running the binary:
+   ```python
+   import stat
+   path = shutil.which("binary_name")
+   if path and not (Path(path).stat().st_mode & stat.S_IXUSR):
+       Path(path).chmod(Path(path).stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
+   ```
+3. **Catch `PermissionError` separately from `CalledProcessError`** in all subprocess blocks — they are different exception types
+4. **Never hardcode model names** for LM Studio or Ollama — always query `/v1/models` or `/api/tags` and resolve at runtime; fall back to first available model
+5. **Separate AgentTracker state file from routing state file** — never share the same JSON path between an AgentRecord registry and a flat routing dict
+6. **All `_load()` methods for typed records must validate `isinstance(v, dict)`** before unpacking with `**v`
+
+### Commits
+- `3c9a4a8` (UTS) — fix(bootstrap): handle PermissionError + auto chmod +x after npm install
+- `23bd01d` (UTS) — fix(bootstrap): remove capture_output=True
+- `ffb1be0` (PT)  — fix(researchers): auto-discover loaded model via /v1/models + /api/tags
+- `d9e4f50` (PT)  — fix(tracker): handle stale routing data in agents.json
+
+---

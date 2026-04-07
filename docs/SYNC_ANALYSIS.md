@@ -276,7 +276,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 ### MCP-Optional v1.1 TODO Checklists Added
 - Tier 1 (PT): `orchestrator/ultrathink_mcp_client.py`, `call_ultrathink_mcp_or_bridge()`, tests — in `PT/docs/ROADMAP_v1.1.md`.
-- Tier 2 (ultrathink): `multi_agent/shared/ollama_client.py`, `_solve()` real pipeline, tests — in `ultrathink/docs/ROADMAP_v1.1.md`.
+- Tier 2 (ultrathink): `bin/shared/ollama_client.py`, `_solve()` real pipeline, tests — in `ultrathink/docs/ROADMAP_v1.1.md`.
 - Recommended sequencing: Tier 2 (server pipeline) before Tier 1 (client infrastructure).
 
 ### Test Count

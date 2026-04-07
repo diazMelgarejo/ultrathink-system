@@ -10,7 +10,7 @@ MCP-Optional transport is planned for v1.1 — see [MCP-Optional Transport (v1.1
 - `Perplexity-Tools` remains the top-level orchestrator and selects ultrathink
   behavior through `task_type` routing (`deep_reasoning`, `code_analysis`).
 - `ultrathink-system` serves the HTTP bridge via `api_server.py` (FastAPI, port 8001).
-- The MCP server (`multi_agent/mcp_servers/ultrathink_orchestration_server.py`)
+- The MCP server (`bin/mcp_servers/ultrathink_orchestration_server.py`)
   exposes the tool surface below but its `_solve()` is a stub — it does not yet
   call Ollama. All production traffic flows through the HTTP bridge.
 - MCP tool surface (v1.1+ target):
@@ -53,7 +53,7 @@ Run the current in-repo bridge with:
 
 ```bash
 cd ultrathink-system
-python multi_agent/mcp_servers/ultrathink_orchestration_server.py
+python bin/mcp_servers/ultrathink_orchestration_server.py
 ```
 
 The MCP server publishes the tool schemas defined in `TOOL_SCHEMAS` and is the
@@ -108,7 +108,7 @@ any MCP client will fall back to HTTP automatically.
 ### Implementation sequencing (Tier 2 before Tier 1)
 
 **Step 1 — Tier 2 (ultrathink-system, do this first):**
-Extract Ollama pipeline into `multi_agent/shared/ollama_client.py`, then implement
+Extract Ollama pipeline into `bin/shared/ollama_client.py`, then implement
 `_solve()` to call Ollama synchronously and return the full result inline —
 matching the HTTP synchronous contract, no polling loop needed.
 
@@ -159,4 +159,4 @@ This bridge documentation assumes:
 
 - Perplexity-Tools: `SKILL.md`, `README.md`
 - ultrathink-system: `README.md`, `docs/api-reference.md`
-- MCP runtime: `multi_agent/mcp_servers/README.md`
+- MCP runtime: `bin/mcp_servers/README.md`

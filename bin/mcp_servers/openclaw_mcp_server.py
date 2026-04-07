@@ -2,7 +2,7 @@
 OpenClaw MCP Server — stdio JSON-RPC server with OpenClaw gateway integration.
 Four tools: openclaw_chat, openclaw_list_agents, openclaw_orchestrate, openclaw_health.
 
-Adapted from multi_agent/mcp_servers/lmstudio_mcp_server.py.
+Adapted from bin/mcp_servers/lmstudio_mcp_server.py.
 All model calls now route through the OpenClaw gateway at 127.0.0.1:18789
 instead of directly hitting LM Studio endpoints.
 

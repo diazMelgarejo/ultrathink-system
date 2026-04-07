@@ -66,7 +66,7 @@ def main():
 
     # 2. Check required package directories
     print("\n[2/4] Checking package directories...")
-    required_dirs = ["multi_agent", "single_agent"]
+    required_dirs = ["bin"]
     for d in required_dirs:
         if not Path(d).is_dir():
             print(f"❌ Missing directory: {d}")
@@ -136,9 +136,9 @@ def main():
                     str(python_bin),
                     "-c",
                     (
-                        "import multi_agent, single_agent; "
-                        "from multi_agent.shared.ultrathink_core import Stage, TaskState; "
-                        "from single_agent.cidf.core.content_insertion_framework import decide; "
+                        "import bin; "
+                        "from bin.shared.ultrathink_core import Stage, TaskState; "
+                        "from bin.skills.cidf.core.content_insertion_framework import decide; "
                         "print('imports ok')"
                     ),
                 ],
@@ -151,10 +151,10 @@ def main():
                 if import_result.stderr:
                     print(import_result.stderr)
                 return False
-            print("✓ import multi_agent")
-            print("✓ import single_agent")
-            print("✓ import multi_agent.shared.ultrathink_core")
-            print("✓ import single_agent.cidf.core.content_insertion_framework")
+            print("✓ import bin")
+            
+            print("✓ import bin.shared.ultrathink_core")
+            print("✓ import bin.skills.cidf.core.content_insertion_framework")
     except subprocess.TimeoutExpired:
         print("❌ install or import verification timed out")
         return False

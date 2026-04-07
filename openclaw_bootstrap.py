@@ -162,7 +162,7 @@ def _ensure_agent_workspaces(config_dir: Path) -> None:
     Copy SOUL.md files from openclaw/agents/<role>/ (git-tracked source)
     to ~/.openclaw/agents/<role>/SOUL.md. Idempotent — skips existing files.
     """
-    soul_src   = SCRIPT_DIR / "openclaw" / "agents"
+    soul_src   = SCRIPT_DIR / "bin" / "agents"
     agents_dir = config_dir / "agents"
     roles = ["mac-researcher", "win-researcher", "orchestrator", "coder", "autoresearcher"]
 

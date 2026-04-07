@@ -29,7 +29,7 @@ bash /path/to/ultrathink-system/install.sh --project
 
 ```bash
 # Copy the skill folder to your Claude skills directory
-cp -R single_agent ~/.claude/skills/ultrathink-system-skill
+cp -R bin/skills ~/.claude/skills/ultrathink-system-skill
 ```
 
 ## What Gets Installed
@@ -128,4 +128,4 @@ rm -rf ~/.claude/skills/ultrathink-system-skill
 ## Source
 
 Distilled from [diazMelgarejo/ultrathink-system](https://github.com/diazMelgarejo/ultrathink-system)
-single_agent/SKILL.md v0.9.9.2 -> unified install script v1.1.0
+bin/skills/SKILL.md v0.9.9.2 -> unified install script v1.1.0

@@ -9,7 +9,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 import api_server
-from multi_agent.shared.bridge_contract import (
+from bin.shared.bridge_contract import (
     optimize_for_to_reasoning_depth,
     reasoning_depth_to_optimize_for,
 )

@@ -237,6 +237,15 @@ async def bootstrap_openclaw(force: bool = False) -> bool:
             print(f"[openclaw] ✗ install failed: {e}")
             return False
 
+    # Ensure the binary is executable (npm on some systems installs without +x)
+    _oclaw_bin = shutil.which("openclaw")
+    if _oclaw_bin:
+        import stat as _stat
+        _mode = Path(_oclaw_bin).stat().st_mode
+        if not (_mode & _stat.S_IXUSR):
+            print(f"[openclaw] ⚠ fixing permissions on {_oclaw_bin}")
+            Path(_oclaw_bin).chmod(_mode | _stat.S_IXUSR | _stat.S_IXGRP | _stat.S_IXOTH)
+
     # 3. Write config (first run or forced)
     if not config_file.exists() or force:
         _write_openclaw_config(config_dir, config_file)
@@ -260,6 +269,11 @@ async def bootstrap_openclaw(force: bool = False) -> bool:
         # onboard --install-daemon: configures defaults, registers daemon, starts gateway
         subprocess.run(["openclaw", "onboard", "--install-daemon"], check=True)
         print(f"[openclaw] ✓ gateway started :{OPENCLAW_GATEWAY_PORT}")
+    except PermissionError as e:
+        _oclaw_path = shutil.which("openclaw") or "openclaw"
+        print(f"[openclaw] ✗ permission denied running openclaw: {e}")
+        print(f"[openclaw]   fix: chmod +x {_oclaw_path}")
+        return False
     except subprocess.CalledProcessError as e:
         print(f"[openclaw] ✗ gateway start failed: {e}")
         return False

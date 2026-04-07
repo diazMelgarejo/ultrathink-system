@@ -60,20 +60,34 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <style>
   *{{box-sizing:border-box;margin:0;padding:0}}
   body{{background:#475569;color:#f8fafc;font-family:monospace;font-size:14px;padding:1.5rem}}
-  h1{{font-size:1.25rem;letter-spacing:.05em;margin-bottom:1rem;color:#94a3b8}}
+  h1{{font-size:1.25rem;letter-spacing:.05em;margin-bottom:1rem;color:#38bdf8}}
   .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}}
   .card{{background:#334155;border:1px solid #64748b;border-radius:4px;padding:1rem}}
   .card-title{{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:.5rem}}
   .badge{{display:inline-block;padding:.15rem .5rem;border-radius:2px;font-size:.75rem;margin-bottom:.5rem}}
   .ok{{color:#4ade80}}
   .err{{color:#f87171}}
-  .warn{{color:#facc15}}
-  .url{{color:#7dd3fc;font-size:.75rem}}
+  .warn{{color:#fbbf24}}
+  .url{{color:#38bdf8;font-size:.75rem}}
   .role{{color:#94a3b8;font-size:.75rem}}
   .models{{margin-top:.5rem}}
   .model{{color:#cbd5e1;font-size:.75rem;padding:.1rem 0}}
   .footer{{margin-top:1.5rem;font-size:.7rem;color:#64748b}}
   .version{{color:#64748b;font-size:.7rem}}
+  .section{{margin-top:1.5rem}}
+  .section-title{{font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;color:#38bdf8;margin-bottom:.75rem;border-bottom:1px solid #38bdf840;padding-bottom:.25rem}}
+  .feed{{background:#334155;border:1px solid #64748b;border-radius:4px;overflow:hidden}}
+  .ev{{display:flex;gap:.5rem;padding:.4rem .75rem;border-bottom:1px solid #3f536640;align-items:baseline}}
+  .ev:last-child{{border-bottom:none}}
+  .ev-ts{{color:#64748b;font-size:.65rem;white-space:nowrap;min-width:5rem}}
+  .ev-who{{color:#38bdf8;font-size:.7rem;white-space:nowrap;min-width:8rem}}
+  .ev-tag{{font-size:.65rem;border-radius:2px;padding:.05rem .3rem;white-space:nowrap}}
+  .tag-reply{{background:#4ade8020;color:#4ade80}}
+  .tag-query{{background:#38bdf820;color:#7dd3fc}}
+  .tag-error{{background:#f8717120;color:#f87171}}
+  .tag-other{{background:#64748b40;color:#94a3b8}}
+  .ev-msg{{color:#cbd5e1;font-size:.75rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}}
+  .none{{color:#64748b;font-size:.75rem;padding:.75rem}}
 </style>
 </head>
 <body>
@@ -81,6 +95,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div class="grid">
 {cards}
 </div>
+{activity_section}
 <div class="footer">Auto-refresh every 10s &bull; {timestamp}</div>
 </body>
 </html>"""
@@ -109,6 +124,52 @@ def _render_card(title: str, ok: bool, url: str, role: str = "", models: List[st
         f'{models_html}'
         f'{extra}'
         f'</div>'
+    )
+
+
+def _render_activity_section(events: List[Dict[str, Any]]) -> str:
+    import datetime
+
+    def _fmt_ts(ts: float) -> str:
+        try:
+            return datetime.datetime.fromtimestamp(ts).strftime("%H:%M:%S")
+        except Exception:
+            return "—"
+
+    def _tag(event: str) -> str:
+        if event in ("reply", "reply_received"):
+            return '<span class="ev-tag tag-reply">reply</span>'
+        if event in ("query_sent", "started"):
+            return '<span class="ev-tag tag-query">{}</span>'.format(event)
+        if event == "error":
+            return '<span class="ev-tag tag-error">error</span>'
+        return '<span class="ev-tag tag-other">{}</span>'.format(event)
+
+    if not events:
+        return (
+            '<div class="section">'
+            '<div class="section-title">Autoresearchers</div>'
+            '<div class="feed"><div class="none">No activity yet — run scripts/launch_researchers.py</div></div>'
+            '</div>'
+        )
+
+    rows = []
+    for ev in events[:15]:
+        msg = ev.get("msg", "")[:120].replace("<", "&lt;").replace(">", "&gt;")
+        rows.append(
+            '<div class="ev">'
+            f'<span class="ev-ts">{_fmt_ts(ev.get("ts", 0))}</span>'
+            f'<span class="ev-who">{ev.get("agent","?")}</span>'
+            f'{_tag(ev.get("event","?"))}'
+            f'<span class="ev-msg">{msg}</span>'
+            '</div>'
+        )
+    return (
+        '<div class="section">'
+        '<div class="section-title">Autoresearchers</div>'
+        '<div class="feed">'
+        + "".join(rows)
+        + '</div></div>'
     )
 
 
@@ -167,9 +228,11 @@ def _render_html(status: Dict[str, Any]) -> str:
     ))
 
     ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    activity_events = status.get("activity", [])
     return HTML_TEMPLATE.format(
         version=VERSION,
         cards="\n".join(cards),
+        activity_section=_render_activity_section(activity_events),
         timestamp=ts,
     )
 
@@ -218,6 +281,15 @@ async def health():
     return {"status": "ok", "version": VERSION}
 
 
+async def _probe_activity(client: httpx.AsyncClient) -> List[Dict[str, Any]]:
+    try:
+        r = await client.get(f"{PT_URL}/activity?limit=15", timeout=PROBE_TIMEOUT)
+        r.raise_for_status()
+        return r.json().get("events", [])
+    except Exception:
+        return []
+
+
 @app.get("/api/status")
 async def api_status():
     async with httpx.AsyncClient() as client:
@@ -227,6 +299,7 @@ async def api_status():
             (lm_mac_ok, lm_mac_models),
             ol_win_result,
             ol_mac_result,
+            activity_events,
             *lm_win_results,
         ) = await asyncio.gather(
             _probe_http(client, f"{PT_URL}/health"),
@@ -234,6 +307,7 @@ async def api_status():
             _probe_lms_models(client, LMS_MAC_ENDPOINT, LMS_API_TOKEN),
             _probe_ollama_models(client, OLLAMA_WIN),
             _probe_ollama_models(client, OLLAMA_MAC),
+            _probe_activity(client),
             *[_probe_lms_models(client, ep, LMS_API_TOKEN) for ep in LMS_WIN_ENDPOINTS],
         )
 
@@ -252,7 +326,7 @@ async def api_status():
         for i, (ok, models) in enumerate(lm_win_results):
             services[f"lmstudio_win_{i}"] = {"ok": ok, "models": models, "url": LMS_WIN_ENDPOINTS[i]}
 
-    return {"portal_version": VERSION, "services": services}
+    return {"portal_version": VERSION, "services": services, "activity": activity_events}
 
 
 @app.get("/", response_class=None)

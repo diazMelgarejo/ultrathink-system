@@ -55,7 +55,7 @@ When running AutoResearcher swarms:
 Before any significant change to this repo, load the mother skill:
 
 ```
-/skill single_agent/SKILL.md
+/skill bin/skills/SKILL.md
 ```
 
 - Run **AFRP gate** before generating non-trivial output
@@ -68,17 +68,17 @@ Before any significant change to this repo, load the mother skill:
 - **Role**: Multi-agent execution engine (Repo #2) — POST /ultrathink on port 8001
 - **Companion repo**: [Perplexity-Tools](https://github.com/diazMelgarejo/Perplexity-Tools) (Repo #1, orchestrator)
 - **Skill**: `.claude/skills/ultrathink-system/SKILL.md`
-- **Mother skill**: `single_agent/SKILL.md` (v0.9.9.2)
+- **Mother skill**: `bin/skills/SKILL.md` (v0.9.9.2)
 
 ## 7. Harness Path Map
 
 | Source | Runtime | Harness |
 |--------|---------|---------|
-| `single_agent/SKILL.md` | `.claude/skills/ultrathink-system/SKILL.md` | Claude Code (project) |
-| `single_agent/SKILL.md` | `~/.claude/skills/ultrathink-system-skill/` | Claude Code (global) |
-| `single_agent/SKILL.md` | `.agents/skills/ultrathink-system/SKILL.md` | Codex/OpenCode |
-| `multi_agent/agents/*/` | `.claude/agents/ultrathink-*.md` | Claude Code subagents |
+| `bin/skills/SKILL.md` | `.claude/skills/ultrathink-system/SKILL.md` | Claude Code (project) |
+| `bin/skills/SKILL.md` | `~/.claude/skills/ultrathink-system-skill/` | Claude Code (global) |
+| `bin/skills/SKILL.md` | `.agents/skills/ultrathink-system/SKILL.md` | Codex/OpenCode |
+| `bin/agents/*/` | `.claude/agents/ultrathink-*.md` | Claude Code subagents |
 
-> CIDF content (`single_agent/cidf/`) is the canonical source. Install scripts copy it to
+> CIDF content (`bin/skills/cidf/`) is the canonical source. Install scripts copy it to
 > `.claude/skills/ultrathink-system/cidf/` and `.agents/skills/ultrathink-system/cidf/`
 > at runtime; checked idempotently on each run.

@@ -21,7 +21,7 @@ from typing import Optional, Any
 from fastapi import FastAPI, Request
 from pydantic import BaseModel, field_validator, Field
 import httpx
-from multi_agent.shared.bridge_contract import (
+from bin.shared.bridge_contract import (
     OPTIMIZE_FOR_TO_REASONING_DEPTH,
     optimize_for_to_reasoning_depth,
     reasoning_depth_to_optimize_for,

@@ -53,4 +53,4 @@ blueprint["content_insertion"]["cidf_decision"] = decision
 ```
 
 **The CIDF decision is made once in Stage 2 — all executor agents inherit it.**
-**Reference**: `single_agent/cidf/FRAMEWORK.md` (v1.2)
+**Reference**: `bin/skills/cidf/FRAMEWORK.md` (v1.2)

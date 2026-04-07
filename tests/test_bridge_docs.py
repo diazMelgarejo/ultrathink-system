@@ -9,15 +9,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from multi_agent.mcp_servers.ultrathink_orchestration_server import TOOL_SCHEMAS
+from bin.mcp_servers.ultrathink_orchestration_server import TOOL_SCHEMAS
 
 
 ROOT = Path(__file__).parent.parent
 BRIDGE_DOC = ROOT / "docs" / "PERPLEXITY_BRIDGE.md"
 SYNC_ANALYSIS_DOC = ROOT / "docs" / "SYNC_ANALYSIS.md"
-AFRP_SKILL = ROOT / "single_agent" / "afrp" / "SKILL.md"
-AFRP_README = ROOT / "single_agent" / "afrp" / "README.md"
-SINGLE_AGENT_SKILL = ROOT / "single_agent" / "SKILL.md"
+AFRP_SKILL = ROOT / "bin" / "skills" / "afrp" / "SKILL.md"
+AFRP_README = ROOT / "bin" / "skills" / "afrp" / "README.md"
+SINGLE_AGENT_SKILL = ROOT / "bin" / "skills" / "SKILL.md"
 
 
 def test_bridge_doc_references_live_mcp_tool_names():

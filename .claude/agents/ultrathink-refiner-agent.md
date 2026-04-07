@@ -41,4 +41,4 @@ When refining content insertion operations, the refiner enforces the CIDF simpli
 - If automation was included but task is one-time+static → flag as LINT-004 violation
 - Suggest lower-rank alternatives to the architect when complexity bias is detected (LINT-003)
 
-**Reference**: `single_agent/cidf/FRAMEWORK.md` (Automation Gate section)
+**Reference**: `bin/skills/cidf/FRAMEWORK.md` (Automation Gate section)

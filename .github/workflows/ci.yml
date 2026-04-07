@@ -55,12 +55,13 @@ jobs:
       - name: Lint with flake8 (warnings only)
         run: |
           # stop the build on syntax errors or undefined names, but ignore style warnings
-          flake8 multi_agent single_agent tests --count --select=E9,F63,F7,F82 --show-source --statistics || true
-      
+          flake8 bin tests --count --select=E9,F63,F7,F82 --show-source --statistics || true
+
       - name: Check imports
         run: |
-          python -c "from multi_agent.shared.ultrathink_core import Stage, TaskState; print('✓ ultrathink_core imports OK')"
-          python -c "from single_agent.cidf.core.content_insertion_framework import decide; print('✓ CIDF imports OK')" || true
+          pip install -q ".[test]"
+          python -c "from bin.shared.ultrathink_core import Stage, TaskState; print('✓ ultrathink_core imports OK')"
+          python -c "from bin.skills.cidf.core.content_insertion_framework import decide; print('✓ CIDF imports OK')" || true
 
   build:
     needs: [test, lint]
@@ -100,7 +101,7 @@ jobs:
 
       - name: Verify SKILL.md frontmatter version is not 1.x (no premature major bump)
         run: |
-          VERSION=$(grep '^version:' single_agent/SKILL.md | head -1 | awk '{print $2}')
+          VERSION=$(grep '^version:' bin/skills/SKILL.md | head -1 | awk '{print $2}')
           echo "SKILL.md version: $VERSION"
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           if [ "$MAJOR" -gt 1 ]; then
@@ -111,16 +112,16 @@ jobs:
 
       - name: Verify Quick Start section exists
         run: |
-          if ! grep -q "Quick Start" single_agent/SKILL.md; then
-            echo "FAIL: Quick Start section missing from single_agent/SKILL.md"
+          if ! grep -q "Quick Start" bin/skills/SKILL.md; then
+            echo "FAIL: Quick Start section missing from bin/skills/SKILL.md"
             exit 1
           fi
           echo "OK: Quick Start section present"
 
-      - name: Verify mcp-ultrathink-lmstudio in allowed-tools
+      - name: Verify mcp-ultrathink-openclaw in allowed-tools
         run: |
-          if ! grep -q "mcp-ultrathink-lmstudio" single_agent/SKILL.md; then
-            echo "FAIL: mcp-ultrathink-lmstudio missing from allowed-tools in SKILL.md"
+          if ! grep -q "mcp-ultrathink-openclaw" bin/skills/SKILL.md; then
+            echo "FAIL: mcp-ultrathink-openclaw missing from allowed-tools in SKILL.md"
             exit 1
           fi
-          echo "OK: mcp-ultrathink-lmstudio present in allowed-tools"
+          echo "OK: mcp-ultrathink-openclaw present in allowed-tools"

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ultrathink-system"
-version = "0.9.9.2"
+version = "0.9.9.3"
 description = "ultrathink Multi-Agent System"
 requires-python = ">=3.8"
 dependencies = [
@@ -38,8 +38,7 @@ managed = true
 [tool.hatch.build.targets.sdist]
 include = [
     "api_server.py",
-    "multi_agent",
-    "single_agent",
+    "bin",
     "examples",
     "docs",
     "tests",
@@ -54,7 +53,7 @@ include = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["multi_agent", "single_agent"]
+packages = ["bin"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "docs" = "docs"

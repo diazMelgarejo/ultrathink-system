@@ -52,4 +52,4 @@ Include in the assumptions ledger:
 - Whether automation gate was open or closed
 - Any LINT violations caught and resolved
 
-**Reference**: `single_agent/cidf/FRAMEWORK.md`
+**Reference**: `bin/skills/cidf/FRAMEWORK.md`

@@ -156,6 +156,28 @@ export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
 
 echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
 
+# ── 2a. Probe backends via Perplexity-Tools ───────────────────────────────────
+# PT detects which backends are live and writes .state/routing.json.
+# UTS reads that file to generate a correctly-targeted openclaw.json.
+if [ -n "${PT_DIR:-}" ] && [ -f "$PT_DIR/agent_launcher.py" ]; then
+  echo "  Probe   detecting backends…"
+  (cd "$PT_DIR" && \
+    WINDOWS_IP="${WIN_IP}" \
+    OLLAMA_MAC_ENDPOINT="http://${MAC_IP}:11434" \
+    "$PT_PYTHON" agent_launcher.py --write-state 2>/dev/null) \
+    || echo "  Probe   non-fatal — no routing state written"
+  export PT_AGENTS_STATE="${PT_DIR}/.state/routing.json"
+fi
+
+# ── 2b. Bootstrap OpenClaw gateway ───────────────────────────────────────────
+if command -v npm >/dev/null 2>&1 || command -v node >/dev/null 2>&1; then
+  echo "  OpenClaw  bootstrapping…"
+  MAC_IP="${MAC_IP}" WIN_IP="${WIN_IP}" \
+    "$US_PYTHON" "$SCRIPT_DIR/openclaw_bootstrap.py" --bootstrap \
+    2>&1 | sed 's/^/  /' \
+    || echo "  OpenClaw  non-fatal — continuing without gateway"
+fi
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 pid_on_port() { lsof -ti "tcp:$1" 2>/dev/null | head -1 || true; }
@@ -168,7 +190,7 @@ wait_for_port() {
     printf "."
     # 150 tries = 75s — enough to outlast slow first-start tasks (e.g. ECC sync ~60s)
     if [ $tries -ge 150 ]; then
-      echo " TIMEOUT (check .logs/${label,,}.log)"
+      echo " TIMEOUT (check .logs/$(echo "$label" | tr '[:upper:]' '[:lower:]').log)"
       return 0  # non-fatal: continue starting remaining services
     fi
   done

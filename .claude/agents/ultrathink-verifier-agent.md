@@ -55,4 +55,4 @@ if errors:
 ```
 
 **CIDF compliance failure = automatic FAIL verdict.**
-**Reference**: `single_agent/cidf/linter/policy_linter.py`
+**Reference**: `bin/skills/cidf/linter/policy_linter.py`

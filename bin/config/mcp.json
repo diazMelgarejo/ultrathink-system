@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ultrathink-lmstudio": {
+      "command": "python",
+      "args": ["bin/mcp_servers/openclaw_mcp_server.py"],
+      "id": "mcp/ultrathink-lmstudio"
+    }
+  }
+}

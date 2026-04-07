@@ -60,4 +60,4 @@ result = execute_with_fallback(
 assert result.status == "success"  # fail fast, fallback chain handles retries
 ```
 
-**Reference**: `single_agent/cidf/core/content_insertion_framework.py`
+**Reference**: `bin/skills/cidf/core/content_insertion_framework.py`

@@ -5,11 +5,11 @@ openclaw_bootstrap.py — ultrathink-system OpenClaw bootstrap
 Idempotent. Safe to call on every start.sh run.
 
 Division of responsibilities:
-  Perplexity-Tools  → probes real hardware, writes .state/agents.json
+  Perplexity-Tools  → probes real hardware, writes .state/routing.json
   ultrathink-system → reads probe results, writes ~/.openclaw/openclaw.json,
                       creates agent workspaces, starts the OpenClaw daemon
 
-Set PT_AGENTS_STATE to the path of Perplexity-Tools' .state/agents.json so
+Set PT_AGENTS_STATE to the path of Perplexity-Tools' .state/routing.json so
 this script can use real probe results instead of env-var defaults.
 
 Usage:
@@ -46,7 +46,7 @@ WIN_MODEL  = os.getenv("WINDOWS_LMS_MODEL",
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _load_pt_state() -> dict | None:
-    """Load PT's real probe results from .state/agents.json (PT_AGENTS_STATE env var)."""
+    """Load PT's real probe results from .state/routing.json (PT_AGENTS_STATE env var)."""
     state_path = os.getenv("PT_AGENTS_STATE")
     if state_path and Path(state_path).exists():
         with open(state_path) as f:
@@ -283,7 +283,7 @@ if __name__ == "__main__":
             "  python openclaw_bootstrap.py --bootstrap --force  # force-rewrite openclaw.json\n"
             "\n"
             "Environment variables (all exported by start.sh):\n"
-            "  PT_AGENTS_STATE   path to Perplexity-Tools .state/agents.json (probe results)\n"
+            "  PT_AGENTS_STATE   path to Perplexity-Tools .state/routing.json (probe results)\n"
             "  MAC_IP / WIN_IP   detected LAN IPs\n"
             "  LM_STUDIO_*       LM Studio endpoints and token\n"
         ),

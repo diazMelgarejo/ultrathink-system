@@ -102,29 +102,8 @@ LOG_DIR="$SCRIPT_DIR/.logs"
 mkdir -p "$LOG_DIR"
 
 # ── IP auto-detection ─────────────────────────────────────────────────────────
-# Detect real LAN IPs via network_autoconfig.py (netifaces-backed).
-# Sets MAC_IP and WIN_IP, then exports the env vars all services read.
-# Already-set env vars (e.g. from .env) are preserved — detection only fills gaps.
-
-_detect_ips() {
-  "$US_PYTHON" - << 'PYEOF'
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) if '__file__' in dir() else '.')
-try:
-    from network_autoconfig import NetworkAutoConfig
-    cfg = NetworkAutoConfig()
-    mac_ip = cfg.get_working_local_ip()   # runs on Mac — this IS the Mac
-    import platform
-    win_fallback = cfg.preferred_ips.get('Windows', '192.168.254.101')
-    print(f"MAC_IP={mac_ip}")
-    print(f"WIN_IP={win_fallback}")
-except Exception as e:
-    print(f"MAC_IP=192.168.254.105")
-    print(f"WIN_IP=192.168.254.101")
-PYEOF
-}
-
 # Run detection inside the US venv so netifaces is available
+# Sets MAC_IP and WIN_IP, then exports the env vars all services read.
 _IP_VARS="$(cd "$SCRIPT_DIR" && "$US_PYTHON" -c "
 import sys, io, contextlib
 sys.path.insert(0, '.')
@@ -156,16 +135,36 @@ export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
 
 echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
 
-# ── 2a. Probe backends via Perplexity-Tools ───────────────────────────────────
+# ── 2a. Probe backends via Perplexity-Tools (retry until one responds) ────────
 # PT detects which backends are live and writes .state/routing.json.
 # UTS reads that file to generate a correctly-targeted openclaw.json.
-if [ -n "${PT_DIR:-}" ] && [ -f "$PT_DIR/agent_launcher.py" ]; then
-  echo "  Probe   detecting backends…"
+# Retries up to 5 times (25 s total) so a slow-starting LM Studio is found.
+_MAX_PROBE_TRIES=5
+_PROBE_INTERVAL=5
+
+_do_probe() {
   (cd "$PT_DIR" && \
     WINDOWS_IP="${WIN_IP}" \
     OLLAMA_MAC_ENDPOINT="http://${MAC_IP}:11434" \
     "$PT_PYTHON" agent_launcher.py --write-state 2>/dev/null) \
-    || echo "  Probe   non-fatal — no routing state written"
+  && [ -s "${PT_DIR}/.state/routing.json" ]
+}
+
+if [ -n "${PT_DIR:-}" ] && [ -f "$PT_DIR/agent_launcher.py" ]; then
+  echo "  Probe   detecting backends…"
+  _probe_ok=0
+  for _try in $(seq 1 $_MAX_PROBE_TRIES); do
+    if _do_probe; then
+      _probe_ok=1; break
+    fi
+    if [ "$_try" -lt "$_MAX_PROBE_TRIES" ]; then
+      echo "  Probe   attempt $_try/$_MAX_PROBE_TRIES — retrying in ${_PROBE_INTERVAL}s…"
+      sleep "$_PROBE_INTERVAL"
+    fi
+  done
+  if [ "$_probe_ok" -eq 0 ]; then
+    echo "  Probe   no backends responded after $_MAX_PROBE_TRIES tries — continuing offline"
+  fi
   export PT_AGENTS_STATE="${PT_DIR}/.state/routing.json"
 fi
 
@@ -176,6 +175,44 @@ if command -v npm >/dev/null 2>&1 || command -v node >/dev/null 2>&1; then
     "$US_PYTHON" "$SCRIPT_DIR/openclaw_bootstrap.py" --bootstrap \
     2>&1 | sed 's/^/  /' \
     || echo "  OpenClaw  non-fatal — continuing without gateway"
+fi
+
+# ── 2c. Determine mode; auto-start researchers if distributed ─────────────────
+# Reads the routing.json written by agent_launcher --write-state and decides:
+#   distributed   → Mac + Windows both reachable: start tandem autoresearchers
+#   single        → Mac only: single-agent mode, no researchers loop
+#   offline       → no backends found: warn, all services still start
+_MODE="offline"
+_DISTRIBUTED="no"
+if [ -f "${PT_AGENTS_STATE:-/nonexistent}" ]; then
+  _read_state() {
+    "$US_PYTHON" - "$PT_AGENTS_STATE" << 'PYEOF'
+import json, sys
+d = json.load(open(sys.argv[1]))
+print("distributed=" + ("yes" if d.get("distributed") else "no"))
+print("mac=" + ("yes" if d.get("mac_reachable") else "no"))
+PYEOF
+  }
+  eval "$(_read_state 2>/dev/null || echo 'distributed=no mac=no')"
+  _DISTRIBUTED="${distributed:-no}"
+  _MAC_OK="${mac:-no}"
+
+  if   [ "$_DISTRIBUTED" = "yes" ]; then _MODE="distributed (Mac + Windows — autoresearchers)"
+  elif [ "$_MAC_OK"      = "yes" ]; then _MODE="single (Mac only)"
+  fi
+fi
+echo "  Mode    $_MODE"
+
+# Launch tandem autoresearchers in background when distributed mode confirmed
+if [ "$_DISTRIBUTED" = "yes" ] \
+   && [ -n "${PT_DIR:-}" ] \
+   && [ -f "$PT_DIR/scripts/launch_researchers.py" ]; then
+  echo "  AutoResearchers  starting → $LOG_DIR/researchers.log"
+  (cd "$PT_DIR" && \
+    WINDOWS_IP="${WIN_IP}" \
+    OLLAMA_MAC_ENDPOINT="http://${MAC_IP}:11434" \
+    "$PT_PYTHON" scripts/launch_researchers.py \
+    >> "$LOG_DIR/researchers.log" 2>&1) &
 fi
 
 # ── helpers ───────────────────────────────────────────────────────────────────

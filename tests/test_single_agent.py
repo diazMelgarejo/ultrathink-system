@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-SINGLE = ROOT / "single_agent"
+SINGLE = ROOT / "bin" / "skills"
 
 
 class TestPackageIntegrity:
@@ -102,10 +102,10 @@ class TestContentQuality:
 class TestCIDF:
     """Verify the full CIDF runnable package is present and functional."""
 
-    CIDF = Path(__file__).parent.parent / "single_agent" / "cidf"
+    CIDF = Path(__file__).parent.parent / "bin" / "skills" / "cidf"
 
     def test_cidf_directory_exists(self):
-        assert self.CIDF.is_dir(), "single_agent/cidf/ not found"
+        assert self.CIDF.is_dir(), "bin/skills/cidf/ not found"
 
     def test_core_python_exists(self):
         assert (self.CIDF / "core" / "content_insertion_framework.py").exists()

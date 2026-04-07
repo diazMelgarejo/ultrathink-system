@@ -10,16 +10,16 @@ import pytest
 from pathlib import Path
 
 ROOT   = Path(__file__).parent.parent
-MULTI  = ROOT / "multi_agent"
+MULTI  = ROOT / "bin"
 AGENTS = ["orchestrator", "context", "architect", "refiner", "executor", "verifier", "crystallizer"]
 SKILL_NAMES = {
-    "orchestrator": "ultrathink-orchestrator.md",
-    "context":      "context-immersion-agent.md",
-    "architect":    "visionary-architect-agent.md",
-    "refiner":      "ruthless-refiner-agent.md",
-    "executor":     "masterful-executor-agent.md",
-    "verifier":     "verification-agent.md",
-    "crystallizer": "vision-crystallizer-agent.md",
+    "orchestrator": "agent.md",
+    "context":      "agent.md",
+    "architect":    "agent.md",
+    "refiner":      "agent.md",
+    "executor":     "agent.md",
+    "verifier":     "agent.md",
+    "crystallizer": "agent.md",
 }
 
 

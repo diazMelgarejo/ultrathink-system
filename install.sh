@@ -23,7 +23,7 @@ info() { echo -e "  ${BLUE}→${RESET} $1"; }
 SKILL_NAME="ultrathink-system-skill"
 REPO_URL="https://github.com/diazMelgarejo/ultrathink-system"
 BRANCH="main"
-SKILL_SOURCE="single_agent"
+SKILL_SOURCE="bin/skills"
 
 # Default: global install
 INSTALL_DIR="$HOME/.claude/skills/$SKILL_NAME"

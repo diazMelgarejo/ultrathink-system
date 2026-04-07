@@ -42,10 +42,10 @@ Clear methodology → clear output. Vague intent → scaled ambiguity.
 # "Apply ultrathink system to: [your task]"
 
 # 3. Create a task plan
-./single_agent/scripts/create_task_plan.sh "Build my feature"
+./bin/skills/scripts/create_task_plan.sh "Build my feature"
 
 # 4. Verify before marking done
-python single_agent/scripts/verify_before_done.py --task "Build my feature"
+python bin/skills/scripts/verify_before_done.py --task "Build my feature"
 ```
 
 ---
@@ -55,7 +55,7 @@ python single_agent/scripts/verify_before_done.py --task "Build my feature"
 ```
 ultrathink-system/
 │
-├── single_agent/                   ← Install here for Claude Code / Cowork
+├── bin/skills/                   ← Install here for Claude Code / Cowork
 │   ├── SKILL.md                    ← Main intelligence layer (<500 lines)
 │   ├── references/                 ← Deep-dive documentation
 │   │   ├── ultrathink-5-stages.md
@@ -68,7 +68,7 @@ ultrathink-system/
 │   │   └── create_task_plan.sh     ← Task plan generator
 │   └── templates/                  ← Reusable task / lesson templates
 │
-├── multi_agent/                    ← Install here for Clawdbot / OpenClaw
+├── bin/                    ← Install here for Clawdbot / OpenClaw
 │   ├── agents/                     ← 7 specialized agents
 │   │   ├── orchestrator/           ← Coordinates 5-stage process
 │   │   ├── context/                ← Stage 1: Context Immersion
@@ -107,7 +107,7 @@ ultrathink-system/
 ### Multi-Agent Network (Distributed / Parallel)
 ```bash
 ./install-multi-agent.sh
-python multi_agent/mcp_servers/ultrathink_orchestration_server.py
+python bin/mcp_servers/ultrathink_orchestration_server.py
 ```
 
 ---
@@ -187,7 +187,7 @@ This skill follows the SKILL.md open standard and is compatible with
 
 ```bash
 # Add to your ECC profile
-cp -r single_agent ~/.claude/skills/ultrathink-system-skill
+cp -r bin/skills ~/.claude/skills/ultrathink-system-skill
 
 # Then use with any ECC-compatible harness
 ```

@@ -11,7 +11,7 @@ warn() { echo -e "  ${YELLOW}⚠${RESET}  $1"; }
 info() { echo -e "  ${BLUE}→${RESET} $1"; }
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-AGENTS_SRC="$REPO_ROOT/multi_agent/agents"
+AGENTS_SRC="$REPO_ROOT/bin/agents"
 
 echo -e "${BOLD}🚀 ultrathink Multi-Agent Network Installer${RESET}"
 echo "=============================================="
@@ -29,29 +29,29 @@ done
 # ── 2. ~/.claude/agents/  (Claude Code global — available across all projects) ─
 GLOBAL_AGENTS="$HOME/.claude/agents"
 mkdir -p "$GLOBAL_AGENTS"
-cp "$AGENTS_SRC/orchestrator/ultrathink-orchestrator.md"   "$GLOBAL_AGENTS/ultrathink-orchestrator.md"
-cp "$AGENTS_SRC/context/context-immersion-agent.md"        "$GLOBAL_AGENTS/ultrathink-context-agent.md"
-cp "$AGENTS_SRC/architect/visionary-architect-agent.md"    "$GLOBAL_AGENTS/ultrathink-architect-agent.md"
-cp "$AGENTS_SRC/refiner/ruthless-refiner-agent.md"         "$GLOBAL_AGENTS/ultrathink-refiner-agent.md"
-cp "$AGENTS_SRC/executor/masterful-executor-agent.md"      "$GLOBAL_AGENTS/ultrathink-executor-agent.md"
-cp "$AGENTS_SRC/verifier/verification-agent.md"            "$GLOBAL_AGENTS/ultrathink-verifier-agent.md"
-cp "$AGENTS_SRC/crystallizer/vision-crystallizer-agent.md" "$GLOBAL_AGENTS/ultrathink-crystallizer-agent.md"
+cp "$AGENTS_SRC/orchestrator/agent.md"   "$GLOBAL_AGENTS/ultrathink-orchestrator.md"
+cp "$AGENTS_SRC/context/agent.md"        "$GLOBAL_AGENTS/ultrathink-context-agent.md"
+cp "$AGENTS_SRC/architect/agent.md"      "$GLOBAL_AGENTS/ultrathink-architect-agent.md"
+cp "$AGENTS_SRC/refiner/agent.md"        "$GLOBAL_AGENTS/ultrathink-refiner-agent.md"
+cp "$AGENTS_SRC/executor/agent.md"       "$GLOBAL_AGENTS/ultrathink-executor-agent.md"
+cp "$AGENTS_SRC/verifier/agent.md"       "$GLOBAL_AGENTS/ultrathink-verifier-agent.md"
+cp "$AGENTS_SRC/crystallizer/agent.md"   "$GLOBAL_AGENTS/ultrathink-crystallizer-agent.md"
 ok "~/.claude/agents/ultrathink-*.md  (Claude Code global subagents)"
 
 # ── 3. Platform-specific paths ────────────────────────────────────────────────
 if [ -d "$HOME/.clawdbot" ]; then
   mkdir -p "$HOME/.clawdbot/agents"
-  cp -r "$REPO_ROOT/multi_agent" "$HOME/.clawdbot/agents/ultrathink-network"
+  cp -r "$REPO_ROOT/bin" "$HOME/.clawdbot/agents/ultrathink-network"
   ok "~/.clawdbot/agents/ultrathink-network/  (Clawdbot)"
 fi
 if [ -d "$HOME/.moltbot" ]; then
   mkdir -p "$HOME/.moltbot/agents"
-  cp -r "$REPO_ROOT/multi_agent" "$HOME/.moltbot/agents/ultrathink-network"
+  cp -r "$REPO_ROOT/bin" "$HOME/.moltbot/agents/ultrathink-network"
   ok "~/.moltbot/agents/ultrathink-network/  (MoltBot)"
 fi
 if [ -d "$HOME/.openclaw" ]; then
   mkdir -p "$HOME/.openclaw/agents"
-  cp -r "$REPO_ROOT/multi_agent" "$HOME/.openclaw/agents/ultrathink-network"
+  cp -r "$REPO_ROOT/bin" "$HOME/.openclaw/agents/ultrathink-network"
   ok "~/.openclaw/agents/ultrathink-network/  (OpenClaw)"
 fi
 
@@ -81,7 +81,7 @@ echo "  .claude/agents/ultrathink-verifier-agent.md"
 echo "  .claude/agents/ultrathink-crystallizer-agent.md"
 echo ""
 echo "  MCP server (for Clawdbot/OpenClaw orchestration):"
-echo "  python multi_agent/mcp_servers/ultrathink_orchestration_server.py"
+echo "  python bin/mcp_servers/ultrathink_orchestration_server.py"
 echo ""
 echo "  Claude Code .claude/settings.json MCP block:"
 cat << JSON
@@ -89,7 +89,7 @@ cat << JSON
     "mcpServers": {
       "ultrathink": {
         "command": "python",
-        "args": ["$REPO_ROOT/multi_agent/mcp_servers/ultrathink_orchestration_server.py"]
+        "args": ["$REPO_ROOT/bin/mcp_servers/ultrathink_orchestration_server.py"]
       }
     }
   }

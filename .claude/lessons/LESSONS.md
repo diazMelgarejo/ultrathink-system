@@ -121,3 +121,39 @@ The pattern: replacing `pip install pkg1 pkg2 pkg3` with `pip install ".[extras]
 - `d9e4f50` (PT)  — fix(tracker): handle stale routing data in agents.json
 
 ---
+
+## 2026-04-07 — Claude — Device identity + GPU crash recovery
+
+### What was learned
+
+**1. `127.0.0.1` and a LAN IP can point to the same physical machine**
+- If `WINDOWS_IP` is mis-configured to the Mac's own LAN IP (e.g. `192.168.254.101`), the probe at `REMOTE_WINDOWS_URL` succeeds and the system treats one Mac as a distributed two-node cluster
+- Fix: after probing, enumerate this machine's IPs via hostname resolution + UDP routing trick; zero out any "Windows" probe whose IP matches a local one
+
+**2. One role per physical device**
+- Running Mac Ollama + Mac LM Studio simultaneously on the same Mac GPU would cause two concurrent model loads — prioritise Ollama and ignore LM Studio when both are local
+- Applies equally to any future n-device setup: each device gets exactly one researcher role
+
+**3. Silent crash recovery burns GPU**
+- Immediate retry after a 503/404/crash triggers repeated model load/unload; 30-second cooldown is the minimum safe buffer
+- Progress bar with role label, crash classification, and per-second countdown makes recovery visible and distinguishable from a freeze
+
+**4. Crash error classification**
+- `HTTP 503` = model still loading (LM Studio startup)
+- `HTTP 404` = model was unloaded (Ollama eviction or restart)
+- `ConnectError/ConnectTimeout` = backend is offline
+- Each class needs a distinct user message and consistent recovery behaviour
+
+### Prevention Rules
+
+1. Always call `_get_local_ips()` before trusting any "remote" endpoint URL
+2. One role per physical device — zero out probes whose host IP matches local IPs
+3. On same device: one inference backend — Ollama > LM Studio deterministically
+4. Crash recovery ≥ 30 seconds — GPU needs this buffer between model cycles
+5. Classify errors by status code before sleeping — 503 ≠ 404 ≠ ConnectError
+6. Progress bar during recovery — `asyncio.sleep(N)` is invisible to the user
+
+### Commits
+- `8af62f5` (PT) — feat(routing): one-role-per-device guard + GPU crash recovery cooldown
+
+---

@@ -1,380 +1,107 @@
 #!/usr/bin/env python3
 """
-openclaw_bootstrap.py — ultrathink-system OpenClaw bootstrap
---------------------------------------------------------------
-Idempotent. Safe to call on every start.sh run.
-
-Division of responsibilities:
-  Perplexity-Tools  → probes real hardware, writes .state/routing.json
-  ultrathink-system → reads probe results, writes ~/.openclaw/openclaw.json,
-                      creates agent workspaces, starts the OpenClaw daemon
-
-Set PT_AGENTS_STATE to the path of Perplexity-Tools' .state/routing.json so
-this script can use real probe results instead of env-var defaults.
+openclaw_bootstrap.py - ultrathink-system delegate-only OpenClaw config applier
+-----------------------------------------------------------------------------
+Perplexity-Tools is the sole runtime authority. This script only:
+  1. Reads the PT-resolved runtime payload
+  2. Writes ~/.openclaw/openclaw.json using that exact payload
+  3. Ensures local agent workspaces and SOUL.md files exist
 
 Usage:
-    python openclaw_bootstrap.py --bootstrap            # full idempotent bootstrap
-    python openclaw_bootstrap.py --bootstrap --force    # force-rewrite openclaw.json
+    python openclaw_bootstrap.py --apply
+    python openclaw_bootstrap.py --apply --payload /path/to/runtime_payload.json
+    python openclaw_bootstrap.py --apply --force
 """
+from __future__ import annotations
+
 import argparse
-import asyncio
 import json
 import os
 import shutil
-import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-OPENCLAW_GATEWAY_PORT = int(os.getenv("OPENCLAW_GATEWAY_PORT", "18789"))
-
-# Candidate ports to probe for any running OpenClaw-compatible gateway.
-# Includes OpenClaw default (18789) and AlphaClaw (chrysb/alphaclaw) which
-# may run on 11435 or other ports. Add more via OPENCLAW_EXTRA_PORTS env var.
-_extra = [int(p) for p in os.getenv("OPENCLAW_EXTRA_PORTS", "").split(",") if p.strip()]
-OPENCLAW_CANDIDATE_PORTS: list[int] = list(dict.fromkeys(
-    [OPENCLAW_GATEWAY_PORT, 11435, 8080, 3000, 4000, 9000] + _extra
-))
-
-# ── env-var defaults (all exported by start.sh) ───────────────────────────────
-
-MAC_IP     = os.getenv("MAC_IP",  "192.168.254.105")
-WIN_IP     = os.getenv("WIN_IP",  "192.168.254.101")
-OLLAMA_MAC = os.getenv("OLLAMA_MAC_ENDPOINT",     f"http://{MAC_IP}:11434")
-OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT",  f"http://{WIN_IP}:11434")
-LMS_MAC    = os.getenv("LM_STUDIO_MAC_ENDPOINT",   f"http://{MAC_IP}:1234")
-LMS_WIN    = os.getenv("LM_STUDIO_WIN_ENDPOINTS",   f"http://{WIN_IP}:1234")
-LMS_TOKEN  = os.getenv("LM_STUDIO_API_TOKEN", "lm-studio")
-
-MAC_MODEL  = os.getenv("MAC_LMS_MODEL", "qwen3:8b-instruct")
-WIN_MODEL  = os.getenv("WINDOWS_LMS_MODEL",
-                        "Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2")
+DEFAULT_PAYLOAD = Path(".state/pt_runtime_payload.json")
 
 
-# ── helpers ───────────────────────────────────────────────────────────────────
-
-def _load_pt_state() -> dict | None:
-    """Load PT's real probe results from .state/routing.json (PT_AGENTS_STATE env var)."""
-    state_path = os.getenv("PT_AGENTS_STATE")
-    if state_path and Path(state_path).exists():
-        with open(state_path) as f:
-            return json.load(f)
-    return None
-
-
-def _lms_base_url(raw: str) -> str:
-    """Ensure LM Studio baseUrl ends with /v1 (OpenAI-compat requirement)."""
-    raw = raw.rstrip("/")
-    return raw if raw.endswith("/v1") else f"{raw}/v1"
+def _payload_path(explicit: str | None = None) -> Path:
+    if explicit:
+        return Path(explicit)
+    env_path = Path(sys.argv[0]).parent / ".state" / "pt_runtime_payload.json"
+    return Path(
+        os.environ.get("PT_RUNTIME_STATE")
+        or os.environ.get("PT_RUNTIME_PAYLOAD")
+        or env_path
+    )
 
 
-# ── gateway discovery ─────────────────────────────────────────────────────────
-
-async def _probe_url(url: str, client) -> bool:
-    """Return True if url responds with HTTP < 400 on /health or /v1/models."""
-    for path in ("/health", "/v1/models"):
-        try:
-            r = await client.get(f"{url.rstrip('/')}{path}")
-            if r.status_code < 400:
-                return True
-        except Exception:
-            pass
-    return False
-
-
-async def _find_any_gateway() -> str | None:
-    """
-    Probe all candidate ports for a running OpenClaw-compatible gateway.
-
-    Compatible gateways (OpenClaw, AlphaClaw, or any proxy exposing /health
-    or /v1/models) are detected without discriminating on implementation.
-    Returns the base URL of the first responsive gateway, or None.
-    """
-    try:
-        import httpx
-    except ImportError:
-        return None
-
-    async with httpx.AsyncClient(timeout=1.5) as client:
-        for port in OPENCLAW_CANDIDATE_PORTS:
-            url = f"http://127.0.0.1:{port}"
-            if await _probe_url(url, client):
-                return url
-    return None
-
-
-def _write_openclaw_config(config_dir: Path, config_file: Path) -> None:
-    """Write ~/.openclaw/openclaw.json from PT probe results + env-var defaults."""
-    pt = _load_pt_state()
-
-    if pt:
-        # Use real probe results from Perplexity-Tools
-        mac_lms_url   = pt.get("mac_lmstudio_endpoint") or LMS_MAC
-        win_lms_url   = pt.get("lmstudio_endpoint")     or LMS_WIN
-        coder_model   = pt.get("coder_model",   WIN_MODEL)
-        manager_model = pt.get("manager_model", MAC_MODEL)
-        coder_backend = pt.get("coder_backend", "mac-degraded")
-        mac_lms_ok    = bool(pt.get("mac_lmstudio_ok"))
-    else:
-        mac_lms_url   = LMS_MAC
-        win_lms_url   = LMS_WIN
-        coder_model   = WIN_MODEL
-        manager_model = MAC_MODEL
-        coder_backend = "unknown"
-        mac_lms_ok    = False
-
-    # Resolve primary model refs based on what's actually live
-    if coder_backend == "windows-lmstudio":
-        coder_primary   = f"lmstudio-win/{coder_model}"
-    elif coder_backend == "windows-ollama":
-        coder_primary   = f"ollama-win/{coder_model}"
-    else:
-        coder_primary   = f"lmstudio-mac/{manager_model}"
-
-    manager_primary = (f"lmstudio-mac/{manager_model}" if mac_lms_ok
-                       else f"ollama-mac/{manager_model}")
-
-    agents_root = str(Path.home() / ".openclaw" / "agents")
-
-    config = {
-        "gateway": {"mode": "local", "port": OPENCLAW_GATEWAY_PORT,
-                    "bind": "loopback", "commandeered": False},
-        "agents": {
-            "defaults": {
-                "model": {"primary": manager_primary},
-                "workspace": f"{agents_root}/default",
-            },
-            "list": [
-                {"id": "mac-researcher",
-                 "model": {"primary": manager_primary},
-                 "workspace": f"{agents_root}/mac-researcher"},
-                {"id": "win-researcher",
-                 "model": {"primary": coder_primary},
-                 "workspace": f"{agents_root}/win-researcher"},
-                {"id": "orchestrator",
-                 "model": {"primary": manager_primary},
-                 "workspace": f"{agents_root}/orchestrator"},
-                {"id": "coder",
-                 "model": {"primary": coder_primary},
-                 "workspace": f"{agents_root}/coder"},
-                {"id": "autoresearcher",
-                 "model": {"primary": coder_primary},
-                 "workspace": str(Path.home() / "autoresearch")},
-            ],
-        },
-        "models": {
-            "providers": {
-                "lmstudio-mac": {
-                    "baseUrl": _lms_base_url(mac_lms_url),
-                    "apiKey":  LMS_TOKEN,
-                    "api":     "openai-completions",
-                    "models":  [{"id": MAC_MODEL,
-                                 "name": f"Mac LMS — {MAC_MODEL}",
-                                 "contextWindow": 32768, "maxTokens": 8192,
-                                 "cost": {"input": 0, "output": 0}}],
-                },
-                "lmstudio-win": {
-                    "baseUrl": _lms_base_url(win_lms_url),
-                    "apiKey":  LMS_TOKEN,
-                    "api":     "openai-completions",
-                    "models":  [{"id": WIN_MODEL,
-                                 "name": f"Win LMS — {WIN_MODEL}",
-                                 "contextWindow": 32768, "maxTokens": 8192,
-                                 "cost": {"input": 0, "output": 0}}],
-                },
-                "ollama-mac": {
-                    "apiKey":  "ollama-local",
-                    "baseUrl": OLLAMA_MAC,
-                    "api":     "ollama",
-                },
-                "ollama-win": {
-                    "apiKey":  "ollama-remote",
-                    "baseUrl": OLLAMA_WIN,
-                    "api":     "ollama",
-                },
-            },
-        },
-    }
-
-    config_dir.mkdir(parents=True, exist_ok=True)
-    config_file.write_text(json.dumps(config, indent=2), encoding="utf-8")
-    print(f"[openclaw] ✓ openclaw.json written → {config_file}  (coder-backend={coder_backend})")
+def load_runtime_payload(payload: str | None = None) -> dict[str, Any]:
+    path = _payload_path(payload)
+    if not path.exists():
+        raise FileNotFoundError(
+            f"PT runtime payload not found: {path}. "
+            "Run Perplexity-Tools orchestrator.py bootstrap first."
+        )
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _ensure_agent_workspaces(config_dir: Path) -> None:
-    """
-    Copy SOUL.md files from openclaw/agents/<role>/ (git-tracked source)
-    to ~/.openclaw/agents/<role>/SOUL.md. Idempotent — skips existing files.
-    """
-    soul_src   = SCRIPT_DIR / "bin" / "agents"
     agents_dir = config_dir / "agents"
     roles = ["mac-researcher", "win-researcher", "orchestrator", "coder", "autoresearcher"]
-
     for role in roles:
-        role_dir  = agents_dir / role
+        role_dir = agents_dir / role
         role_dir.mkdir(parents=True, exist_ok=True)
         soul_file = role_dir / "SOUL.md"
         if soul_file.exists():
             continue
-        src = soul_src / role / "SOUL.md"
-        if src.exists():
-            shutil.copy(src, soul_file)
-            print(f"[openclaw] ✓ agent workspace: {role}")
-        else:
-            print(f"[openclaw] ⚠ missing source: openclaw/agents/{role}/SOUL.md")
+        source = SCRIPT_DIR / "bin" / "agents" / role / "SOUL.md"
+        if source.exists():
+            shutil.copy(source, soul_file)
+            print(f"[openclaw] wrote workspace for {role}")
 
 
-def _ensure_autoresearch() -> None:
-    """Idempotent clone + uv sync of ~/autoresearch (karpathy/autoresearch)."""
-    repo = Path.home() / "autoresearch"
-    if repo.exists():
-        print("[openclaw] ✓ ~/autoresearch already exists")
-        return
-    print("[openclaw] → Cloning karpathy/autoresearch…")
-    try:
-        subprocess.run(
-            ["git", "clone", "https://github.com/karpathy/autoresearch", str(repo)],
-            check=True, capture_output=True,
-        )
-        subprocess.run(["pip", "install", "uv"], check=True, capture_output=True)
-        subprocess.run(["uv", "sync"], cwd=repo, check=True, capture_output=True)
-        print("[openclaw] ✓ autoresearch ready (run 'uv run prepare.py' for dataset)")
-    except subprocess.CalledProcessError as e:
-        print(f"[openclaw] ✗ autoresearch setup failed (non-fatal): {e}")
+def apply_runtime_payload(payload: dict[str, Any], force: bool = False) -> dict[str, Any]:
+    openclaw_config = payload.get("gateway", {}).get("openclaw_config")
+    if not openclaw_config:
+        raise ValueError("PT runtime payload does not contain gateway.openclaw_config")
 
+    config_dir = Path.home() / ".openclaw"
+    config_file = config_dir / "openclaw.json"
+    config_dir.mkdir(parents=True, exist_ok=True)
 
-# ── main bootstrap ────────────────────────────────────────────────────────────
+    if force or not config_file.exists() or json.loads(config_file.read_text(encoding="utf-8")) != openclaw_config:
+        config_file.write_text(json.dumps(openclaw_config, indent=2), encoding="utf-8")
+        print(f"[openclaw] applied PT-resolved config -> {config_file}")
+    else:
+        print(f"[openclaw] config already matches PT payload -> {config_file}")
 
-async def bootstrap_openclaw(force: bool = False) -> bool:
-    """
-    Idempotent OpenClaw gateway bootstrap. Safe to call on every start.sh run.
-
-    First probes all known candidate ports for ANY running OpenClaw-compatible
-    gateway (including AlphaClaw or other forks).  If one is found it is
-    commandeered — no daemon is started and no loaded models are disturbed.
-    Only when no gateway is reachable does it install / start a new one.
-
-    Steps:
-      0. Discover any running compatible gateway (commandeer if found)
-      1. Verify npm is available          ← skipped when commandeering
-      2. Install openclaw@latest if missing ← skipped when commandeering
-      3. Write ~/.openclaw/openclaw.json (skipped if exists and not forced)
-      4. Create agent workspaces from bin/agents/*/SOUL.md
-      5. Start OpenClaw daemon            ← skipped when commandeering
-      6. Ensure ~/autoresearch is cloned and synced
-    """
-    try:
-        import httpx  # noqa: F401 — checked early so later uses don't need try/except
-    except ImportError:
-        print("[openclaw] ✗ httpx not installed — run: pip install httpx")
-        return False
-
-    config_dir  = Path.home() / ".openclaw"
-    config_file = config_dir  / "openclaw.json"
-
-    # ── Step 0: discover any already-running compatible gateway ──────────────
-    print(f"[openclaw] → Probing {len(OPENCLAW_CANDIDATE_PORTS)} candidate ports for"
-          f" a running gateway: {OPENCLAW_CANDIDATE_PORTS}")
-    existing_url = await _find_any_gateway()
-
-    if existing_url:
-        existing_port = int(existing_url.rsplit(":", 1)[-1])
-        if existing_port != OPENCLAW_GATEWAY_PORT:
-            print(f"[openclaw] ✓ Found gateway at {existing_url}"
-                  f" (not default :{OPENCLAW_GATEWAY_PORT})"
-                  f" — commandeering, skipping daemon start")
-        else:
-            print(f"[openclaw] ✓ Gateway already running at {existing_url}"
-                  f" — commandeering, no restart needed")
-        # Persist the discovered URL so consumers always target the right port
-        os.environ["OPENCLAW_GATEWAY_URL"] = existing_url
-        # Still write config + workspaces so routing is up to date; skip daemon
-        if not config_file.exists() or force:
-            _write_openclaw_config(config_dir, config_file)
-        _ensure_agent_workspaces(config_dir)
-        _ensure_autoresearch()
-        return True
-    # ─────────────────────────────────────────────────────────────────────────
-
-    print("[openclaw] No running gateway found — proceeding with full bootstrap")
-
-    # 1. npm check
-    if not shutil.which("npm"):
-        print("[openclaw] ✗ npm not found — install Node 24 from https://nodejs.org/")
-        return False
-
-    # 2. Install openclaw if missing
-    if not shutil.which("openclaw"):
-        print("[openclaw] → Installing openclaw@latest…")
-        try:
-            subprocess.run(["npm", "install", "-g", "openclaw@latest"], check=True)
-            print("[openclaw] ✓ openclaw installed")
-        except subprocess.CalledProcessError as e:
-            print(f"[openclaw] ✗ install failed: {e}")
-            return False
-
-    # Ensure the binary is executable (npm on some systems installs without +x)
-    _oclaw_bin = shutil.which("openclaw")
-    if _oclaw_bin:
-        import stat as _stat
-        _mode = Path(_oclaw_bin).stat().st_mode
-        if not (_mode & _stat.S_IXUSR):
-            print(f"[openclaw] ⚠ fixing permissions on {_oclaw_bin}")
-            Path(_oclaw_bin).chmod(_mode | _stat.S_IXUSR | _stat.S_IXGRP | _stat.S_IXOTH)
-
-    # 3. Write config (first run or forced)
-    if not config_file.exists() or force:
-        _write_openclaw_config(config_dir, config_file)
-
-    # 4. Agent workspaces
     _ensure_agent_workspaces(config_dir)
+    return {
+        "applied": True,
+        "config_path": str(config_file),
+        "gateway_ready": bool(payload.get("gateway", {}).get("gateway_ready")),
+        "gateway_url": payload.get("gateway", {}).get("gateway_url"),
+        "topology": payload.get("role_routing", {}).get("topology"),
+    }
 
-    # 5. Start gateway
-    print("[openclaw] → Starting OpenClaw gateway…")
-    try:
-        subprocess.run(["openclaw", "onboard", "--install-daemon"], check=True)
-        print(f"[openclaw] ✓ gateway started :{OPENCLAW_GATEWAY_PORT}")
-        os.environ["OPENCLAW_GATEWAY_URL"] = f"http://127.0.0.1:{OPENCLAW_GATEWAY_PORT}"
-    except PermissionError as e:
-        _oclaw_path = shutil.which("openclaw") or "openclaw"
-        print(f"[openclaw] ✗ permission denied running openclaw: {e}")
-        print(f"[openclaw]   fix: chmod +x {_oclaw_path}")
-        return False
-    except subprocess.CalledProcessError as e:
-        print(f"[openclaw] ✗ gateway start failed: {e}")
-        return False
-
-    # 6. AutoResearcher
-    _ensure_autoresearch()
-    return True
-
-
-# ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="ultrathink-system OpenClaw bootstrap",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=(
-            "Examples:\n"
-            "  python openclaw_bootstrap.py --bootstrap          # idempotent full bootstrap\n"
-            "  python openclaw_bootstrap.py --bootstrap --force  # force-rewrite openclaw.json\n"
-            "\n"
-            "Environment variables (all exported by start.sh):\n"
-            "  PT_AGENTS_STATE   path to Perplexity-Tools .state/routing.json (probe results)\n"
-            "  MAC_IP / WIN_IP   detected LAN IPs\n"
-            "  LM_STUDIO_*       LM Studio endpoints and token\n"
-        ),
+        description="Delegate-only OpenClaw config applier for ultrathink-system",
     )
-    parser.add_argument("--bootstrap", action="store_true",
-                        help="Idempotent OpenClaw install + configure + start gateway")
-    parser.add_argument("--force", action="store_true",
-                        help="Force-rewrite openclaw.json even if it already exists")
-    _args = parser.parse_args()
+    parser.add_argument("--apply", action="store_true", help="Apply PT-resolved OpenClaw config")
+    parser.add_argument("--payload", default=None, help="Path to PT runtime payload JSON")
+    parser.add_argument("--force", action="store_true", help="Force-write openclaw.json")
+    parser.add_argument("--json", action="store_true", help="Print the result as JSON")
+    args = parser.parse_args()
 
-    if _args.bootstrap:
-        ok = asyncio.run(bootstrap_openclaw(force=_args.force))
-        sys.exit(0 if ok else 1)
-    else:
+    if not args.apply:
         parser.print_help()
-        sys.exit(1)
+        raise SystemExit(1)
+
+    result = apply_runtime_payload(load_runtime_payload(args.payload), force=args.force)
+    if args.json:
+        print(json.dumps(result, indent=2))
+    raise SystemExit(0)

@@ -21,14 +21,14 @@ SINGLE_AGENT_SKILL = ROOT / "bin" / "skills" / "SKILL.md"
 
 
 def test_bridge_doc_references_live_mcp_tool_names():
-    content = BRIDGE_DOC.read_text()
+    content = BRIDGE_DOC.read_text(encoding="utf-8")
 
     for schema in TOOL_SCHEMAS:
         assert f"`{schema['name']}`" in content
 
 
 def test_bridge_doc_marks_http_path_as_primary_transport():
-    content = BRIDGE_DOC.read_text()
+    content = BRIDGE_DOC.read_text(encoding="utf-8")
 
     # HTTP bridge is the v1.0 RC primary transport (not a backup)
     assert "HTTP Bridge" in content
@@ -46,4 +46,4 @@ def test_legacy_http_docs_are_marked_as_backup_or_historical():
     }
 
     for path, expected_text in docs.items():
-        assert expected_text in path.read_text(), f"Missing marker in {path.name}"
+        assert expected_text in path.read_text(encoding="utf-8"), f"Missing marker in {path.name}"

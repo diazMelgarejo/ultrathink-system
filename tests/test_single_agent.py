@@ -18,18 +18,18 @@ class TestPackageIntegrity:
         assert (SINGLE / "SKILL.md").exists(), "SKILL.md not found"
 
     def test_skill_md_has_frontmatter(self):
-        content = (SINGLE / "SKILL.md").read_text()
+        content = (SINGLE / "SKILL.md").read_text(encoding="utf-8")
         assert content.startswith("---"), "SKILL.md must start with YAML frontmatter"
         assert "name: ultrathink-system-skill" in content
         assert "version:" in content
         assert "license: Apache 2.0" in content
 
     def test_skill_md_under_500_lines(self):
-        lines = (SINGLE / "SKILL.md").read_text().splitlines()
+        lines = (SINGLE / "SKILL.md").read_text(encoding="utf-8").splitlines()
         assert len(lines) < 500, f"SKILL.md is {len(lines)} lines (max 500)"
 
     def test_skill_md_has_required_sections(self):
-        content = (SINGLE / "SKILL.md").read_text()
+        content = (SINGLE / "SKILL.md").read_text(encoding="utf-8")
         required = ["Execution Mode Router", "CIDF v1.2", "MODE 1",
                     "The 6 Directives", "Boundaries", "Success Criteria"]
         for section in required:
@@ -65,34 +65,34 @@ class TestPackageIntegrity:
 
 class TestContentQuality:
     def test_cidf_has_json_block(self):
-        cidf = (SINGLE / "references" / "content-insertion-framework.md").read_text()
+        cidf = (SINGLE / "references" / "content-insertion-framework.md").read_text(encoding="utf-8")
         assert "method_registry" in cidf, "CIDF missing method_registry JSON block"
         assert "automation_gate" in cidf, "CIDF missing automation_gate"
 
     def test_5stages_covers_all_stages(self):
-        content = (SINGLE / "references" / "ultrathink-5-stages.md").read_text()
+        content = (SINGLE / "references" / "ultrathink-5-stages.md").read_text(encoding="utf-8")
         for stage in ["Context Immersion", "Visionary Architecture",
                       "Ruthless Refinement", "Masterful Execution", "Crystallize"]:
             assert stage in content, f"5-stages doc missing: {stage}"
 
     def test_directives_covers_all_6(self):
-        content = (SINGLE / "references" / "core-operational-directives.md").read_text()
+        content = (SINGLE / "references" / "core-operational-directives.md").read_text(encoding="utf-8")
         for directive in ["Plan Node", "Subagent", "Self-Improvement",
                           "Verification", "Elegance", "Autonomous Bug"]:
             assert directive in content, f"Directives doc missing: {directive}"
 
     def test_task_plan_template_has_checkboxes(self):
-        content = (SINGLE / "templates" / "task-plan.md").read_text()
+        content = (SINGLE / "templates" / "task-plan.md").read_text(encoding="utf-8")
         assert "- [ ]" in content, "task-plan.md must have checkable items"
 
     def test_lessons_template_has_format(self):
-        content = (SINGLE / "templates" / "lessons-log.md").read_text()
+        content = (SINGLE / "templates" / "lessons-log.md").read_text(encoding="utf-8")
         assert "What Went Wrong" in content
         assert "Prevention Rule" in content
         assert "Root Cause" in content
 
     def test_verification_checklist_has_7_categories(self):
-        content = (SINGLE / "templates" / "verification-checklist.md").read_text()
+        content = (SINGLE / "templates" / "verification-checklist.md").read_text(encoding="utf-8")
         categories = ["Unit Tests", "Integration Tests", "Manual Testing",
                       "Code Quality", "Diff Review", "Documentation", "Security"]
         for cat in categories:
@@ -134,7 +134,7 @@ class TestCIDF:
 
     def test_policy_json_is_valid(self):
         import json
-        data = json.loads((self.CIDF / "core" / "content_insertion_policy.json").read_text())
+        data = json.loads((self.CIDF / "core" / "content_insertion_policy.json").read_text(encoding="utf-8"))
         assert data["framework_version"] == "1.2"
         assert len(data["tool_priority_order"]) == 5
         assert len(data["test_vectors"]) == 6

@@ -37,7 +37,7 @@ class TestAgentStructure:
     @pytest.mark.parametrize("agent", AGENTS)
     def test_agent_skill_has_frontmatter(self, agent):
         skill_file = SKILL_NAMES[agent]
-        content = (MULTI / "agents" / agent / skill_file).read_text()
+        content = (MULTI / "agents" / agent / skill_file).read_text(encoding="utf-8")
         assert content.startswith("---"), f"{agent} SKILL.md must start with ---"
         assert "version:" in content
         assert "license: Apache 2.0" in content
@@ -71,12 +71,12 @@ class TestSharedUtilities:
         assert (MULTI / "shared" / "message_bus.py").exists()
 
     def test_core_has_stage_enum(self):
-        content = (MULTI / "shared" / "ultrathink_core.py").read_text()
+        content = (MULTI / "shared" / "ultrathink_core.py").read_text(encoding="utf-8")
         assert "class Stage" in content
         assert "context_immersion" in content
 
     def test_core_has_task_state(self):
-        content = (MULTI / "shared" / "ultrathink_core.py").read_text()
+        content = (MULTI / "shared" / "ultrathink_core.py").read_text(encoding="utf-8")
         assert "class TaskState" in content
         assert "elegance_score" in content
 
@@ -85,12 +85,12 @@ class TestConfig:
     def test_agent_registry_valid_json(self):
         path = MULTI / "config" / "agent_registry.json"
         assert path.exists()
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         assert "agents" in data
         assert len(data["agents"]) == 7
 
     def test_all_agents_in_registry(self):
-        data = json.loads((MULTI / "config" / "agent_registry.json").read_text())
+        data = json.loads((MULTI / "config" / "agent_registry.json").read_text(encoding="utf-8"))
         ids = [a["id"] for a in data["agents"]]
         for agent in ["orchestrator", "context-agent", "architect-agent",
                       "refiner-agent", "executor-agent", "verifier-agent", "crystallizer-agent"]:
@@ -99,7 +99,7 @@ class TestConfig:
     def test_routing_rules_valid_json(self):
         path = MULTI / "config" / "routing_rules.json"
         assert path.exists()
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
         assert "rules" in data
         assert len(data["rules"]) > 5
 

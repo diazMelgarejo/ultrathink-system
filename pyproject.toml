@@ -27,6 +27,7 @@ test = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 asyncio_mode = "auto"
+pythonpath = ["."]
 filterwarnings = [
     "ignore:There is no current event loop:DeprecationWarning",
     "ignore::ResourceWarning",

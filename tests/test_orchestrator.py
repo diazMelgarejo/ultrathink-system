@@ -1,27 +1,38 @@
 #!/usr/bin/env python3
 """
-test_orchestrator.py
-====================
 Unit tests for the ultrathink orchestrator logic and core types.
 Run: pytest tests/test_orchestrator.py -v
 """
+from __future__ import annotations
+
 import sys
-import pytest
 from pathlib import Path
 
-# Add shared to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "multi_agent" / "shared"))
+import pytest
+
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT / "bin" / "shared"))
+sys.path.insert(0, str(ROOT / "bin" / "agents" / "orchestrator"))
 
 try:
     from ultrathink_core import (
-        TaskState, AgentMessage, ValidationResult, ArchitectureOutput,
-        Stage, MessageType, Verdict, OptimizeFor,
-        calculate_elegance_score, ELEGANCE_THRESHOLD, QUALITY_RUBRIC_WEIGHTS
+        ArchitectureOutput,
+        AgentMessage,
+        ELEGANCE_THRESHOLD,
+        MessageType,
+        OptimizeFor,
+        QUALITY_RUBRIC_WEIGHTS,
+        Stage,
+        TaskState,
+        ValidationResult,
+        Verdict,
+        calculate_elegance_score,
     )
+    from orchestrator_logic import advance_stage, create_task_state
     IMPORTS_OK = True
-except ImportError as e:
+except ImportError as exc:  # pragma: no cover - skip gate below handles this
     IMPORTS_OK = False
-    IMPORT_ERROR = str(e)
+    IMPORT_ERROR = str(exc)
 
 
 @pytest.mark.skipif(not IMPORTS_OK, reason="shared module import failed")
@@ -47,27 +58,26 @@ class TestTaskState:
         assert state.is_done() is True
 
     def test_to_dict_has_required_keys(self):
-        d = TaskState().to_dict()
+        payload = TaskState().to_dict()
         for key in ["task_id", "current_stage", "elegance_score", "stage_outputs"]:
-            assert key in d
+            assert key in payload
 
 
 @pytest.mark.skipif(not IMPORTS_OK, reason="shared module import failed")
 class TestEleganceScoring:
     def test_perfect_scores_give_high_elegance(self):
-        scores = {k: 1.0 for k in QUALITY_RUBRIC_WEIGHTS}
+        scores = {key: 1.0 for key in QUALITY_RUBRIC_WEIGHTS}
         assert calculate_elegance_score(scores) == 1.0
 
     def test_zero_scores_give_zero_elegance(self):
-        scores = {k: 0.0 for k in QUALITY_RUBRIC_WEIGHTS}
+        scores = {key: 0.0 for key in QUALITY_RUBRIC_WEIGHTS}
         assert calculate_elegance_score(scores) == 0.0
 
     def test_threshold_default_is_0_8(self):
         assert ELEGANCE_THRESHOLD == 0.8
 
     def test_simplicity_has_highest_weight(self):
-        weights = QUALITY_RUBRIC_WEIGHTS
-        assert weights["simplicity"] == max(weights.values())
+        assert QUALITY_RUBRIC_WEIGHTS["simplicity"] == max(QUALITY_RUBRIC_WEIGHTS.values())
 
 
 @pytest.mark.skipif(not IMPORTS_OK, reason="shared module import failed")
@@ -77,7 +87,7 @@ class TestAgentMessage:
             from_agent="orchestrator",
             to_agent="context-agent",
             message_type=MessageType.DELEGATE_TASK,
-            payload={"task": "test"}
+            payload={"task": "test"},
         )
         assert msg.trace_id
         assert msg.message_id
@@ -85,39 +95,80 @@ class TestAgentMessage:
 
     def test_to_dict_has_all_fields(self):
         msg = AgentMessage(
-            from_agent="a", to_agent="b",
+            from_agent="a",
+            to_agent="b",
             message_type=MessageType.RESULT_RETURN,
-            payload={}
+            payload={},
         )
-        d = msg.to_dict()
+        payload = msg.to_dict()
         for key in ["from_agent", "to_agent", "message_type", "trace_id", "payload"]:
-            assert key in d
+            assert key in payload
 
 
 @pytest.mark.skipif(not IMPORTS_OK, reason="shared module import failed")
 class TestValidationResult:
     def test_valid_pass_default(self):
-        r = ValidationResult(valid=True)
-        assert r.verdict == Verdict.PASS
-        assert r.issues == []
+        result = ValidationResult(valid=True)
+        assert result.verdict == Verdict.PASS
+        assert result.issues == []
 
     def test_invalid_fail(self):
-        r = ValidationResult(valid=False, verdict=Verdict.FAIL, issues=["test broke"])
-        assert not r.valid
-        d = r.to_dict()
-        assert d["verdict"] == Verdict.FAIL
+        result = ValidationResult(valid=False, verdict=Verdict.FAIL, issues=["test broke"])
+        assert not result.valid
+        assert result.to_dict()["verdict"] == Verdict.FAIL
+
+
+@pytest.mark.skipif(not IMPORTS_OK, reason="shared module import failed")
+class TestOrchestratorLogic:
+    def test_create_task_state_uses_context_stage(self):
+        state = create_task_state("Design a PT-first migration", OptimizeFor.RELIABILITY)
+        assert state.task_description == "Design a PT-first migration"
+        assert state.current_stage == Stage.CONTEXT
+
+    def test_advance_stage_requires_refinement_before_execution(self):
+        state = create_task_state("Refine a gateway design")
+        state.current_stage = Stage.ARCHITECTURE
+
+        updated = advance_stage(
+            state,
+            stage_output={"blueprint": "v1"},
+            elegance_score=0.4,
+        )
+
+        assert updated.current_stage == Stage.REFINEMENT
+        assert updated.iteration_count == 1
+        assert updated.stage_outputs[Stage.ARCHITECTURE.value]["blueprint"] == "v1"
+
+    def test_advance_stage_moves_to_done_after_pass(self):
+        state = create_task_state("Ship the orchestrator")
+        state.current_stage = Stage.VERIFICATION
+
+        validated = advance_stage(
+            state,
+            validation=ValidationResult(valid=True, verdict=Verdict.PASS),
+        )
+        assert validated.current_stage == Stage.CRYSTALLIZATION
+
+        done = advance_stage(validated, stage_output={"summary": "done"})
+        assert done.current_stage == Stage.DONE
+        assert done.completed_at
 
 
 class TestExamplesExist:
     def test_financial_validator_example(self):
-        example = Path(__file__).parent.parent / "examples" / "financial-validator"
+        example = ROOT / "examples" / "financial-validator"
         assert (example / "README.md").exists()
         assert (example / "task.md").exists()
         assert (example / "output" / "validate_financial_data.py").exists()
 
     def test_financial_validator_has_function(self):
-        code = (Path(__file__).parent.parent / "examples" / "financial-validator" /
-                "output" / "validate_financial_data.py").read_text()
+        code = (
+            ROOT
+            / "examples"
+            / "financial-validator"
+            / "output"
+            / "validate_financial_data.py"
+        ).read_text(encoding="utf-8")
         assert "def validate_equity_data" in code
         assert "ValidationReport" in code
         assert "PASS" in code and "FAIL" in code

@@ -9,7 +9,7 @@
 [![ECC Tools](https://img.shields.io/badge/ECC_Tools-Compatible-brightgreen)](https://ecc.tools)
 [![Version](https://img.shields.io/badge/version-1.0.0-orange)](CHANGELOG.md)
 
-**Compatible with**: Claude Code · Cowork · Open · Clawdbot · MoltBot · OpenClaw · ECC Tools · everything-claude-code
+**Compatible with**: Claude Code · Cowork · Clawdbot · MoltBot · OpenClaw · ECC Tools · everything-claude-code
 
 ---
 
@@ -34,7 +34,7 @@ Clear methodology → clear output. Vague intent → scaled ambiguity.
 ## Quick Start (3 Minutes)
 
 ```bash
-# 1. Install bin/skills (Claude Code / Cowork / Open)
+# 1. Install bin/skills (Claude Code / Cowork / OpenClaw)
 ./install.sh
 
 # 2. Activate in Claude
@@ -144,21 +144,21 @@ Always active, regardless of which stage you're in:
 ```
 User → Orchestrator
            ↓
-     Context Agent          ← Stage 1 (spawns sub-agents)
+    Context Agent           ← Stage 1 (spawns sub-agents)
            ↓
-     Architect Agent         ← Stage 2 (spawns module designers)
+    Architect Agent         ← Stage 2 (spawns module designers)
            ↓
-     Refiner Agent           ← Stage 3 (loops until elegance ≥ 0.8)
+    Refiner Agent           ← Stage 3 (loops until elegance ≥ 0.8)
            ↓
   ┌──────────────────┐
-  │ Executor Agent × 5│       ← Stage 4 (parallel)
+  │Executor Agent × 5│      ← Stage 4 (parallel)
   └──────────────────┘
            ↓
-     Verifier Agent          ← Stage 4.5 (blocks until PASS)
+    Verifier Agent          ← Stage 4.5 (blocks until PASS)
            ↓
-     Crystallizer Agent      ← Stage 5 (documents + captures lessons)
+    Crystallizer Agent      ← Stage 5 (documents + captures lessons)
            ↓
-       Result + Lessons
+    Result + Lessons
 ```
 
 ---

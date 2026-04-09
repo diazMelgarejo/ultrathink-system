@@ -5,6 +5,7 @@ __pycache__/
 *.egg-info/
 .DS_Store
 *.log
+.state/
 PR_BODY.md
 .env
 dist/

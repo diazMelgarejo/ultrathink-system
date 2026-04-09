@@ -6,6 +6,7 @@ Request/response tests for the HTTP bridge.
 """
 from __future__ import annotations
 
+import json
 from fastapi.testclient import TestClient
 
 import api_server
@@ -178,3 +179,26 @@ def test_http_health_endpoint(monkeypatch):
         "creativity": "deep",
         "speed": "standard",
     }
+    assert body["pt_runtime"]["available"] is False
+
+
+def test_runtime_state_reads_pt_payload(monkeypatch, tmp_path):
+    runtime_path = tmp_path / "pt-runtime.json"
+    runtime_path.write_text(
+        json.dumps(
+            {
+                "gateway": {"gateway_ready": True},
+                "routing": {"distributed": True},
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("PT_RUNTIME_STATE", str(runtime_path))
+
+    with TestClient(api_server.app, raise_server_exceptions=True) as client:
+        response = client.get("/runtime-state")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["available"] is True
+    assert body["runtime"]["gateway"]["gateway_ready"] is True

@@ -13,10 +13,12 @@ Version: 0.9.9.2 | License: Apache 2.0
 from __future__ import annotations
 
 import os
+import json
 import logging
 import time
 import uuid
 from typing import Optional, Any
+from pathlib import Path
 
 from fastapi import FastAPI, Request
 from pydantic import BaseModel, field_validator, Field
@@ -40,6 +42,20 @@ HOST            = os.getenv("ULTRATHINK_HOST", "127.0.0.1")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "qwen3.5:35b-a3b-q4_K_M")
 FAST_MODEL = os.getenv("FAST_MODEL", "qwen3:8b-instruct")
 CODE_MODEL = os.getenv("CODE_MODEL", "qwen3-coder:14b")
+
+
+def _load_pt_runtime_state() -> dict[str, Any] | None:
+    state_path = os.getenv("PT_RUNTIME_STATE", "").strip()
+    if not state_path:
+        return None
+    path = Path(state_path)
+    if not path.exists():
+        return None
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("Failed to read PT runtime state %s: %s", path, exc)
+        return None
 
 # ── Request / Response models ─────────────────────────────────────────────────
 
@@ -139,6 +155,7 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
 
 @app.get("/health")
 async def health():
+    runtime_state = _load_pt_runtime_state()
     return {
         "status": "ok",
         "version": "0.9.9.2",
@@ -150,8 +167,19 @@ async def health():
         "orchestrator": "mac-studio",
         "execution_target": "win-rtx3080",
         "primary_contract": "lmstudio",
-        "mapping": OPTIMIZE_FOR_TO_REASONING_DEPTH
+        "mapping": OPTIMIZE_FOR_TO_REASONING_DEPTH,
+        "pt_runtime": {
+            "available": runtime_state is not None,
+            "gateway_ready": bool((runtime_state or {}).get("gateway", {}).get("gateway_ready")),
+            "distributed": bool((runtime_state or {}).get("routing", {}).get("distributed")),
+        },
     }
+
+
+@app.get("/runtime-state")
+async def runtime_state():
+    payload = _load_pt_runtime_state()
+    return {"available": payload is not None, "runtime": payload}
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 

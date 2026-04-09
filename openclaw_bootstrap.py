@@ -24,6 +24,110 @@ from typing import Any
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 DEFAULT_PAYLOAD = Path(".state/pt_runtime_payload.json")
+OPENCLAW_GATEWAY_PORT = int(os.getenv("OPENCLAW_GATEWAY_PORT", "18789"))
+
+# Candidate ports to probe for any running OpenClaw-compatible gateway.
+# Includes OpenClaw default (18789) and AlphaClaw (chrysb/alphaclaw) which
+# may run on 11435 or other ports. Add more via OPENCLAW_EXTRA_PORTS env var.
+_extra = [int(p) for p in os.getenv("OPENCLAW_EXTRA_PORTS", "").split(",") if p.strip()]
+OPENCLAW_CANDIDATE_PORTS: list[int] = list(dict.fromkeys(
+    [OPENCLAW_GATEWAY_PORT, 11435, 8080, 3000, 4000, 9000] + _extra
+))
+
+# ── env-var defaults (all exported by start.sh) ───────────────────────────────
+
+MAC_IP     = os.getenv("MAC_IP",  "192.168.254.103")
+WIN_IP     = os.getenv("WIN_IP",  "192.168.254.100")
+OLLAMA_MAC = os.getenv("OLLAMA_MAC_ENDPOINT",     f"http://{MAC_IP}:11434")
+OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT",  f"http://{WIN_IP}:11434")
+LMS_MAC    = os.getenv("LM_STUDIO_MAC_ENDPOINT",   f"http://{MAC_IP}:1234")
+LMS_WIN    = os.getenv("LM_STUDIO_WIN_ENDPOINTS",   f"http://{WIN_IP}:1234")
+LMS_TOKEN  = os.getenv("LM_STUDIO_API_TOKEN", "lm-studio")
+
+MAC_MODEL  = os.getenv("MAC_LMS_MODEL", "qwen3:8b-instruct")
+WIN_MODEL  = os.getenv("WINDOWS_LMS_MODEL",
+                        "Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2")
+
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+def _load_pt_state() -> dict | None:
+    """Load PT's real probe results from .state/routing.json (PT_AGENTS_STATE env var)."""
+    state_path = os.getenv("PT_AGENTS_STATE")
+    if state_path and Path(state_path).exists():
+        with open(state_path) as f:
+            return json.load(f)
+    return None
+
+
+def _lms_base_url(raw: str) -> str:
+    """Ensure LM Studio baseUrl ends with /v1 (OpenAI-compat requirement)."""
+    raw = raw.rstrip("/")
+    return raw if raw.endswith("/v1") else f"{raw}/v1"
+
+
+# ── gateway discovery ─────────────────────────────────────────────────────────
+
+async def _probe_url(url: str, client) -> bool:
+    """Return True if url responds with HTTP < 400 on /health or /v1/models."""
+    for path in ("/health", "/v1/models"):
+        try:
+            r = await client.get(f"{url.rstrip('/')}{path}")
+            if r.status_code < 400:
+                return True
+        except Exception:
+            pass
+    return False
+
+
+async def _find_any_gateway() -> str | None:
+    """
+    Probe all candidate ports for a running OpenClaw-compatible gateway.
+
+    Compatible gateways (OpenClaw, AlphaClaw, or any proxy exposing /health
+    or /v1/models) are detected without discriminating on implementation.
+    Returns the base URL of the first responsive gateway, or None.
+    """
+    try:
+        import httpx
+    except ImportError:
+        return None
+
+    async with httpx.AsyncClient(timeout=1.5) as client:
+        for port in OPENCLAW_CANDIDATE_PORTS:
+            url = f"http://127.0.0.1:{port}"
+            if await _probe_url(url, client):
+                return url
+    return None
+
+
+def _write_openclaw_config(config_dir: Path, config_file: Path) -> None:
+    """Write ~/.openclaw/openclaw.json from PT probe results + env-var defaults."""
+    pt = _load_pt_state()
+
+    if pt:
+        # Use real probe results from Perplexity-Tools
+        mac_lms_url   = pt.get("mac_lmstudio_endpoint") or LMS_MAC
+        win_lms_url   = pt.get("lmstudio_endpoint")     or LMS_WIN
+        coder_model   = pt.get("coder_model",   WIN_MODEL)
+        manager_model = pt.get("manager_model", MAC_MODEL)
+        coder_backend = pt.get("coder_backend", "mac-degraded")
+        mac_lms_ok    = bool(pt.get("mac_lmstudio_ok"))
+    else:
+        mac_lms_url   = LMS_MAC
+        win_lms_url   = LMS_WIN
+        coder_model   = WIN_MODEL
+        manager_model = MAC_MODEL
+        coder_backend = "unknown"
+        mac_lms_ok    = False
+
+    # Resolve primary model refs based on what's actually live
+    if coder_backend == "windows-lmstudio":
+        coder_primary   = f"lmstudio-win/{coder_model}"
+    elif coder_backend == "windows-ollama":
+        coder_primary   = f"ollama-win/{coder_model}"
+    else:
+        coder_primary   = f"lmstudio-mac/{manager_model}"
 
 
 def _payload_path(explicit: str | None = None) -> Path:

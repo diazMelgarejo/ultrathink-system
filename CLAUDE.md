@@ -75,7 +75,7 @@ Before any significant change to this repo, load the mother skill:
 | Source | Runtime | Harness |
 |--------|---------|---------|
 | `bin/skills/SKILL.md` | `.claude/skills/ultrathink-system/SKILL.md` | Claude Code (project) |
-| `bin/skills/SKILL.md` | `~/.claude/skills/ultrathink-system-skill/` | Claude Code (global) |
+| `bin/skills/SKILL.md` | `~/.claude/skills/ultrathink-system/` | Claude Code (global) |
 | `bin/skills/SKILL.md` | `.agents/skills/ultrathink-system/SKILL.md` | Codex/OpenCode |
 | `bin/agents/*/` | `.claude/agents/ultrathink-*.md` | Claude Code subagents |
 

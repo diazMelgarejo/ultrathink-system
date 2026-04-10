@@ -1,5 +1,5 @@
 # ultrathink 5-Stage Methodology: Deep Dive
-**Reference Document for ultrathink-system-skill**
+**Reference Document for ultrathink-system**
 
 ---
 

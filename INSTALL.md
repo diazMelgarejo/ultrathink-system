@@ -29,13 +29,13 @@ bash /path/to/ultrathink-system/install.sh --project
 
 ```bash
 # Copy the skill folder to your Claude skills directory
-cp -R bin/skills ~/.claude/skills/ultrathink-system-skill
+cp -R bin/skills ~/.claude/skills/ultrathink-system
 ```
 
 ## What Gets Installed
 
 ```
-~/.claude/skills/ultrathink-system-skill/
+~/.claude/skills/ultrathink-system/
 ├── SKILL.md                              <- Master skill (5-stage + router + 6 directives)
 ├── afrp/
 │   └── SKILL.md                          <- Audience-First Response Protocol (pre-router gate)
@@ -66,7 +66,7 @@ cp -R bin/skills ~/.claude/skills/ultrathink-system-skill
 
 ### Auto-Activation
 
-Claude detects the skill from `~/.claude/skills/ultrathink-system-skill/SKILL.md` and loads it
+Claude detects the skill from `~/.claude/skills/ultrathink-system/SKILL.md` and loads it
 when your query matches the description triggers:
 
 - "ultrathink", "think deeply", "5-stage"
@@ -108,13 +108,13 @@ from `references/`, `afrp/`, and `cidf/` — keeping your context window clean.
 
 ```bash
 # Create a task plan (Directive #1)
-bash ~/.claude/skills/ultrathink-system-skill/scripts/create_task_plan.sh "Build auth system"
+bash ~/.claude/skills/ultrathink-system/scripts/create_task_plan.sh "Build auth system"
 
 # Verify before marking done (Directive #4)
-python3 ~/.claude/skills/ultrathink-system-skill/scripts/verify_before_done.py --task "Auth system" --dir .
+python3 ~/.claude/skills/ultrathink-system/scripts/verify_before_done.py --task "Auth system" --dir .
 
 # Capture a lesson (Directive #3)
-python3 ~/.claude/skills/ultrathink-system-skill/scripts/capture_lesson.py
+python3 ~/.claude/skills/ultrathink-system/scripts/capture_lesson.py
 ```
 
 ## Uninstall
@@ -122,7 +122,7 @@ python3 ~/.claude/skills/ultrathink-system-skill/scripts/capture_lesson.py
 ```bash
 bash install.sh --uninstall
 # or manually:
-rm -rf ~/.claude/skills/ultrathink-system-skill
+rm -rf ~/.claude/skills/ultrathink-system
 ```
 
 ## Source

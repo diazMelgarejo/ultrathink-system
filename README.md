@@ -99,9 +99,9 @@ ultrathink-system/
 
 | Platform | Directory |
 |---------|-----------|
-| Claude Code | `~/.claude/skills/ultrathink-system-skill/` |
-| Cowork | `~/.cowork/skills/ultrathink-system-skill/` |
-| ECC Tools | `~/.claude/skills/ultrathink-system-skill/` |
+| Claude Code | `~/.claude/skills/ultrathink-system/` |
+| Cowork | `~/.cowork/skills/ultrathink-system/` |
+| ECC Tools | `~/.claude/skills/ultrathink-system/` |
 | everything-claude-code | Drop into skills dir |
 
 ### Multi-Agent Network (Distributed / Parallel)
@@ -187,7 +187,7 @@ This skill follows the SKILL.md open standard and is compatible with
 
 ```bash
 # Add to your ECC profile
-cp -r bin/skills ~/.claude/skills/ultrathink-system-skill
+cp -r bin/skills ~/.claude/skills/ultrathink-system
 
 # Then use with any ECC-compatible harness
 ```

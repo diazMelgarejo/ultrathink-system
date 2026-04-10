@@ -20,7 +20,7 @@ class TestPackageIntegrity:
     def test_skill_md_has_frontmatter(self):
         content = (SINGLE / "SKILL.md").read_text(encoding="utf-8")
         assert content.startswith("---"), "SKILL.md must start with YAML frontmatter"
-        assert "name: ultrathink-system-skill" in content
+        assert "name: ultrathink-system" in content
         assert "version:" in content
         assert "license: Apache 2.0" in content
 

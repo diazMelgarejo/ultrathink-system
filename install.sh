@@ -2,7 +2,7 @@
 # install.sh
 # ultrathink System — Single-Agent + ECC/Codex Harness Installer
 # =================================================================
-# Installs the ultrathink skill to ~/.claude/skills/ultrathink-system-skill/
+# Installs the ultrathink skill to ~/.claude/skills/ultrathink-system/
 # Works with Claude Code CLI, Codex/OpenCode, and ECC.
 #
 # Usage:
@@ -20,7 +20,7 @@ ok()   { echo -e "  ${GREEN}✓${RESET} $1"; }
 warn() { echo -e "  ${YELLOW}⚠${RESET}  $1"; }
 info() { echo -e "  ${BLUE}→${RESET} $1"; }
 
-SKILL_NAME="ultrathink-system-skill"
+SKILL_NAME="ultrathink-system"
 REPO_URL="https://github.com/diazMelgarejo/ultrathink-system"
 BRANCH="main"
 SKILL_SOURCE="bin/skills"

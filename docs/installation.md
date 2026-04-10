@@ -22,22 +22,22 @@
 
 ```bash
 # Claude Code
-cp -r bin/skills ~/.claude/skills/ultrathink-system-skill
+cp -r bin/skills ~/.claude/skills/ultrathink-system
 
 # Cowork
-cp -r bin/skills ~/.cowork/skills/ultrathink-system-skill
+cp -r bin/skills ~/.cowork/skills/ultrathink-system
 
 # Any Claude platform — place in skills dir
-cp -r bin/skills /path/to/your/skills/ultrathink-system-skill
+cp -r bin/skills /path/to/your/skills/ultrathink-system
 ```
 
 ### ECC Tools / everything-claude-code
 
 ```bash
 # Drop into existing skill library
-cp -r bin/skills ~/.claude/skills/ultrathink-system-skill
+cp -r bin/skills ~/.claude/skills/ultrathink-system
 # or if using ecc-tools profile
-cp -r bin/skills ~/.ecc/skills/ultrathink-system-skill
+cp -r bin/skills ~/.ecc/skills/ultrathink-system
 ```
 
 ---

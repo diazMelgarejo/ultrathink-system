@@ -1,5 +1,5 @@
 # SKILL.md Architecture Guide
-**Reference Document for ultrathink-system-skill**
+**Reference Document for ultrathink-system**
 **Source**: Derived from "The Architectural Optimization of Agent Capability" technical analysis
 
 ---

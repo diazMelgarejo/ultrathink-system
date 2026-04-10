@@ -1,5 +1,5 @@
 ---
-name: ultrathink-system-skill
+name: ultrathink-system
 description: >-
   Elegant problem-solving methodology with 5-stage process, AFRP pre-router gate,
   CIDF v1.2 content insertion framework, and 7-agent execution network. Activates

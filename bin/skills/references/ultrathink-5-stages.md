@@ -1,5 +1,6 @@
 # ultrathink 5-Stage Methodology: Deep Dive
-**Reference Document for ultrathink-system**
+
+## Reference Document for ultrathink-system
 
 ---
 
@@ -9,6 +10,7 @@ Technology alone is not enough. It's technology married with the liberal arts,
 married with the humanities, that yields results that make our hearts sing.
 
 Your work should:
+
 - Integrate seamlessly into human workflows
 - Feel intuitive and purposeful, never mechanical
 - Solve the *real* problem, not just the stated one
@@ -36,7 +38,8 @@ Crystallize Vision ─────────────┘
     [DONE]
 ```
 
-**Loop back when:**
+### Loop back when
+
 - Context → Architecture: Discovered new constraints
 - Architecture → Refinement: Design is too complex
 - Refinement → Architecture: Simplification revealed better approach
@@ -47,10 +50,12 @@ Crystallize Vision ─────────────┘
 ## Stage 1: Context Immersion (Progressive Deepening)
 
 ### What It Means
+
 Ground yourself deeply in the problem space before proposing solutions.
 Don't reach for the first working answer — understand the entire landscape.
 
 ### Information Sources (Priority Order)
+
 1. **Git history** — Commit messages, PR descriptions, resolved issues
 2. **Documentation** — CLAUDE.md, AGENTS.md, SKILL.md, README files
 3. **Architecture** — Design docs, ADRs, system diagrams
@@ -58,6 +63,7 @@ Don't reach for the first working answer — understand the entire landscape.
 5. **Constraints** — Tech debt, performance requirements, compliance needs
 
 ### Diagnostic Questions
+
 - What problem is this system *really* solving?
 - What are the non-negotiable constraints?
 - What patterns does the codebase already follow?
@@ -65,6 +71,7 @@ Don't reach for the first working answer — understand the entire landscape.
 - What assumptions might be invisible to me right now?
 
 ### Output Format
+
 ```markdown
 ## Context Summary
 
@@ -88,12 +95,14 @@ Don't reach for the first working answer — understand the entire landscape.
 ```
 
 ### Common Mistakes
+
 - ❌ Skipping this stage to "save time" (always costs more later)
 - ❌ Assuming your experience applies without verifying
 - ❌ Ignoring git history ("old code doesn't matter")
 - ❌ Not identifying constraints until after building
 
 ### Success Criteria
+
 - Can explain system to a new team member in 5 minutes
 - Can predict how existing code will react to proposed changes
 - Have identified 3+ constraints that will shape the solution
@@ -104,10 +113,12 @@ Don't reach for the first working answer — understand the entire landscape.
 ## Stage 2: Visionary Architecture (Think Different + Decomposition)
 
 ### What It Means
+
 Break the problem into modular sub-problems and envision the most elegant
 solution possible. Think like a designer: what would the ideal look like?
 
 ### Unconstrained Visioning
+
 ```
 Question: If I had unlimited time and resources, what would
           the perfect solution look like?
@@ -117,6 +128,7 @@ Purpose: Establish the north star, then work backward to
 ```
 
 ### Modular Decomposition
+
 1. **Identify boundaries** — Where should modules split?
 2. **Define interfaces** — How do modules communicate?
 3. **Assign responsibilities** — What does each module do (and NOT do)?
@@ -124,6 +136,7 @@ Purpose: Establish the north star, then work backward to
 5. **Sketch data flows** — How does information move through the system?
 
 ### Blueprint Template
+
 ```markdown
 ## Module: [Name]
 **Responsibility**: [Single clear purpose]
@@ -149,17 +162,20 @@ User Input → Validator → Processor → Storage
 ```
 
 ### Design Principles
+
 - **Single Responsibility** — Each module does ONE thing well
 - **Open/Closed** — Open for extension, closed for modification
 - **Dependency Inversion** — Depend on abstractions, not concretions
 - **Least Surprise** — Behavior should match expectations
 
 ### Common Mistakes
+
 - ❌ Over-engineering (too many abstractions too early)
 - ❌ Under-engineering (monolithic "god objects")
 - ❌ Not defining clear boundaries between modules
 
 ### Success Criteria
+
 - Can draw architecture on a whiteboard
 - Each module has single, clear responsibility
 - Interfaces are obvious and inevitable
@@ -170,8 +186,9 @@ User Input → Validator → Processor → Storage
 ## Stage 3: Ruthless Refinement (Rubric + Simplicity)
 
 ### What It Means
+
 Define quality criteria, then eliminate everything non-essential.
-**Elegance is achieved when there's nothing left to take away.**
+> **Elegance is achieved when there's nothing left to take away.**
 
 ### Quality Rubric
 
@@ -185,6 +202,7 @@ Define quality criteria, then eliminate everything non-essential.
 | Performance | ⭐⭐⭐ | Does this meet performance requirements? |
 
 ### The 5-Step Refinement Process
+
 1. **Identify Redundancy** — Where am I doing the same thing twice?
 2. **Challenge Abstractions** — Does this abstraction earn its existence?
 3. **Eliminate Fragility** — Where could this break?
@@ -192,6 +210,7 @@ Define quality criteria, then eliminate everything non-essential.
 5. **Iterate** — Is there STILL something non-essential here?
 
 ### The "Could This Be Simpler?" Test
+
 - Can I **remove** this entirely? (Best outcome)
 - Can I **merge** this with something else? (Good)
 - Can I make this **dumber/more obvious**? (Good)
@@ -199,12 +218,14 @@ Define quality criteria, then eliminate everything non-essential.
 - Do I need to **keep as-is**? (Last resort)
 
 ### Common Mistakes
+
 - ❌ "Future-proofing" (complexity for imagined future needs)
 - ❌ Premature optimization (performance before correctness)
 - ❌ Clever code (impressiveness over clarity)
 - ❌ "Enterprise" patterns (abstraction for abstraction's sake)
 
 ### Success Criteria
+
 - No code exists that doesn't directly serve the goal
 - A junior developer can understand the core logic
 - Removing any component would break functionality
@@ -215,6 +236,7 @@ Define quality criteria, then eliminate everything non-essential.
 ## Stage 4: Masterful Execution (Plan → Craft → Verify)
 
 ### Plan (Before ANY code)
+
 ```markdown
 # Task: [Clear, specific name]
 ## Goal
@@ -233,6 +255,7 @@ Define quality criteria, then eliminate everything non-essential.
 ```
 
 ### Craft: Naming Poetry
+
 ```python
 # ❌ Bad: Unclear, abbreviated
 def proc_dat(d): return d + 1
@@ -247,6 +270,7 @@ def calculate_next_fibonacci(previous: int, current: int) -> int:
 ```
 
 ### Craft: Edge Case Handling
+
 ```python
 def divide(a: float, b: float) -> Result[float, str]:
     if b == 0:          return Err("Cannot divide by zero")
@@ -256,6 +280,7 @@ def divide(a: float, b: float) -> Result[float, str]:
 ```
 
 ### Verify: The Non-Negotiables
+
 ```markdown
 - [ ] All new code has tests
 - [ ] All tests pass locally (not just CI)
@@ -270,11 +295,13 @@ def divide(a: float, b: float) -> Result[float, str]:
 ```
 
 ### The Staff Engineer Test
+>
 > "If I showed this to a senior engineer I respect, would they approve it
 > without significant changes?"
 > If the answer is "no" or "maybe" — keep refining.
 
 ### Common Mistakes
+
 - ❌ Writing code before planning
 - ❌ Marking complete based on "it looks right"
 - ❌ Skipping edge cases to "ship faster"
@@ -285,10 +312,12 @@ def divide(a: float, b: float) -> Result[float, str]:
 ## Stage 5: Crystallize the Vision (Final Reflection)
 
 ### What It Means
+
 Make the invisible beauty of your thinking visible.
 Document the journey, not just the destination.
 
 ### 1. Assumptions Ledger
+
 ```markdown
 ## Assumptions Made
 - **Assumption**: [What you assumed]
@@ -303,6 +332,7 @@ Document the journey, not just the destination.
 ```
 
 ### 2. Simplification Story
+
 ```markdown
 ## Complexity Removed
 1. **Removed**: [X] (N lines)
@@ -316,6 +346,7 @@ Document the journey, not just the destination.
 ```
 
 ### 3. Inevitability Argument
+
 ```markdown
 ## Why This Solution is Inevitable
 The core challenge was [X], requiring [Y]. Any solution must:
@@ -328,6 +359,7 @@ Any other approach adds unnecessary complexity without meaningful benefit.
 ```
 
 ### 4. Meaningful Commits
+
 ```bash
 # ❌ Bad
 git commit -m "fix bug"
@@ -343,14 +375,17 @@ Closes #123"
 ```
 
 ### 5. Capture Lessons
+
 Run `python scripts/capture_lesson.py` if any corrections occurred.
 
 ### Common Mistakes
+
 - ❌ Not documenting decisions ("everyone knows this")
 - ❌ Not explaining "why" (only documenting "what")
 - ❌ Generic commit messages (information loss over time)
 
 ### Success Criteria
+
 - Someone can understand your thinking 6 months from now
 - Decisions have clear rationale attached
 - Git history tells a coherent story

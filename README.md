@@ -7,7 +7,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![SKILL.md Standard](https://img.shields.io/badge/SKILL.md-Compatible-green)](https://ecc.tools/skills)
 [![ECC Tools](https://img.shields.io/badge/ECC_Tools-Compatible-brightgreen)](https://ecc.tools)
-[![Version](https://img.shields.io/badge/version-1.0.0-orange)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.9.4-orange)](CHANGELOG.md)
 
 **Compatible with**: Claude Code · Cowork · Clawdbot · MoltBot · OpenClaw · ECC Tools · everything-claude-code
 
@@ -83,6 +83,8 @@ ultrathink-system/
 │
 ├── examples/                       ← Real-world usage walkthroughs
 ├── docs/                           ← Installation, guides, FAQ
+├── portal_server.py                ← LAN dashboard for PT, ultrathink, LM Studio, Ollama
+├── network_autoconfig.py           ← LAN IP / agent auto-discovery helper
 ├── tests/                          ← Full test suite (pytest)
 └── .github/                        ← CI/CD workflows
 ```
@@ -109,6 +111,19 @@ ultrathink-system/
 ./install-multi-agent.sh
 python bin/mcp_servers/ultrathink_orchestration_server.py
 ```
+
+### LAN Helpers
+
+```bash
+# Probe a LAN-friendly host/IP and optionally scan for agents
+python network_autoconfig.py --scan
+
+# Launch the slate-grey portal on port 8002
+python portal_server.py
+```
+
+- `network_autoconfig.py` detects the preferred local IP and can scan for LM Studio, Ollama, PT, ultrathink, and portal services.
+- `portal_server.py` shows a lightweight LAN dashboard for PT, ultrathink, LM Studio, and Ollama endpoints.
 
 ---
 

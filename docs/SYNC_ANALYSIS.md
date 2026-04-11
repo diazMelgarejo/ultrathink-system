@@ -1,6 +1,6 @@
 # Sync Analysis: ultrathink-system ↔ Perplexity-Tools
 
-**Date:** 2026-03-30 | **Version:** ultrathink v0.9.9.0 · PT v0.9.9.0
+**Date:** 2026-04-11 | **Version:** ultrathink v0.9.9.4 · PT v0.9.9.4
 
 > **v1.0 RC transport clarification:** HTTP Bridge (`POST /ultrathink` via `api_server.py`)
 > is the **active primary transport** for v1.0 RC. MCP-Optional transport (stdio JSON-RPC)
@@ -12,9 +12,9 @@
 
 | Dimension | Status | Notes |
 |---|---|---|
-| **Version** | ✅ IN SYNC | Both at v0.9.9.0 |
+| **Version** | ✅ IN SYNC | Both at v0.9.9.4 |
 | **Architecture contract** | ✅ IN SYNC | 4-layer hierarchy documented + upheld |
-| **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.8.0; HAL cross-link complete 
+| **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.9.4; HAL cross-link complete 
 | **API endpoint spec** | ✅ IN SYNC | HTTP Bridge (`POST /ultrathink`) is v1.0 RC primary transport; MCP-Optional planned for v1.1 |
 | **Idempotency contract** | ✅ RESOLVED | PT owns all state via `.state/agents.json`; ultrathink stateless (no Redis). Redis deferred to PT v1.1+ |
 | **Shared `.env` contract** | ✅ IN SYNC | Vars in both `.env.example` files match BRIDGE doc |
@@ -26,7 +26,7 @@
 | **Tests** | ✅ RESOLVED | PT now has 6 test files (56+ tests); ultrathink has 86+ tests |
 | **routing.yml** | ✅ IN SYNC | PT `config/routing.yml` has `deep_reasoning` + `code_analysis` ultrathink routes |
 | **HAL doc cross-ref** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md HAL section complete; 
-| **PT hardware cross-link (OPT 1)** | ✅ RESOLVED | ultrathink `bin/skills/SKILL.md` references PT `hardware/SKILL.md`; `orchestrator/__init__.py` has `__version__` |
+| **PT hardware cross-link (OPT 1)** | ✅ RESOLVED | ultrathink `bin/skills/SKILL.md` references PT `hardware/SKILL.md`; `portal_server.py` and `network_autoconfig.py` are documented as active LAN helpers |
 | **PT `pyproject.toml` (OPT 2)** | ✅ RESOLVED | PT now pip-installable as `perplexity-tools`; `[tool.pytest.ini_options]` + dev extras included |
 | **Integration test suite (OPT 3)** | ✅ RESOLVED | `tests/test_ultrathink_integration.py` — 12 tests verifying routing.yml ↔ ultrathink | **Integration test suite (OPT 3)** | ✅ RESOLVED | `tests/test_ultrathink_integration.py` — 12 tests verifying routing.yml ↔ ultrathink contract |
 

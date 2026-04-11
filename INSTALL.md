@@ -128,4 +128,4 @@ rm -rf ~/.claude/skills/ultrathink-system
 ## Source
 
 Distilled from [diazMelgarejo/ultrathink-system](https://github.com/diazMelgarejo/ultrathink-system)
-bin/skills/SKILL.md v0.9.9.3 -> unified install script v1.1.0
+bin/skills/SKILL.md v0.9.9.4 -> unified install script v1.1.0

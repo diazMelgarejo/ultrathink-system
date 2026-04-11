@@ -145,12 +145,12 @@ Always active, regardless of which stage you're in:
 
 | # | Directive | Trigger |
 |---|-----------|---------|
-| 1 | **Plan Node Default** 📋 | Any task with 3+ steps |
-| 2 | **Subagent Strategy** 🤖 | When context window is crowded |
-| 3 | **Self-Improvement Loop** 🔄 | After ANY user correction |
-| 4 | **Verification Before Done** ✅ | Before marking any task complete |
-| 5 | **Demand Elegance** ✨ | When a solution feels hacky |
-| 6 | **Autonomous Bug Fixing** 🔧 | On any bug report |
+| 1 | 📋 **Plan Node Default** | Any task with 3+ steps |
+| 2 | 🤖 **Subagent Strategy** | When context window is crowded |
+| 3 | 🔄 **Self-Improvement Loop** | After ANY user correction |
+| 4 | ✅ **Verification Before Done** | Before marking any task complete |
+| 5 | ✨ **Demand Elegance** | When a solution feels hacky |
+| 6 | 🔧 **Autonomous Bug Fixing** | On any bug report |
 
 ---
 

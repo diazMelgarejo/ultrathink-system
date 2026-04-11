@@ -7,7 +7,7 @@ All probes run concurrently via asyncio.gather.
 Routes:
   GET /           HTML dashboard (meta-refresh every 10s)
   GET /api/status JSON status of all services
-  GET /health     {"status": "ok", "version": "1.0.0-rc"}
+  GET /health     {"status": "ok", "version": "0.9.9.4"}
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from fastapi import FastAPI
 log = logging.getLogger("ultrathink.portal")
 logging.basicConfig(level=logging.INFO)
 
-VERSION = "1.0.0-rc"
+VERSION = "0.9.9.4"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 
@@ -35,14 +35,14 @@ US_URL = os.getenv("ULTRATHINK_ENDPOINT", "http://localhost:8001")
 
 LMS_WIN_ENDPOINTS: List[str] = [
     ep.strip()
-    for ep in os.getenv("LM_STUDIO_WIN_ENDPOINTS", "http://192.168.1.100:1234").split(",")
+    for ep in os.getenv("LM_STUDIO_WIN_ENDPOINTS", "http://192.168.254.100:1234").split(",")
     if ep.strip()
 ]
-LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://localhost:1234")
+LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://192.168.254.103:1234")
 LMS_API_TOKEN = os.getenv("LM_STUDIO_API_TOKEN", "")
 
-OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT", "http://192.168.1.100:11434")
-OLLAMA_MAC = os.getenv("OLLAMA_MAC_ENDPOINT", "http://localhost:11434")
+OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT", "http://192.168.254.100:11434")
+OLLAMA_MAC = os.getenv("OLLAMA_MAC_ENDPOINT", "http://192.168.254.103:11434")
 
 PROBE_TIMEOUT = 3.0
 

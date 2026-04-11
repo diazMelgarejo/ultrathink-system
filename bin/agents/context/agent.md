@@ -1,7 +1,7 @@
 ---
 name: context-immersion-agent
 description: Stage 1 specialist for ultrathink — performs deep progressive context gathering from git history, documentation, code patterns, and lessons database before any solution is designed. Activates when orchestrator delegates context_immersion stage.
-version: 0.9.9.3
+version: 0.9.9.4
 license: Apache 2.0
 compatibility: clawdbot, moltbot, openclaw
 allowed-tools: git-history, documentation-reader, code-analyzer, lessons-db, file-operations

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Network Auto-Configuration for Perplexity-Tools
-Auto-detects working internet address and configures minimal server interface
-Mac-first unless not running, then Windows-only
+Network auto-configuration helper for ultrathink-system.
+Auto-detects a useful LAN address and can scan for PT, ultrathink, LM Studio,
+Ollama, and portal services on the local subnet.
 """
 
 import socket
@@ -22,8 +22,8 @@ class NetworkAutoConfig:
     def __init__(self):
         self.system = platform.system()
         self.preferred_ips = {
-            'Darwin': '192.168.254.105',   # macOS
-            'Windows': '192.168.254.101',  # Windows
+            'Darwin': '192.168.254.103',   # macOS
+            'Windows': '192.168.254.100',  # Windows
         }
         
     def get_preferred_ip(self) -> str:

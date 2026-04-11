@@ -1,6 +1,6 @@
 # Perplexity-Tools Bridge for UltraThink System
 
-## Version 0.9.9.0
+## Version 0.9.9.4
 
 ## Current Contract (v1.0 RC)
 
@@ -43,6 +43,9 @@ The practical current mapping is:
 Perplexity-Tools owns hardware-aware routing before tasks reach ultrathink.
 
 - `mac-studio` and `win-rtx3080` profiles stay on the PT side.
+- Current PT defaults are `Mac=http://192.168.254.103:1234` and `Win=http://192.168.254.100:1234` for LM Studio.
+- PT prefers `glm-5.1:cloud` for the thin Mac orchestrator lane when the live probe succeeds, then falls back to Mac LM Studio.
+- PT prefers `Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2` for Windows heavy coding and autoresearch, with `qwen3-coder:14b` and `qwen3.5:35b-a3b-q4_K_M` retained as fallbacks.
 - ultrathink remains the hardware-agnostic local reasoning layer.
 - The implemented HTTP backup bridge accepts `model_hint`, but PT still owns
   the hardware-routing decision that produces that hint.
@@ -151,7 +154,7 @@ implemented backup method rather than a future-only note.
 
 This bridge documentation assumes:
 
-- ultrathink-system >= v0.9.9.0
+- ultrathink-system >= v0.9.9.4
 - Perplexity-Tools >= v0.9.0.0
 - Python >= 3.8
 

@@ -1,5 +1,5 @@
 {
-  "version": "0.9.9.3",
+  "version": "0.9.9.4",
   "network_name": "ultrathink-agent-network",
   "description": "Unified ultrathink agent network — 7 ultrathink stage agents + 4 OpenClaw SOUL agents",
   "openclaw_agents": {

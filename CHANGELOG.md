@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.9.4] - 2026-04-11
+### Changed
+- Version: synchronized active package and skill metadata to 0.9.9.4
+- Docs: `README.md`, `CLAUDE.md`, `docs/PERPLEXITY_BRIDGE.md`, and `docs/SYNC_ANALYSIS.md` now reference the active `bin/skills/SKILL.md` path and current version
+- Docs: `portal_server.py` and `network_autoconfig.py` are now documented as active LAN/runtime helpers
+- Runtime defaults: LAN helper defaults now align with the canonical Mac/Win LM Studio endpoints used by Perplexity-Tools
+- Historical `0.9.9.0` and `1.0.0-rc` notes preserved below for context
+
 ## [0.9.9.3] - 2026-04-07
 ### Changed
 - Docs: all `single_agent/` path references updated to `bin/skills/` across README, docs/, .claude/, .agents/, .codex/, .github/, bin/skills/ skills files

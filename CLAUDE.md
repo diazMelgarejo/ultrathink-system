@@ -45,10 +45,32 @@ The canonical lessons file is `.claude/lessons/LESSONS.md` — **same relative p
 
 ## 4. AutoResearcher Integration
 
+Primary mode: **uditgoenka/autoresearch Claude Code plugin** (runs anywhere).
+Secondary mode: GPU runner via SSH for `ml-experiment` task types.
+
+### Plugin install (one-time, idempotent)
+```bash
+claude plugin marketplace add uditgoenka/autoresearch
+claude plugin install autoresearch@autoresearch
+```
+
+### Activation (per session)
+```
+/autoresearch          # research loop
+/autoresearch:debug    # verbose reasoning trace
+```
+
+### Hardware guard — Windows sequential load rule
+Never configure the system to load more than one model at a time on the
+Windows GPU. Check `swarm_state.md` for `GPU: BUSY` before dispatching any
+new experiment. This is enforced in the autoresearcher SOUL.md.
+
 When running AutoResearcher swarms:
 - Read `.claude/lessons/LESSONS.md` for prior experiment context
 - Record new findings in `.claude/lessons/LESSONS.md` under a dated session entry
 - Cross-reference Perplexity-Tools' `.claude/lessons/LESSONS.md` for joint context
+- `AUTORESEARCH_REMOTE` env var selects the fork (default: uditgoenka/autoresearch)
+- `AUTORESEARCH_BRANCH` env var selects the sync branch (default: main)
 
 ## 5. Mother Skill — Always Load
 

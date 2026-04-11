@@ -245,3 +245,60 @@ Root cause: **the pattern was designed for Python import statements** (`from mul
 - Whether setup-time UX should eventually persist richer migration diagnostics for support cases.
 
 ---
+
+## 2026-04-11 — Claude — AutoResearcher migration: karpathy → uditgoenka
+
+### Architectural Shift
+
+The autoresearch loop has been migrated from a hardcoded Python script cloned
+to a GPU runner (`karpathy/autoresearch`) to the `uditgoenka/autoresearch`
+Claude Code plugin that can execute anywhere, with the GPU runner demoted to an
+optional `Verify` substrate for ML experiments.
+
+### Key Changes
+
+1. **`AUTORESEARCH_REMOTE` is now an environment variable** (not hardcoded):
+   ```bash
+   AUTORESEARCH_REMOTE=https://github.com/uditgoenka/autoresearch.git  # default
+   AUTORESEARCH_BRANCH=main  # default sync branch (was hardcoded 'master')
+   ```
+   Override either to pin a fork or branch without touching source code.
+
+2. **Plugin install (primary mode):**
+   ```bash
+   claude plugin marketplace add uditgoenka/autoresearch
+   claude plugin install autoresearch@autoresearch
+   ```
+   `install_autoresearch_plugin()` in `autoresearch_bridge.py` handles this
+   idempotently (checks `claude plugin list` first).
+
+3. **GPU runner is now secondary (Verify substrate):**
+   - Still used for `ml-experiment` task types via SSH + swarm_state.md
+   - `bootstrap_autoresearch_on_runner()` now runs `uv sync --dev` (not `pip install`)
+   - `sync_autoresearch_idempotent()` now uses `AUTORESEARCH_DEFAULT_BRANCH`
+     instead of hardcoding `origin/master`
+
+4. **`preflight()` now returns `plugin_ok` and `plugin_error` keys** in addition
+   to `sync_ok`, `sha`, `error`, `swarm_state_initialised`.
+
+5. **Hardware guard added to swarm_state.md template:**
+   Windows model loading is strictly sequential — never dispatch a new GPU run
+   while swarm_state.md shows `GPU: BUSY`. This is now explicit in every
+   freshly initialised swarm_state.md file.
+
+6. **`uv sync --dev`** replaces bare `pip install uv && uv sync` in all bootstrap
+   paths (start.sh, openclaw_bootstrap.py).
+
+7. **`openclaw_bootstrap.py` rewritten as thin shim:**
+   - Delegates to `$PT_HOME/alphaclaw_bootstrap.py` when available
+   - Keeps inline fallback with uditgoenka URL + uv sync --dev
+   - `start.sh` passes `PT_HOME` + `UTS_HOME` env vars to the PT script
+
+### Valid Windows Model Names (Canonical)
+- `Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2` — the only valid 27B identifier
+- `Qwen3.5-27B-Instruct` **DOES NOT EXIST** — never use this string
+
+### Commits
+- UTS branch `claude/add-windows-agent-autodetect-9W3OI` — refactor(openclaw): delegate to PT alphaclaw_bootstrap + autoresearcher plugin migration
+
+---

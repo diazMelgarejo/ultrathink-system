@@ -281,6 +281,53 @@ async def _bootstrap_inline(force: bool = False) -> bool:
     return True
 
 
+# ── PT payload applier ───────────────────────────────────────────────────────
+
+def apply_runtime_payload(payload: dict, force: bool = False) -> dict:
+    """Write the PT-resolved openclaw_config to ~/.openclaw/openclaw.json.
+
+    This is the programmatic entry point when a PT runtime payload dict is
+    already available in memory (e.g. from an orchestrator call or test).
+    The delegation path in bootstrap_openclaw() is for CLI/subprocess use.
+
+    Args:
+        payload: PT runtime payload dict containing gateway.openclaw_config.
+        force: If True, overwrite even if the file already matches.
+
+    Returns:
+        Status dict with gateway_ready, topology, applied, config_path, gateway_url.
+    """
+    openclaw_config = payload.get("gateway", {}).get("openclaw_config")
+    if not openclaw_config:
+        raise ValueError("PT runtime payload does not contain gateway.openclaw_config")
+
+    config_dir = Path.home() / ".openclaw"
+    config_file = config_dir / "openclaw.json"
+    config_dir.mkdir(parents=True, exist_ok=True)
+
+    existing: dict = {}
+    if config_file.exists():
+        try:
+            existing = json.loads(config_file.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    if force or existing != openclaw_config:
+        config_file.write_text(json.dumps(openclaw_config, indent=2), encoding="utf-8")
+        print(f"[openclaw] applied PT-resolved config -> {config_file}")
+    else:
+        print(f"[openclaw] config already matches PT payload -> {config_file}")
+
+    _ensure_agent_workspaces(config_dir)
+    return {
+        "applied": True,
+        "config_path": str(config_file),
+        "gateway_ready": bool(payload.get("gateway", {}).get("gateway_ready")),
+        "gateway_url": payload.get("gateway", {}).get("gateway_url"),
+        "topology": payload.get("role_routing", {}).get("topology"),
+    }
+
+
 # ── CLI ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

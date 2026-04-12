@@ -1,5 +1,5 @@
 ---
-name: ultrathink
+name: ultrathink-system
 description: >-
   Elegant problem-solving methodology with 5-stage process, AFRP pre-router gate,
   CIDF v1.2 content insertion framework, and 7-agent execution network. Activates
@@ -7,10 +7,10 @@ description: >-
   complex multi-step tasks, code quality reviews, and self-improvement workflows.
   Triggers on: "ultrathink", "think deeply", "5-stage", "systematic approach",
   "elegant solution", "verify before done", "content insertion", "AFRP", "CIDF".
-version: 1.0.0
-license: Apache-2.0
+version: 0.9.9.6
+license: Apache 2.0
 compatibility: claude-code, claude-desktop
-allowed-tools: bash, file-operations, web-search, subagent-creation
+allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink-lmstudio
 sub_skills:
   - path: afrp/SKILL.md
     trigger: "Query is non-trivial, audience-dependent, or open-ended (Type B/C/D)"
@@ -81,9 +81,11 @@ Task arrives (post-AFRP)
 No exceptions. Start at rank 1 every time.
 
 ### The One Rule
+>
 > Use the simplest tool that works. Complexity is a cost, not a feature.
 
 ### Method Priority
+
 | Rank | Method             | Eligible When                      | Complexity |
 |------|--------------------|------------------------------------|------------|
 | 1    | `direct_form_input`| Field accessible, content < 10k    | 1          |
@@ -93,6 +95,7 @@ No exceptions. Start at rank 1 every time.
 | 5    | `scripting`        | Automation gate OPEN only           | 5          |
 
 ### Verification Protocol (mandatory)
+
 ```
 execute_method() -> visual_ok? --no--> refresh_page()
                        |                     |
@@ -116,18 +119,22 @@ Full CIDF details: `cidf/SKILL.md`
 ## MODE 2: Single-Agent + Subagents (Standard Tasks)
 
 ### Stage 1 — Context Immersion
+
 Scan project structure, git history, skill files. Identify constraints, patterns,
 historical lessons. Output: 2-3 paragraph context summary.
 
 ### Stage 2 — Visionary Architecture
+
 Design modular breakdown with clean interfaces. If content insertion -> run CIDF
 `decide()` here. Ask: "What would the most elegant solution look like?"
 
 ### Stage 3 — Ruthless Refinement
+
 Quality rubric: simplicity 5/5, readability 5/5, robustness 5/5.
 Remove everything non-essential. Elegance = nothing left to take away.
 
 ### Stage 4 — Masterful Execution
+
 ```
 Plan   -> tasks/todo.md with checkable items
 Craft  -> TDD, naming poetry, edge cases handled
@@ -136,10 +143,12 @@ Verify -> scripts/verify_before_done.py -> must PASS
 ```
 
 ### Stage 5 — Crystallize the Vision
+
 Assumptions ledger, simplification story, inevitability argument.
 Run `scripts/capture_lesson.py` if any corrections occurred.
 
 ### Subagent Delegation (Directive #2)
+
 ```
 When context > 70% -- offload, one task per subagent:
   subagent("Research best library for X. Return: comparison table.")
@@ -149,6 +158,7 @@ When context > 70% -- offload, one task per subagent:
 ## MODE 3: Full Multi-Agent Network (Complex Tasks)
 
 ### Agent Network
+
 ```
 Orchestrator
 +-> Context Agent       Stage 1 -- parallel: doc scanner + git historian
@@ -160,6 +170,22 @@ Orchestrator
 ```
 
 Config: `config/agent_registry.json` + `config/routing_rules.json`
+
+### AutoResearch Integration (Mode 3 Task Type)
+
+When the coordinating system reports **`task_type`** of **`autoresearch`** or **`ml-experiment`** (from **Perplexity-Tools**):
+
+1. **Defer execution topology** to Perplexity-Tools: `POST /autoresearch/sync` must succeed (`sync_ok == true`) before deep multi-step planning assumes the GPU workspace is ready.
+2. **Reasoning layer (this repo)**: apply **CIDF / ultrathink** methodology for hypotheses, critique, and next-step narrative — but **do not** assume cloud models for autoresearch unless the user explicitly overrides (see Perplexity-Tools `SKILL.md` “autoresearch Tasks”).
+3. **GPU lock & metrics**: treat **`swarm_state.md`** (IDLE/BUSY) and **`log.txt` / `val_bpb`** as the source of truth for whether a run is active and whether metrics are valid.
+4. **Cross-repo stack**: Perplexity-Tools (orchestrator) → ultrathink-system (reasoning) → ECC Tools (optional parallel executors) → Karpathy autoresearch loop on the GPU host.
+
+For local setup work inside Perplexity-Tools, the Perplexity client now exposes optional `base_url` and `timeout` overrides, and the smoke-test script accepts the same values:
+
+```bash
+python scripts/test_perplexity.py --validate --base-url https://api.perplexity.ai --timeout 30
+```
+
 
 ## The 6 Directives (Always Active, All Modes)
 
@@ -175,18 +201,21 @@ Config: `config/agent_registry.json` + `config/routing_rules.json`
 ## Boundaries
 
 ### Always Do
+
 - Run CIDF `decide()` before any content insertion (all modes, no exceptions)
 - Verify programmatically after every insertion
 - Write `tasks/todo.md` before implementing anything with 3+ steps
 - Start at CIDF rank 1 — never jump directly to scripting
 
 ### Ask First
+
 - Deleting files or directories
 - Deploying to any live environment
 - Modifying config, vendor, or .env files
 - Switching from Mode 2 -> Mode 3 (resource cost)
 
 ### Never Do
+
 - Mark complete without programmatic verification
 - Skip CIDF for any content insertion (even "quick" writes)
 - Trust visual confirmation alone
@@ -200,11 +229,52 @@ Config: `config/agent_registry.json` + `config/routing_rules.json`
 | CIDF compliance           | 100%   |
 | Mode selection accuracy   | Mode 3 only when genuinely needed |
 | Verification before done  | 100%   |
-| Repeat mistake rate       | < 5%   |
+| Repeat mistake rate       | <5%   |
+
+## Quick Start (Usage Guide)
+
+### 1. Activation
+
+Trigger the full 5-stage process with:
+
+- `ultrathink this`
+- `apply the system to: [your task]`
+- `production-ready [task]`
+
+### 2. Mandatory Workflow
+
+Follow the 6 directives in every non-trivial task:
+
+1. **Plan**: `./scripts/create_task_plan.sh "Build feature"`
+2. **Execute**: Build stage-by-stage (Context -> Architect -> Refine -> Execute -> Crystallize)
+3. **Verify**: `python scripts/verify_before_done.py` (Must PASS before done)
+4. **Learn**: `python scripts/capture_lesson.py` (Run after any correction)
+
+### 3. Integrated Frameworks
+
+- **AFRP**: Pre-router gate. Classifies and clarifies intent before architecture.
+- **CIDF v1.2**: Content insertion governance. Start at rank 1 (direct_form_input) for every write.
+
+> **Historical Note:** The legacy backup HTTP `/ultrathink` is implemented via `api_server.py` for v1.0 compatibility.
+
+## OpenClaw Multi-Agent Bridge (Tier 2)
+
+Use the `mcp-ultrathink-openclaw` tool to offload heavy reasoning through the
+OpenClaw gateway at `127.0.0.1:18789`. Model selection is automatic — OpenClaw
+reads `~/.openclaw/openclaw.json` and routes each `agent_id` to the correct
+live provider (LM Studio / Ollama, Mac / Windows GPU).
+
+### Capabilities
+
+- `openclaw_chat`: Route by role (`coder`, `orchestrator`, `mac-researcher`, `win-researcher`)
+- `openclaw_list_agents`: List agents registered in `~/.openclaw/openclaw.json`
+- `openclaw_orchestrate`: Dispatch Stage 4 execution tasks via OpenClaw gateway
+- `openclaw_health`: Verify gateway is running at `127.0.0.1:18789`
 
 ## References (Progressive Disclosure)
 
 Load on demand for deeper context:
+
 - `afrp/SKILL.md` — Audience-First Response Protocol (pre-router gate)
 - `cidf/SKILL.md` — Content Insertion Decision Framework v1.2
 - `references/amplifier-principle.md` — foundational essay on intent-driven development
@@ -215,55 +285,3 @@ Load on demand for deeper context:
 - `templates/task-plan.md` — task planning template (Directive #1)
 - `templates/verification-checklist.md` — pre-completion checklist (Directive #4)
 - `templates/lessons-log.md` — self-improvement log (Directive #3)
-
-## Development Conventions (reference from the original ultrathink-system skill)
-
-> Generated from `bin/skills/SKILL.md` on 2026-03-29. This section highlights the conventions and architecture statements that the previous `ultrathink-system` skill captured.
-
-### Overview
-
-This skill captures the patterns and development style of the ultrathink-system repo: a Python multi-agent framework implementing the ultrathink 5-stage methodology, an AFRP pre-router gate, a CIDF v1.2 content insertion framework, and a 7-agent execution network.
-
-### Mother Skill
-
-The canonical system skill lives at `bin/skills/SKILL.md` (v0.9.9.3). Loading it provides the full ultrathink methodology, AFRP gate, CIDF rules, and the six directives listed below.
-
-### Tech Stack
-
-- **Primary Language**: Python
-- **Architecture**: Unified `bin/` package (skills/, agents/, mcp_servers/, shared/), API server (`api_server.py`)
-- **Package Manager**: `uv` / `hatchling`
-- **Validation**: Pydantic V2 (`@field_validator`)
-- **Test Location**: `tests/`
-
-### Commit Conventions
-
-- Style: Conventional Commits (scoped)
-- Prefixes: `feat`, `fix`, `refactor`, `docs`, `sec`, `chore`, `arch`, `release`
-- Average length: ~50 chars
-- Example: `feat(api): add model_hint field to UltraThinkRequest (ADR-001, v0.9.9.0)`
-
-### Architecture Snapshot
-
-```
-ultrathink-system/
-├── bin/skills/SKILL.md      ← mother skill (v0.9.9.3)
-├── bin/skills/afrp/         ← AFRP sub-skill
-├── bin/skills/cidf/         ← CIDF v1.2 sub-skill
-├── bin/                   ← unified package (agents/, mcp_servers/, shared/)
-├── api_server.py              ← POST /ultrathink (port 8001, stateless)
-└── tests/
-```
-
-### Best Practices
-
-- Load `bin/skills/SKILL.md` before any significant change
-- Run the AFRP gate before generating non-trivial output
-- Use CIDF `decide()` before any content insertion
-- Prefer `@field_validator` (Pydantic V2) instead of `@validator`
-- Keep the ultrathink API stateless (no Redis dependency)
-- Use snake_case for file names
-- Write `tasks/todo.md` before any 3+ step task
-
----
-*Auto-generated by ECC Tools. Review and customize as needed.*

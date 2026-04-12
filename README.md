@@ -26,8 +26,8 @@ A production-ready, self-improving agent skill package that synthesizes:
 | **Multi-Agent Network** | 7 specialized agents for distributed parallel problem solving |
 
 ### The Amplifier Principle
-AI doesn't replace judgment — it amplifies intent. ultrathink gives that intent structure.
-Clear methodology → clear output. Vague intent → scaled ambiguity.
+
+AI doesn't replace judgment, it amplifies intent: ultrathink gives that intent structure. Clear methodology → clear output. Vague intent → scaled ambiguity.
 
 ---
 
@@ -52,7 +52,7 @@ python bin/skills/scripts/verify_before_done.py --task "Build my feature"
 
 ## Repository Structure
 
-```
+```ascii
 ultrathink-system/
 │
 ├── bin/skills/                   ← Install here for Claude Code / Cowork
@@ -107,6 +107,7 @@ ultrathink-system/
 | everything-claude-code | Drop into skills dir |
 
 ### Multi-Agent Network (Distributed / Parallel)
+
 ```bash
 ./install-multi-agent.sh
 python bin/mcp_servers/ultrathink_orchestration_server.py
@@ -156,7 +157,7 @@ Always active, regardless of which stage you're in:
 
 ## Multi-Agent Architecture
 
-```
+```ascii
 User → Orchestrator
            ↓
     Context Agent           ← Stage 1 (spawns sub-agents)
@@ -245,5 +246,4 @@ See [LICENSE](LICENSE).
 
 ---
 
-*"The people crazy enough to believe they can change the world are the ones who do."*
-*Make your dent in the universe. Start here.* 🚀
+*"The people crazy enough to believe they can change the world are the ones who do."* 🚀

@@ -2,7 +2,16 @@
   "permissions": {
     "allow": [
       "Bash(gh api:*)",
-      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('version:', d['version']\\); print\\('autoresearch_agents keys:', list\\(d.get\\('autoresearch_agents',{}\\).keys\\(\\)\\)\\); print\\('routing entries:', len\\(d.get\\('routing',{}\\)\\)\\)\")"
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('version:', d['version']\\); print\\('autoresearch_agents keys:', list\\(d.get\\('autoresearch_agents',{}\\).keys\\(\\)\\)\\); print\\('routing entries:', len\\(d.get\\('routing',{}\\)\\)\\)\")",
+      "Skill(ultrathink-system)",
+      "Skill(update-config)",
+      "Bash(chmod +x \"/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/ultrathink-system/scripts/sync-companion-instincts.sh\")",
+      "Bash(chmod +x \"/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perplexity-Tools/scripts/sync-companion-instincts.sh\")",
+      "Bash(bash \"/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/ultrathink-system/scripts/sync-companion-instincts.sh\")",
+      "Bash(echo \"UT exit: $?\")",
+      "Bash(bash \"/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perplexity-Tools/scripts/sync-companion-instincts.sh\")",
+      "Bash(echo \"PT exit: $?\")",
+      "Bash(python3:*)"
     ]
   }
 }

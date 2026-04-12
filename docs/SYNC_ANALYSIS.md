@@ -1,6 +1,6 @@
 # Sync Analysis: ultrathink-system ↔ Perplexity-Tools
 
-**Date:** 2026-04-11 | **Version:** ultrathink v0.9.9.4 · PT v0.9.9.4
+**Date:** 2026-04-11 | **Version:** ultrathink v0.9.9.6 · PT v0.9.9.6
 
 > **v1.0 RC transport clarification:** HTTP Bridge (`POST /ultrathink` via `api_server.py`)
 > is the **active primary transport** for v1.0 RC. MCP-Optional transport (stdio JSON-RPC)
@@ -12,15 +12,15 @@
 
 | Dimension | Status | Notes |
 |---|---|---|
-| **Version** | ✅ IN SYNC | Both at v0.9.9.4 |
+| **Version** | ✅ IN SYNC | Both at v0.9.9.6 |
 | **Architecture contract** | ✅ IN SYNC | 4-layer hierarchy documented + upheld |
-| **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.9.4; HAL cross-link complete 
+| **Bridge doc** | ✅ IN SYNC | PERPLEXITY_BRIDGE.md aligned to v0.9.9.6; HAL cross-link complete 
 | **API endpoint spec** | ✅ IN SYNC | HTTP Bridge (`POST /ultrathink`) is v1.0 RC primary transport; MCP-Optional planned for v1.1 |
 | **Idempotency contract** | ✅ RESOLVED | PT owns all state via `.state/agents.json`; ultrathink stateless (no Redis). Redis deferred to PT v1.1+ |
 | **Shared `.env` contract** | ✅ IN SYNC | Vars in both `.env.example` files match BRIDGE doc |
 | **SKILL.md cross-ref** | ✅ IN SYNC | PT SKILL.md references ultrathink routing methodology |
 | **ECC Tools integration** | ✅ IN SYNC | Both agree on ECC as Stage-4 sub-agent selector |
-| **autoresearch integration** | ✅ IN SYNC | Both reference karpathy/autoresearch equally |
+| **autoresearch integration** | ✅ IN SYNC | Both reference uditgoenka/autoresearch equally |
 | **Cross-repo README links** | ✅ IN SYNC | PT README links to ultrathink-system; ultrathink README lists PT |
 | **CI/CD** | ✅ IN SYNC | Both repos have `.github/workflows/ci.yml` with pytest + lint |
 | **Tests** | ✅ RESOLVED | PT now has 6 test files (56+ tests); ultrathink has 86+ tests |

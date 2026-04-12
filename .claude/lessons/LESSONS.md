@@ -246,59 +246,113 @@ Root cause: **the pattern was designed for Python import statements** (`from mul
 
 ---
 
-## 2026-04-11 — Claude — AutoResearcher migration: karpathy → uditgoenka
+## 2026-04-12 — Claude — 48-hour multi-agent sprint: collaboration patterns + version registry
 
-### Architectural Shift
-
-The autoresearch loop has been migrated from a hardcoded Python script cloned
-to a GPU runner (`karpathy/autoresearch`) to the `uditgoenka/autoresearch`
-Claude Code plugin that can execute anywhere, with the GPU runner demoted to an
-optional `Verify` substrate for ML experiments.
-
-### Key Changes
-
-1. **`AUTORESEARCH_REMOTE` is now an environment variable** (not hardcoded):
-   ```bash
-   AUTORESEARCH_REMOTE=https://github.com/uditgoenka/autoresearch.git  # default
-   AUTORESEARCH_BRANCH=main  # default sync branch (was hardcoded 'master')
-   ```
-   Override either to pin a fork or branch without touching source code.
-
-2. **Plugin install (primary mode):**
-   ```bash
-   claude plugin marketplace add uditgoenka/autoresearch
-   claude plugin install autoresearch@autoresearch
-   ```
-   `install_autoresearch_plugin()` in `autoresearch_bridge.py` handles this
-   idempotently (checks `claude plugin list` first).
-
-3. **GPU runner is now secondary (Verify substrate):**
-   - Still used for `ml-experiment` task types via SSH + swarm_state.md
-   - `bootstrap_autoresearch_on_runner()` now runs `uv sync --dev` (not `pip install`)
-   - `sync_autoresearch_idempotent()` now uses `AUTORESEARCH_DEFAULT_BRANCH`
-     instead of hardcoding `origin/master`
-
-4. **`preflight()` now returns `plugin_ok` and `plugin_error` keys** in addition
-   to `sync_ok`, `sha`, `error`, `swarm_state_initialised`.
-
-5. **Hardware guard added to swarm_state.md template:**
-   Windows model loading is strictly sequential — never dispatch a new GPU run
-   while swarm_state.md shows `GPU: BUSY`. This is now explicit in every
-   freshly initialised swarm_state.md file.
-
-6. **`uv sync --dev`** replaces bare `pip install uv && uv sync` in all bootstrap
-   paths (start.sh, openclaw_bootstrap.py).
-
-7. **`openclaw_bootstrap.py` rewritten as thin shim:**
-   - Delegates to `$PT_HOME/alphaclaw_bootstrap.py` when available
-   - Keeps inline fallback with uditgoenka URL + uv sync --dev
-   - `start.sh` passes `PT_HOME` + `UTS_HOME` env vars to the PT script
-
-### Valid Windows Model Names (Canonical)
-- `Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2` — the only valid 27B identifier
-- `Qwen3.5-27B-Instruct` **DOES NOT EXIST** — never use this string
-
-### Commits
-- UTS branch `claude/add-windows-agent-autodetect-9W3OI` — refactor(openclaw): delegate to PT alphaclaw_bootstrap + autoresearcher plugin migration
+### Context
+Two AI agents worked simultaneously on overlapping files across a ~48h window. This entry documents
+what broke, what worked, and the protocol we are encoding for all future agents.
 
 ---
+
+### 1. Version Number Registry — All Canonical Locations
+
+**Current version: `0.9.9.6`.** Do NOT bump without explicit user instruction.
+
+#### ultrathink-system (UTS) — canonical locations
+
+| File | Field | Status |
+|------|-------|--------|
+| `pyproject.toml:7` | `version = "0.9.9.6"` | ✓ current |
+| `bin/skills/SKILL.md:10` | `version: 0.9.9.6` | ✓ current |
+| `bin/config/agent_registry.json:2` | `"version": "0.9.9.6"` | ✓ current |
+| `portal_server.py:26` | `VERSION = "0.9.9.6"` | ✓ current |
+| `bin/agents/*/agent.md:4` | `version: 0.9.9.6` | ✓ current (all 7 agents) |
+| `CLAUDE.md:71` | `(v0.9.9.6)` | ✓ current |
+| `docs/PERPLEXITY_BRIDGE.md:3` | `Version 0.9.9.6` | ✓ current |
+
+Legacy markers (stable, do not auto-bump):
+- `api_server.py`, `bin/shared/*.py`, `bin/mcp_servers/*.py` → `0.9.9.2`
+- `bin/skills/config/`, `afrp/README.md`, `templates/` → `0.9.9.0`
+
+#### Perplexity-Tools (PT) — see PT LESSONS.md for full table
+
+---
+
+### 2. Embedded Git Repo: `.ecc/`
+
+`.ecc/` is a **gitlink** (submodule stub), not a regular tracked directory. Git warned:
+```
+hint: You've added another git repository inside your current repository.
+```
+This is intentional — `.ecc/` is ECC tooling state for shallow runtime sync.
+- The commit recorded a gitlink, not the directory contents
+- Other cloners need `git submodule update --init .ecc` to get the contents
+- Do NOT delete, gitignore, or `git rm` it — it will be formalized as a proper submodule
+
+---
+
+### 3. What Broke and How We Fixed It
+
+#### Orphan branch / no common ancestor
+Our `claude/add-windows-agent-autodetect-9W3OI` branch in UTS had no shared history with
+`origin/main`. `git merge-base HEAD origin/main` returned exit 1; `git rebase origin/main`
+produced add/add conflicts on EVERY file.
+
+**Fix**: `git reset --hard origin/main` + manually re-apply 5 changed files from `/tmp` backup.
+
+**Lesson**: Always create feature branches from `origin/main`:
+```bash
+git checkout -b feature/xyz origin/main
+```
+If you're on a branch with no common ancestor, reset don't rebase.
+
+#### Hardcoded LAN IP broke CI
+`orchestrator/fastapi_app.py` /health defaults changed to `192.168.254.103` (real LAN IP),
+breaking `test_health_uses_plain_string_defaults` on all CI machines.
+
+**Fix**: `git commit` to PT main restoring `127.0.0.1` defaults.
+
+**Rule**: Source code fallback defaults must be loopback. Real IPs live in `.env` only.
+
+---
+
+### 4. Pre-Commit and Pre-PR Checklist
+
+#### Before every commit
+```bash
+git fetch origin main
+git log --oneline HEAD..origin/main   # changes by other agents
+grep -rn "192\.168\." --include="*.py" | grep -v "test_\|\.env\|LESSONS"
+python -m pytest -q
+```
+
+#### Before every PR
+```bash
+# 1. Dated LESSONS.md entry exists
+grep "$(date +%Y-%m-%d)" .claude/lessons/LESSONS.md
+# 2. No conflict markers
+git grep "<<<<<<< \|>>>>>>> " -- '*.py' '*.md' '*.yml'
+# 3. CI passes
+```
+
+---
+
+### 5. Multi-Agent Synchronization Protocol
+
+Key principles (see also `bin/skills/SKILL.md` — Multi-Agent Collaboration Protocol section):
+
+1. **Read LESSONS.md first** — mandatory, already in CLAUDE.md
+2. **Scope claim** — append `[IN PROGRESS]` marker before touching files
+3. **Additive changes** — prefer appending over rewriting (no conflict risk)
+4. **Commit message as communication** — state which constants/APIs changed
+5. **Never hardcode ephemeral runtime values** — `127.0.0.1` default, real IP in `.env`
+6. **One canonical source per constant** — if two files both define the same IP string, they will diverge
+7. **Test isolation** — `autouse` fixture that restores module-level state, especially after `importlib.reload()`
+
+The commit message body is the only async channel between agents that never share a session.
+Write it for an agent who has read neither this conversation nor the LESSONS.md.
+
+---
+
+### Commits
+- `71a15f7` (PT) — fix(health): restore 127.0.0.1 loopback defaults for ollama/lm_studio_host

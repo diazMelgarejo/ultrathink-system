@@ -90,7 +90,7 @@ Before any significant change to this repo, load the mother skill:
 - **Role**: Multi-agent execution engine (Repo #2) — POST /ultrathink on port 8001
 - **Companion repo**: [Perplexity-Tools](https://github.com/diazMelgarejo/Perplexity-Tools) (Repo #1, orchestrator)
 - **Skill**: `.claude/skills/ultrathink-system/SKILL.md`
-- **Mother skill**: `bin/skills/SKILL.md` (v0.9.9.4)
+- **Mother skill**: `bin/skills/SKILL.md` (v0.9.9.6)
 
 ## 7. Harness Path Map
 

@@ -7,7 +7,7 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![SKILL.md Standard](https://img.shields.io/badge/SKILL.md-Compatible-green)](https://ecc.tools/skills)
 [![ECC Tools](https://img.shields.io/badge/ECC_Tools-Compatible-brightgreen)](https://ecc.tools)
-[![Version](https://img.shields.io/badge/version-0.9.9.6-orange)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-0.9.9.7-orange)](CHANGELOG.md)
 
 **Compatible with**: Claude Code · Cowork · Clawdbot · MoltBot · OpenClaw · ECC Tools · everything-claude-code
 

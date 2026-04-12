@@ -256,19 +256,19 @@ what broke, what worked, and the protocol we are encoding for all future agents.
 
 ### 1. Version Number Registry — All Canonical Locations
 
-**Current version: `0.9.9.6`.** Do NOT bump without explicit user instruction.
+**Current version: `0.9.9.7`.** Do NOT bump without explicit user instruction.
 
 #### ultrathink-system (UTS) — canonical locations
 
 | File | Field | Status |
 |------|-------|--------|
-| `pyproject.toml:7` | `version = "0.9.9.6"` | ✓ current |
-| `bin/skills/SKILL.md:10` | `version: 0.9.9.6` | ✓ current |
-| `bin/config/agent_registry.json:2` | `"version": "0.9.9.6"` | ✓ current |
-| `portal_server.py:26` | `VERSION = "0.9.9.6"` | ✓ current |
-| `bin/agents/*/agent.md:4` | `version: 0.9.9.6` | ✓ current (all 7 agents) |
-| `CLAUDE.md:71` | `(v0.9.9.6)` | ✓ current |
-| `docs/PERPLEXITY_BRIDGE.md:3` | `Version 0.9.9.6` | ✓ current |
+| `pyproject.toml:7` | `version = "0.9.9.7"` | ✓ current |
+| `bin/skills/SKILL.md:10` | `version: 0.9.9.7` | ✓ current |
+| `bin/config/agent_registry.json:2` | `"version": "0.9.9.7"` | ✓ current |
+| `portal_server.py:26` | `VERSION = "0.9.9.7"` | ✓ current |
+| `bin/agents/*/agent.md:4` | `version: 0.9.9.7` | ✓ current (all 7 agents) |
+| `CLAUDE.md:71` | `(v0.9.9.7)` | ✓ current |
+| `docs/PERPLEXITY_BRIDGE.md:3` | `Version 0.9.9.7` | ✓ current |
 
 Legacy markers (stable, do not auto-bump):
 - `api_server.py`, `bin/shared/*.py`, `bin/mcp_servers/*.py` → `0.9.9.2`

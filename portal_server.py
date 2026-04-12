@@ -7,7 +7,7 @@ All probes run concurrently via asyncio.gather.
 Routes:
   GET /           HTML dashboard (meta-refresh every 10s)
   GET /api/status JSON status of all services
-  GET /health     {"status": "ok", "version": "0.9.9.6"}
+  GET /health     {"status": "ok", "version": "0.9.9.7"}
 """
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ from fastapi import FastAPI
 log = logging.getLogger("ultrathink.portal")
 logging.basicConfig(level=logging.INFO)
 
-VERSION = "0.9.9.6"
+VERSION = "0.9.9.7"
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 

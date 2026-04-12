@@ -113,17 +113,17 @@ try:
     # suppress print() calls inside get_working_local_ip
     with contextlib.redirect_stdout(io.StringIO()):
         mac_ip = cfg.get_working_local_ip()
-    win_ip = cfg.preferred_ips.get('Windows', '192.168.254.101')
+    win_ip = cfg.preferred_ips.get('Windows', '192.168.254.100')
     print('MAC_IP=' + mac_ip)
     print('WIN_IP=' + win_ip)
 except Exception:
     print('MAC_IP=192.168.254.105')
-    print('WIN_IP=192.168.254.101')
+    print('WIN_IP=192.168.254.100')
 " 2>/dev/null)"
 
 eval "$_IP_VARS"
 MAC_IP="${MAC_IP:-192.168.254.105}"
-WIN_IP="${WIN_IP:-192.168.254.101}"
+WIN_IP="${WIN_IP:-192.168.254.100}"
 
 # Export as the env vars all services read — only if not already set by user
 export OLLAMA_MAC_ENDPOINT="${OLLAMA_MAC_ENDPOINT:-http://${MAC_IP}:11434}"
@@ -190,6 +190,30 @@ if command -v npm >/dev/null 2>&1 || command -v node >/dev/null 2>&1; then
   fi
 fi
 
+<<<<<<< HEAD
+=======
+# ── 2b-sec. AlphaClaw security warning ───────────────────────────────────────
+# Show a banner if AlphaClaw is running on the default password.
+# onboarding.json is written by alphaclaw_bootstrap.py after Step 6 health poll.
+_AC_PT_HOME="${PT_HOME:-${PT_DIR:-$HOME/Perplexity-Tools}}"
+_AC_ONBOARDING="${_AC_PT_HOME}/.state/onboarding.json"
+if [ -f "$_AC_ONBOARDING" ]; then
+  if "$US_PYTHON" -c "
+import json, sys, pathlib
+f = pathlib.Path('${_AC_ONBOARDING}')
+d = json.loads(f.read_text(encoding='utf-8'))
+sys.exit(0 if d.get('alphaclaw', {}).get('password_is_default') else 1)
+" 2>/dev/null; then
+    echo ""
+    echo "  ┌────────────────────────────────────────────────────────────────┐"
+    echo "  │  SECURITY  AlphaClaw is running on the DEFAULT password         │"
+    echo "  │  Set SETUP_PASSWORD=<yourpassword> in .env and restart          │"
+    echo "  └────────────────────────────────────────────────────────────────┘"
+    echo ""
+  fi
+fi
+
+>>>>>>> 89db467 (feat(v0.9.9.7): start.sh security warning + WIN_IP standardization + version bump)
 # ── 2c. Determine mode; auto-start researchers if distributed ─────────────────
 # Reads the routing.json written by agent_launcher --write-state and decides:
 #   distributed   → Mac + Windows both reachable: start tandem autoresearchers

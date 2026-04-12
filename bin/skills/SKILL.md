@@ -7,7 +7,7 @@ description: >-
   complex multi-step tasks, code quality reviews, and self-improvement workflows.
   Triggers on: "ultrathink", "think deeply", "5-stage", "systematic approach",
   "elegant solution", "verify before done", "content insertion", "AFRP", "CIDF".
-version: 0.9.9.6
+version: 0.9.9.7
 license: Apache 2.0
 compatibility: claude-code, claude-desktop
 allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink-lmstudio
@@ -331,7 +331,7 @@ When bumping version, update ALL of these atomically:
 - `api_server.py` / `bin/shared/*.py` / `bin/mcp_servers/*.py` → `0.9.9.2`
 - `bin/skills/config/`, templates, `afrp/README.md` → `0.9.9.0`
 
-**Current version: `0.9.9.6`** — do not bump until explicitly instructed.
+**Current version: `0.9.9.7`** — do not bump until explicitly instructed.
 
 ### Embedded Git Repo: `.ecc/`
 `.ecc/` is a gitlink (submodule stub), NOT a regular directory. Git warns about

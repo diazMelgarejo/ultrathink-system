@@ -7,7 +7,7 @@ description: >-
   complex multi-step tasks, code quality reviews, and self-improvement workflows.
   Triggers on: "ultrathink", "think deeply", "5-stage", "systematic approach",
   "elegant solution", "verify before done", "content insertion", "AFRP", "CIDF".
-version: 0.9.9.6
+version: 0.9.9.7
 license: Apache 2.0
 compatibility: claude-code, claude-desktop
 allowed-tools: bash, file-operations, web-search, subagent-creation, mcp-ultrathink-lmstudio

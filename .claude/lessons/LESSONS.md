@@ -398,6 +398,81 @@ Write it for an agent who has read neither this conversation nor the LESSONS.md.
 
 ---
 
+## 2026-04-13 — Claude — alphaclaw macOS compatibility patches + idempotent setup automation
+
+### Context
+`alphaclaw` (`@chrysb/alphaclaw` npm package v0.9.3) was written for Linux/Docker environments
+running as root. On macOS with a standard user account, its startup script hard-coded four
+`/usr/local/bin/` and `/etc/cron.d/` paths that require root access — causing four EACCES/ENOENT
+errors on every boot. Separately, the OpenClaw gateway timed out because `openclaw.json` failed
+schema validation (missing required `models[]` arrays).
+
+### Root Causes Found
+
+| # | Error message | Root cause |
+| --- | -------------- | ---------- |
+| 1 | `gog install skipped: Permission denied /usr/local/bin/gog` | curl+mv hardcoded to `/usr/local/bin/` (root-owned on macOS) |
+| 2 | `Cron setup skipped: ENOENT /etc/cron.d/openclaw-hourly-sync` | `/etc/cron.d/` is Linux-only; doesn't exist on macOS |
+| 3 | `systemctl shim skipped: EACCES /usr/local/bin/systemctl` | Linux/Docker-only shim; `/usr/local/bin/` requires root |
+| 4 | `git auth shim skipped: EACCES /usr/local/bin/git` | git shim hardcoded to `/usr/local/bin/git` (root-owned) |
+| 5 | Gateway timeout: `timed out after 30s` | `openclaw gateway run` exited immediately — `ollama-mac.models` and `ollama-win.models` were `undefined` (required arrays); port 18789 never opened |
+
+### Fixes Applied (all 5 patches to `~/.alphaclaw/.../alphaclaw.js`)
+
+1. **gog install** — changed destination to `path.join(os.homedir(), ".local", "bin")` + `mkdir -p` before mv
+2. **cron setup** — added `if (os.platform() === "darwin")` guard using `crontab -l` user crontab; original Linux `/etc/cron.d/` path preserved in `else` branch
+3. **systemctl shim** — wrapped entire block in `if (os.platform() !== "darwin")` — macOS uses launchd, shim is irrelevant
+4. **git auth shim dest** — changed `gitShimDest` to `path.join(os.homedir(), ".local", "bin", "git")`; added `fs.mkdirSync()` before `fs.writeFileSync`
+5. **git-sync shimPath** (line 277) — updated `shimPath` reference to `~/.local/bin/git` to match new shim location
+
+**openclaw.json fix** — added `models[]` arrays to `ollama-mac` (3 real models from `/api/tags`) and `ollama-win` (placeholder); corrected all 4 provider `baseUrl` fields (stale `.101`/`.105` IPs → correct `.110`/`.108`/`127.0.0.1`).
+
+### Key Insight: `~/.local/bin` Shadowing
+
+`~/.local/bin` is at PATH position 4 (before `/usr/local/bin` at position 9) on this system.
+Installing binaries there means they shadow system paths with no root required. This is the
+correct macOS pattern for user-space tool installs that alphaclaw should use by default.
+
+### Automation: `setup_macos.py`
+
+Created `ultrathink-system/setup_macos.py` — runs idempotently on every `./start.sh`:
+
+- **Step 1**: Create `~/.local/bin` if missing
+- **Step 2**: Add `~/.local/bin` to PATH in `~/.zshrc` if not present
+- **Step 3**: Validate `~/.openclaw/openclaw.json` — add `models[]` arrays if missing; query live Ollama for real model names, fall back to known defaults
+- **Step 4**: Apply the 6 alphaclaw.js patches — each patch has a `detect` string (already-patched marker) for idempotency; applies only if the original string is found
+
+**Idempotency contract**: each patch checks `detect in content` before applying. If the npm
+package version changes (`KNOWN_ALPHACLAW_VERSION = "0.9.3"` constant), a warning is printed
+but patches are still attempted. Marker file written to `~/.alphaclaw/.macos_patches.json`.
+
+`start.sh` integration (added after `mkdir -p "$LOG_DIR"`):
+
+```bash
+if [ -f "$SCRIPT_DIR/setup_macos.py" ]; then
+  "$US_PYTHON" "$SCRIPT_DIR/setup_macos.py" --quiet 2>&1 | sed 's/^/  /' || true
+fi
+```
+
+### Prevention Rules for Future Agents
+
+1. **npm packages designed for Docker/root will fail on macOS** — check `/usr/local/bin/` writes and `/etc/cron.d/` references; redirect to `~/.local/bin/` and user crontab respectively
+2. **openclaw.json schema validation is strict** — gateway exits immediately on validation failure; check with `openclaw gateway --help` or `openclaw doctor` BEFORE troubleshooting port timeouts
+3. **Gateway timeout ≠ gateway crash** — if port never opens, look at config validation first, not process crashes
+4. **All pre-flight patches must be idempotent** — use a `detect` string (patched-version marker) + `old` string (original-version marker); apply only when `old` is found, skip when `detect` is found
+5. **node_modules patches are transient** — `npm install` in `~/.alphaclaw/` overwrites alphaclaw.js; `setup_macos.py` re-applies on next `./start.sh`
+
+### Files Changed
+
+| File | Change |
+| ------ | -------- |
+| `~/.alphaclaw/node_modules/@chrysb/alphaclaw/bin/alphaclaw.js` | 6 macOS compat patches (lines 277, 539, 596, 866, 893, 906) |
+| `~/.openclaw/openclaw.json` | Fixed 2 missing `models[]` arrays + 4 stale provider IPs |
+| `ultrathink-system/setup_macos.py` | **NEW** — idempotent pre-flight automation |
+| `ultrathink-system/start.sh` | Added `setup_macos.py` call after LOG_DIR creation |
+
+---
+
 ## 2026-04-13 — Claude — Portal update: visibility, user-input textbox, correct IPs
 
 ### What was learned

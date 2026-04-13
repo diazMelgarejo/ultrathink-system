@@ -102,6 +102,14 @@ PORTAL_URL="http://localhost:${PORTAL_PORT}"
 LOG_DIR="$SCRIPT_DIR/.logs"
 mkdir -p "$LOG_DIR"
 
+# ── macOS pre-flight: patches + openclaw.json validation ─────────────────────
+# Applies idempotent fixes to ~/.alphaclaw/alphaclaw.js (macOS compat patches)
+# and validates ~/.openclaw/openclaw.json schema on every run.
+# See setup_macos.py for full details. Non-fatal — startup continues on any error.
+if [ -f "$SCRIPT_DIR/setup_macos.py" ]; then
+  "$US_PYTHON" "$SCRIPT_DIR/setup_macos.py" --quiet 2>&1 | sed 's/^/  /' || true
+fi
+
 # ── IP auto-detection ─────────────────────────────────────────────────────────
 # Run detection inside the US venv so netifaces is available
 # Sets MAC_IP and WIN_IP, then exports the env vars all services read.

@@ -1,5 +1,6 @@
-# ultrathink System
+# ὅραμα System
 
+(inspired by *ultrathink*)
 > *"Technology married with humanities yields solutions that make hearts sing."*
 
 **The complete agent methodology for solving impossible problems with elegance.**
@@ -9,7 +10,7 @@
 [![ECC Tools](https://img.shields.io/badge/ECC_Tools-Compatible-brightgreen)](https://ecc.tools)
 [![Version](https://img.shields.io/badge/version-0.9.9.7-orange)](CHANGELOG.md)
 
-**Compatible with**: Claude Code · Cowork · Clawdbot · MoltBot · OpenClaw · ECC Tools · everything-claude-code
+**Compatible with**: Claude Code · Cowork · Clawdbot · MoltBot · OpenClaw · ECC Tools (everything-claude-code)
 
 ---
 

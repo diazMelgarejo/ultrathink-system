@@ -10,6 +10,7 @@ What it does:
   2. Add ~/.local/bin to PATH in ~/.zshrc (if not already present)
   3. Validate and repair ~/.openclaw/openclaw.json (models arrays)
   5. Install ~/.openclaw/scripts/discover.py (LM Studio auto-discovery hub)
+  6. Guard /self-discovery skill against version downgrade; announce on startup
   4. Patch ~/.alphaclaw/.../alphaclaw.js — 6 macOS compatibility fixes:
        a) git auth shim dest  → ~/.local/bin/git      (not /usr/local/bin/git)
        b) git auth shim mkdir → add mkdirSync guard
@@ -436,6 +437,39 @@ def step_install_discover_hub() -> None:
     DISCOVER_HUB_DST.chmod(0o755)
     _applied("discover hub", f"installed to {DISCOVER_HUB_DST}")
 
+
+# ── step 6: self-discovery skill version guard ────────────────────────────────
+
+SELF_DISC_SKILL = Path(__file__).parent / ".claude" / "skills" / "self-discovery" / "SKILL.md"
+SELF_DISC_VERSION = "0.9.9.7"
+
+def _skill_version(path: Path) -> tuple:
+    """Parse `version: X.Y.Z` from SKILL.md frontmatter. Returns (0,0,0) if absent."""
+    try:
+        for line in path.read_text().splitlines():
+            s = line.strip()
+            if s.startswith("version:"):
+                v = s.split(":", 1)[1].strip().strip('"\' ')
+                return tuple(int(x) for x in v.split("."))
+    except Exception:
+        pass
+    return (0, 0, 0)
+
+def step_self_discovery_skill() -> None:
+    """Announce /self-discovery and guard against version downgrade."""
+    bundled = tuple(int(x) for x in SELF_DISC_VERSION.split("."))
+    if SELF_DISC_SKILL.exists():
+        installed = _skill_version(SELF_DISC_SKILL)
+        v_str = ".".join(str(x) for x in installed)
+        if installed >= bundled:
+            _skip("self-discovery skill", f"installed v{v_str} >= bundled v{SELF_DISC_VERSION}")
+            return
+        _warn("self-discovery skill",
+              f"installed v{v_str} < bundled v{SELF_DISC_VERSION} — update SKILL.md from GitHub")
+        return
+    _warn("self-discovery skill",
+          f"not found at {SELF_DISC_SKILL} — clone the full repo or restore from GitHub")
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -447,6 +481,7 @@ def main() -> int:
     step_openclaw_json()
     step_patch_alphaclaw()
     step_install_discover_hub()
+    step_self_discovery_skill()
 
     if _fixes:
         print(f"  setup_macos: applied {len(_fixes)} fix(es): {', '.join(_fixes)}", flush=True)

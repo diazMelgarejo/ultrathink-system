@@ -9,6 +9,7 @@ What it does:
   1. Create ~/.local/bin  (user-writable binary dir in PATH)
   2. Add ~/.local/bin to PATH in ~/.zshrc (if not already present)
   3. Validate and repair ~/.openclaw/openclaw.json (models arrays)
+  5. Install ~/.openclaw/scripts/discover.py (LM Studio auto-discovery hub)
   4. Patch ~/.alphaclaw/.../alphaclaw.js — 6 macOS compatibility fixes:
        a) git auth shim dest  → ~/.local/bin/git      (not /usr/local/bin/git)
        b) git auth shim mkdir → add mkdirSync guard
@@ -410,6 +411,31 @@ def step_patch_alphaclaw() -> None:
         )
 
 
+
+# ── step 5: install discover.py hub ──────────────────────────────────────────
+
+OPENCLAW_SCRIPTS = HOME / ".openclaw" / "scripts"
+DISCOVER_HUB_SRC = Path(__file__).parent / "scripts" / "discover.py"
+DISCOVER_HUB_DST = OPENCLAW_SCRIPTS / "discover.py"
+
+def step_install_discover_hub() -> None:
+    """Copy scripts/discover.py to ~/.openclaw/scripts/discover.py (idempotent)."""
+    if not DISCOVER_HUB_SRC.exists():
+        _warn("discover hub", f"source not found at {DISCOVER_HUB_SRC} — skipping install")
+        return
+    OPENCLAW_SCRIPTS.mkdir(parents=True, exist_ok=True)
+    src_content = DISCOVER_HUB_SRC.read_bytes()
+    if DISCOVER_HUB_DST.exists() and DISCOVER_HUB_DST.read_bytes() == src_content:
+        _skip("discover hub", f"already up-to-date at {DISCOVER_HUB_DST}")
+        return
+    if DRY_RUN:
+        print(f"  [dry-run] would install {DISCOVER_HUB_SRC} → {DISCOVER_HUB_DST}", flush=True)
+        return
+    import shutil
+    shutil.copy2(DISCOVER_HUB_SRC, DISCOVER_HUB_DST)
+    DISCOVER_HUB_DST.chmod(0o755)
+    _applied("discover hub", f"installed to {DISCOVER_HUB_DST}")
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -420,6 +446,7 @@ def main() -> int:
     step_path_entry()
     step_openclaw_json()
     step_patch_alphaclaw()
+    step_install_discover_hub()
 
     if _fixes:
         print(f"  setup_macos: applied {len(_fixes)} fix(es): {', '.join(_fixes)}", flush=True)
@@ -433,3 +460,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     sys.exit(main())
+

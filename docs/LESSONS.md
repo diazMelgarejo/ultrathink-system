@@ -276,3 +276,41 @@ All lessons above are expanded with root causes, exact fixes, and verification c
 | 05 | [Bulk Sed Safety](wiki/05-bulk-sed-safety.md) | grep-first, scope to .py only |
 | 06 | [Multi-Agent Collab](wiki/06-multi-agent-collab.md) | version registry, scope claims, orphan branches |
 | 07 | [Startup IP Detection](wiki/07-startup-ip-detection.md) | stdin deadlock, load_dotenv, asyncio probing |
+| 08 | [Gate 1 Delegation](wiki/08-gate1-delegation.md) | start.sh thinning, PT alphaclaw_manager, CJS/ESM conflict |
+
+---
+
+## 2026-04-20 — Claude — Gate 1: start.sh thinned; orama is now a pure PT delegator
+
+### What was learned
+
+**orama is a delegate, not a decision-maker.** The key lesson from Gate 1: any line in start.sh that reads routing.json, probes backends, or determines "distributed vs single vs offline" mode is a policy violation. That logic belongs in PT. orama reads the result; it never re-derives it.
+
+**Thinning pattern for shell delegation:**
+```bash
+_PT_ENV_EXPORTS="$(
+  "$PT_PYTHON" -m orchestrator.alphaclaw_manager --resolve --env-only \
+    --mac-ip "${MAC_IP}" --win-ip "${WIN_IP}" \
+    2>&1 | tee /dev/stderr | grep '^export '
+)" && eval "$_PT_ENV_EXPORTS"
+```
+The `tee /dev/stderr` keeps progress messages visible while `grep '^export '` captures only the `eval`-able lines. This is cleaner than temp files.
+
+**New file to know:** `orchestrator/alphaclaw_manager.py` (in PT) is the authoritative Python lifecycle manager. Start there when debugging gateway issues. It wraps `agent_launcher.py` (probe) and `alphaclaw_bootstrap.py` (lifecycle).
+
+**FUSE git limitation persists:** git operations in the sandbox FUSE mount still fail with `index.lock` or `Resource deadlock avoided`. Always provide Mac terminal commands for commits.
+
+### Decisions Made
+
+- start.sh v0.9.9.8 is the canonical thinned version. Sections 2a and 2c are gone — absorbed into PT's `alphaclaw_manager.py`.
+- start.sh now labels services as "orama" (not "ultrathink") everywhere.
+- The security warning (AlphaClaw default password) is preserved — it reads from `.state/onboarding.json` written by PT's bootstrap.
+- `PT_MODE`, `PT_DISTRIBUTED`, `PT_ALPHACLAW_PORT` env vars are now available in orama's shell environment after PT resolve.
+
+### Open
+
+- `openclaw_bootstrap.py` in orama still has gateway decision logic — Gate 2 work to scope it down to apply-config only.
+- Autoresearcher launch (was start.sh §distributed check) needs to move to PT's `alphaclaw_manager.py` resolve payload as a flag — Gate 2.
+
+→ [PT docs/MIGRATION.md §Gate 1](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/MIGRATION.md)
+→ [PT orchestrator/alphaclaw_manager.py](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/orchestrator/alphaclaw_manager.py)

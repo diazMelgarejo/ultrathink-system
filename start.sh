@@ -1,14 +1,18 @@
 #!/bin/bash
-# start.sh — ultrathink v1.0 RC first-run launcher
+# start.sh — orama-system thin delegator  v0.9.9.8
 #
-# Starts three services in background, then opens the portal in your browser:
-#   :8000  Perplexity-Tools orchestrator  (PT)
-#   :8001  ultrathink reasoning engine    (US)
-#   :8002  Portal dashboard               (this file)
+# orama-system is Layer 3 — orchestration / meta-intelligence / delegate runtime.
+# All gateway/backend/mode decisions are PT's responsibility (Perpetua-Tools).
+# This script: macOS preflight → delegate to PT lifecycle → start orama services.
+#
+# Starts three services:
+#   :8000  Perpetua-Tools orchestrator    (PT — Layer 2)
+#   :8001  orama-system reasoning engine  (US)
+#   :8002  Portal dashboard
 #
 # Usage:
-#   ./start.sh             — start all, open browser (writes .paths on first run)
-#   ./start.sh --no-open   — start all, skip browser open
+#   ./start.sh             — start all, open browser
+#   ./start.sh --no-open   — start all, skip browser
 #   ./start.sh --stop      — kill all three services
 #   ./start.sh --status    — show which ports are listening
 #   ./start.sh --discover  — re-run path discovery, rewrite .paths, exit
@@ -21,24 +25,14 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PATHS_FILE="$SCRIPT_DIR/.paths"
 
-# ── path resolution: .paths file → git discovery → hardcoded sibling default ──
-#
-# Priority (per variable):
-#   1. Value in .paths (gitignored, machine-local, user-editable)
-#   2. Auto-discovered: git worktree siblings, then hardcoded sibling path
-#   3. Written back to .paths on first discovery so future runs are instant
-#
-# To reconfigure: rm .paths && ./start.sh  OR  edit .paths directly
-# Template:       .paths.example
+# ── path resolution: .paths → git siblings → hardcoded sibling default ─────────
 
 _discover_pt_dir() {
-  # 1. Try known sibling path (matches this repo's git layout)
   local candidate
   candidate="$(cd "$SCRIPT_DIR/../perplexity-api/Perplexity-Tools" 2>/dev/null && pwd || true)"
   if [ -f "${candidate}/orchestrator/fastapi_app.py" ]; then
     echo "$candidate"; return
   fi
-  # 2. Walk git worktree siblings looking for Perplexity-Tools
   local root
   root="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
   if [ -n "$root" ]; then
@@ -49,8 +43,7 @@ _discover_pt_dir() {
       fi
     done
   fi
-  echo "PT=${candidate}"
-  echo "root=${parent}"
+  echo "$candidate"
 }
 
 _best_python() {
@@ -102,24 +95,20 @@ PORTAL_URL="http://localhost:${PORTAL_PORT}"
 LOG_DIR="$SCRIPT_DIR/.logs"
 mkdir -p "$LOG_DIR"
 
-# ── macOS pre-flight: patches + openclaw.json validation ─────────────────────
-# Applies idempotent fixes to ~/.alphaclaw/alphaclaw.js (macOS compat patches)
-# and validates ~/.openclaw/openclaw.json schema on every run.
-# See setup_macos.py for full details. Non-fatal — startup continues on any error.
+# ── macOS pre-flight ──────────────────────────────────────────────────────────
+# Applies idempotent fixes to the AlphaClaw binary (macOS compat patches).
+# Non-fatal — startup continues on any error.
 if [ -f "$SCRIPT_DIR/setup_macos.py" ]; then
   "$US_PYTHON" "$SCRIPT_DIR/setup_macos.py" --quiet 2>&1 | sed 's/^/  /' || true
 fi
 
 # ── IP auto-detection ─────────────────────────────────────────────────────────
-# Run detection inside the US venv so netifaces is available
-# Sets MAC_IP and WIN_IP, then exports the env vars all services read.
 _IP_VARS="$(cd "$SCRIPT_DIR" && "$US_PYTHON" -c "
 import sys, io, contextlib
 sys.path.insert(0, '.')
 try:
     from network_autoconfig import NetworkAutoConfig
     cfg = NetworkAutoConfig()
-    # suppress print() calls inside get_working_local_ip
     with contextlib.redirect_stdout(io.StringIO()):
         mac_ip = cfg.get_working_local_ip()
     win_ip = cfg.preferred_ips.get('Windows', '192.168.254.100')
@@ -134,7 +123,59 @@ eval "$_IP_VARS"
 MAC_IP="${MAC_IP:-192.168.254.105}"
 WIN_IP="${WIN_IP:-192.168.254.100}"
 
-# Export as the env vars all services read — only if not already set by user
+echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
+
+# ── PT resolve — backend probe + AlphaClaw bootstrap ─────────────────────────
+# Delegates ALL gateway decisions to Perpetua-Tools (Layer 2).
+# PT probes backends, determines mode, bootstraps AlphaClaw, and returns
+# a JSON payload. orama reads that payload — it makes zero gateway decisions.
+#
+# PT owns: backend probe (was start.sh §2a), AlphaClaw bootstrap (§2b),
+#          mode determination (was §2c).
+# See: orchestrator/alphaclaw_manager.py
+PT_RESOLVE_OK=0
+PT_MODE="offline"
+PT_DISTRIBUTED="no"
+PT_ALPHACLAW_PORT=""
+
+if [ -n "${PT_DIR:-}" ] && [ -f "${PT_DIR}/orchestrator/alphaclaw_manager.py" ]; then
+  echo "  PT    resolving runtime (backends + AlphaClaw)…"
+  _PT_ENV_EXPORTS="$(
+    MAC_IP="${MAC_IP}" WIN_IP="${WIN_IP}" \
+    PYTHONPATH="${PT_DIR}" \
+    "$PT_PYTHON" -m orchestrator.alphaclaw_manager \
+      --resolve --env-only \
+      --mac-ip "${MAC_IP}" --win-ip "${WIN_IP}" \
+      2>&1 | tee /dev/stderr | grep '^export '
+  )" && PT_RESOLVE_OK=1 || true
+
+  if [ "$PT_RESOLVE_OK" -eq 1 ] && [ -n "$_PT_ENV_EXPORTS" ]; then
+    eval "$_PT_ENV_EXPORTS"
+    PT_MODE="${PT_MODE:-offline}"
+    PT_DISTRIBUTED="${PT_DISTRIBUTED:-no}"
+    PT_ALPHACLAW_PORT="${PT_ALPHACLAW_PORT:-}"
+    echo "  PT    mode=${PT_MODE}  AlphaClaw=:${PT_ALPHACLAW_PORT}"
+    export PT_AGENTS_STATE="${PT_DIR}/.state/routing.json"
+  else
+    echo "  PT    resolve non-fatal — continuing with defaults"
+  fi
+else
+  # Fallback: PT manager not available — delegate to bootstrap script directly
+  PT_HOME="${PT_HOME:-$HOME/Perplexity-Tools}"
+  ALPHACLAW_SCRIPT="$PT_HOME/alphaclaw_bootstrap.py"
+  if [ -f "$ALPHACLAW_SCRIPT" ]; then
+    echo "  AlphaClaw  bootstrapping via PT fallback ($ALPHACLAW_SCRIPT)…"
+    PT_HOME="$PT_HOME" UTS_HOME="$SCRIPT_DIR" \
+      MAC_IP="${MAC_IP}" WIN_IP="${WIN_IP}" \
+      "$US_PYTHON" "$ALPHACLAW_SCRIPT" --bootstrap \
+      </dev/null 2>&1 | sed 's/^/  /' \
+      || echo "  AlphaClaw  non-fatal — continuing without gateway"
+  else
+    echo "  PT    not found at ${PT_DIR:-$PT_HOME} — skipping AlphaClaw bootstrap"
+  fi
+fi
+
+# Export env vars all services read (with user overrides respected)
 export OLLAMA_MAC_ENDPOINT="${OLLAMA_MAC_ENDPOINT:-http://${MAC_IP}:11434}"
 export OLLAMA_WINDOWS_ENDPOINT="${OLLAMA_WINDOWS_ENDPOINT:-http://${WIN_IP}:11434}"
 export LM_STUDIO_MAC_ENDPOINT="${LM_STUDIO_MAC_ENDPOINT:-http://${MAC_IP}:1234}"
@@ -142,67 +183,8 @@ export LM_STUDIO_WIN_ENDPOINTS="${LM_STUDIO_WIN_ENDPOINTS:-http://${WIN_IP}:1234
 export WINDOWS_IP="${WINDOWS_IP:-${WIN_IP}}"
 export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
 
-echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
-
-# ── 2a. Probe backends via Perplexity-Tools (retry until one responds) ────────
-# PT detects which backends are live and writes .state/routing.json.
-# UTS reads that file to generate a correctly-targeted openclaw.json.
-# Retries up to 5 times (25 s total) so a slow-starting LM Studio is found.
-_MAX_PROBE_TRIES=5
-_PROBE_INTERVAL=5
-
-_do_probe() {
-  (cd "$PT_DIR" && \
-    WINDOWS_IP="${WIN_IP}" \
-    OLLAMA_MAC_ENDPOINT="http://${MAC_IP}:11434" \
-    "$PT_PYTHON" agent_launcher.py --write-state 2>/dev/null) \
-  && [ -s "${PT_DIR}/.state/routing.json" ]
-}
-
-if [ -n "${PT_DIR:-}" ] && [ -f "$PT_DIR/agent_launcher.py" ]; then
-  echo "  Probe   detecting backends…"
-  _probe_ok=0
-  for _try in $(seq 1 $_MAX_PROBE_TRIES); do
-    if _do_probe; then
-      _probe_ok=1; break
-    fi
-    if [ "$_try" -lt "$_MAX_PROBE_TRIES" ]; then
-      echo "  Probe   attempt $_try/$_MAX_PROBE_TRIES — retrying in ${_PROBE_INTERVAL}s…"
-      sleep "$_PROBE_INTERVAL"
-    fi
-  done
-  if [ "$_probe_ok" -eq 0 ]; then
-    echo "  Probe   no backends responded after $_MAX_PROBE_TRIES tries — continuing offline"
-  fi
-  export PT_AGENTS_STATE="${PT_DIR}/.state/routing.json"
-fi
-
-# ── 2b. Bootstrap AlphaClaw gateway ──────────────────────────────────────────
-# Delegates to PT's alphaclaw_bootstrap.py when PT_HOME is set (preferred).
-# Falls back to the local openclaw_bootstrap.py shim when PT is unavailable.
-if command -v npm >/dev/null 2>&1 || command -v node >/dev/null 2>&1; then
-  PT_HOME="${PT_HOME:-$HOME/Perplexity-Tools}"
-  ALPHACLAW_SCRIPT="$PT_HOME/alphaclaw_bootstrap.py"
-  if [ -f "$ALPHACLAW_SCRIPT" ]; then
-    echo "  AlphaClaw  bootstrapping via PT ($ALPHACLAW_SCRIPT)…"
-    PT_HOME="$PT_HOME" UTS_HOME="$SCRIPT_DIR" \
-      MAC_IP="${MAC_IP}" WIN_IP="${WIN_IP}" \
-      "$US_PYTHON" "$ALPHACLAW_SCRIPT" --bootstrap \
-      </dev/null 2>&1 | sed 's/^/  /' \
-      || echo "  AlphaClaw  non-fatal — continuing without gateway"
-  else
-    echo "  AlphaClaw  PT_HOME not found ($PT_HOME) — falling back to local shim"
-    MAC_IP="${MAC_IP}" WIN_IP="${WIN_IP}" \
-      "$US_PYTHON" "$SCRIPT_DIR/openclaw_bootstrap.py" --bootstrap \
-      </dev/null 2>&1 | sed 's/^/  /' \
-      || echo "  AlphaClaw  non-fatal — continuing without gateway"
-  fi
-fi
-
-# ── 2b-sec. AlphaClaw security warning ───────────────────────────────────────
-# Show a banner if AlphaClaw is running on the default password.
-# onboarding.json is written by alphaclaw_bootstrap.py after Step 6 health poll.
-_AC_PT_HOME="${PT_HOME:-${PT_DIR:-$HOME/Perplexity-Tools}}"
+# AlphaClaw security warning — show if running on default password
+_AC_PT_HOME="${PT_DIR:-${PT_HOME:-$HOME/Perplexity-Tools}}"
 _AC_ONBOARDING="${_AC_PT_HOME}/.state/onboarding.json"
 if [ -f "$_AC_ONBOARDING" ]; then
   if "$US_PYTHON" -c "
@@ -220,44 +202,6 @@ sys.exit(0 if d.get('alphaclaw', {}).get('password_is_default') else 1)
   fi
 fi
 
-# ── 2c. Determine mode; auto-start researchers if distributed ─────────────────
-# Reads the routing.json written by agent_launcher --write-state and decides:
-#   distributed   → Mac + Windows both reachable: start tandem autoresearchers
-#   single        → Mac only: single-agent mode, no researchers loop
-#   offline       → no backends found: warn, all services still start
-_MODE="offline"
-_DISTRIBUTED="no"
-if [ -f "${PT_AGENTS_STATE:-/nonexistent}" ]; then
-  _read_state() {
-    "$US_PYTHON" - "$PT_AGENTS_STATE" << 'PYEOF'
-import json, sys
-d = json.load(open(sys.argv[1]))
-print("distributed=" + ("yes" if d.get("distributed") else "no"))
-print("mac=" + ("yes" if d.get("mac_reachable") else "no"))
-PYEOF
-  }
-  eval "$(_read_state 2>/dev/null || echo 'distributed=no mac=no')"
-  _DISTRIBUTED="${distributed:-no}"
-  _MAC_OK="${mac:-no}"
-
-  if   [ "$_DISTRIBUTED" = "yes" ]; then _MODE="distributed (Mac + Windows — autoresearchers)"
-  elif [ "$_MAC_OK"      = "yes" ]; then _MODE="single (Mac only)"
-  fi
-fi
-echo "  Mode    $_MODE"
-
-# Launch tandem autoresearchers in background when distributed mode confirmed
-if [ "$_DISTRIBUTED" = "yes" ] \
-   && [ -n "${PT_DIR:-}" ] \
-   && [ -f "$PT_DIR/scripts/launch_researchers.py" ]; then
-  echo "  AutoResearchers  starting → $LOG_DIR/researchers.log"
-  (cd "$PT_DIR" && \
-    WINDOWS_IP="${WIN_IP}" \
-    OLLAMA_MAC_ENDPOINT="http://${MAC_IP}:11434" \
-    "$PT_PYTHON" scripts/launch_researchers.py \
-    >> "$LOG_DIR/researchers.log" 2>&1) &
-fi
-
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 pid_on_port() { lsof -ti "tcp:$1" 2>/dev/null | head -1 || true; }
@@ -268,7 +212,6 @@ wait_for_port() {
   while ! nc -z localhost "$port" 2>/dev/null; do
     sleep 0.5; tries=$((tries+1))
     printf "."
-    # Warn verbosely every 30 s of silence; show last 5 log lines for diagnosis
     if [ $((tries % 60)) -eq 0 ] && [ $tries -gt 0 ]; then
       local elapsed=$((tries / 2))
       local logfile="$LOG_DIR/$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]').log"
@@ -279,7 +222,6 @@ wait_for_port() {
       fi
       printf "  still waiting for %s (:%s)" "$label" "$port"
     fi
-    # 150 tries = 75s — enough to outlast slow first-start tasks (e.g. ECC sync ~60s)
     if [ $tries -ge 150 ]; then
       local logfile="$LOG_DIR/$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]').log"
       printf " TIMEOUT — check %s\n" "$logfile"
@@ -291,15 +233,15 @@ wait_for_port() {
 
 open_browser() {
   local url=$1
-  if command -v open &>/dev/null; then open "$url"          # macOS
-  elif command -v xdg-open &>/dev/null; then xdg-open "$url" # Linux
+  if command -v open &>/dev/null; then open "$url"
+  elif command -v xdg-open &>/dev/null; then xdg-open "$url"
   fi
 }
 
 # ── --stop ────────────────────────────────────────────────────────────────────
 
 if [[ "${1:-}" == "--stop" ]]; then
-  echo "Stopping ultrathink services..."
+  echo "Stopping orama-system services..."
   for port in $PT_PORT $US_PORT $PORTAL_PORT; do
     pid=$(pid_on_port "$port")
     if [ -n "$pid" ]; then
@@ -315,7 +257,7 @@ fi
 
 if [[ "${1:-}" == "--status" ]]; then
   echo ""
-  echo "=== ultrathink service status ==="
+  echo "=== orama-system service status ==="
   for port in $PT_PORT $US_PORT $PORTAL_PORT; do
     pid=$(pid_on_port "$port")
     if [ -n "$pid" ]; then
@@ -328,13 +270,14 @@ if [[ "${1:-}" == "--status" ]]; then
   exit 0
 fi
 
-# ── start ─────────────────────────────────────────────────────────────────────
+# ── start services ────────────────────────────────────────────────────────────
 
 echo ""
-echo "=== ultrathink v1.0 RC — starting ==="
+echo "=== orama-system v0.9.9.8 — starting ==="
+echo "  Mode: ${PT_MODE}  |  PT → http://localhost:${PT_PORT}"
 echo ""
 
-# 1. Perplexity-Tools (PT)
+# 1. Perpetua-Tools (PT) orchestrator
 if [ -n "$PT_DIR" ] && [ -f "$PT_DIR/orchestrator.py" ]; then
   if pid_on_port "$PT_PORT" | grep -q .; then
     echo "  PT   :$PT_PORT already running"
@@ -346,18 +289,18 @@ if [ -n "$PT_DIR" ] && [ -f "$PT_DIR/orchestrator.py" ]; then
     wait_for_port "$PT_PORT" "PT"
   fi
 else
-  echo "  PT   skipped (not found at $PT_DIR)"
+  echo "  PT   skipped (not found at ${PT_DIR:-unknown})"
 fi
 
-# 2. ultrathink api_server (US)
+# 2. orama-system reasoning engine
 if pid_on_port "$US_PORT" | grep -q .; then
-  echo "  US   :$US_PORT already running"
+  echo "  orama :$US_PORT already running"
 else
-  echo "  US   starting → $LOG_DIR/us.log"
+  echo "  orama starting → $LOG_DIR/us.log"
   (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" "$US_PYTHON" -m uvicorn api_server:app \
     --host 0.0.0.0 --port "$US_PORT" \
     >> "$LOG_DIR/us.log" 2>&1) &
-  wait_for_port "$US_PORT" "US"
+  wait_for_port "$US_PORT" "orama"
 fi
 
 # 3. Portal
@@ -373,12 +316,11 @@ fi
 
 echo ""
 echo "  PT     http://localhost:${PT_PORT}/health"
-echo "  US     http://localhost:${US_PORT}/health"
+echo "  orama  http://localhost:${US_PORT}/health"
 echo "  Portal ${PORTAL_URL}"
 echo "  JSON   ${PORTAL_URL}/api/status"
 echo ""
 
-# Open browser unless suppressed
 if [[ "${1:-}" != "--no-open" ]]; then
   open_browser "$PORTAL_URL"
 fi

@@ -141,6 +141,20 @@ orama orchestrator → PT adapter APIs → AlphaClaw HTTP/CLI
 
 `bin/mcp_servers/openclaw_bridge.py` currently calls AlphaClaw directly. Gate 3 work: route through PT's typed adapter contract instead.
 
+### Lifecycle delegation — Gate 1+ (CRITICAL)
+
+`start.sh` now delegates ALL gateway/backend decisions to PT:
+```bash
+eval "$(python -m orchestrator.alphaclaw_manager --resolve --env-only)"
+```
+- `orchestrator/alphaclaw_manager.py` in PT owns: backend probe, mode determination, AlphaClaw bootstrap
+- orama's `start.sh` is a **pure process manager** — it reads PT's resolved payload and starts services
+- Never add gateway routing logic back to `start.sh` — that violates the PT-is-authoritative invariant
+
+**Files NOT to modify without understanding the invariant:**
+- `start.sh` — thin delegator; any new gateway logic must go to PT's `alphaclaw_manager.py`
+- `openclaw_bootstrap.py` — scope-down to apply-config only is Gate 2; do not add probe logic here
+
 ### Key invariants (carried over from ultrathink-system)
 
 - orama API stays **stateless** — no Redis dependency

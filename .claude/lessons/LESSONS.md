@@ -496,3 +496,28 @@ fi
 
 ### Commits
 - `691787a` (UTS) — fix(portal): dotenv load, correct IPs, routing card, agent state, user input textbox
+
+## 2026-04-20 — Auto-discovery & three-repo automation setup
+
+### What was done
+- Deployed `~/.openclaw/scripts/discover.py` (Layer A Python hub) + per-repo shell gates
+- All 3 repos auto-discover LM Studio endpoints at Claude Code SessionStart
+- Idempotent: SHA1 hash comparison — no writes if state unchanged
+- 4-tier disaster recovery: live probe → last-good JSON → versioned backup → named profiles
+- Backup policy: ≤30 snapshots, 31st auto-deletes oldest; files >30 days archived (not deleted)
+- Stale IPs fixed: openclaw.json, devices.yml, models.yml all updated
+- Claude Code hooks added: ruff on edit, lessons check on Stop
+
+### Key invariants
+- Never hardcode LM Studio IPs — always use `$LM_STUDIO_WIN_ENDPOINTS` from `.env.lmstudio`
+- `.env.lmstudio` is auto-generated and gitignored — safe to delete and re-run discover.py
+- `~/.openclaw/scripts/discover.py --status` is the first check when endpoints seem wrong
+- Gossip TTL is 5 min — for fresh data NOW: `discover.py --force`
+- Repo renamed from ultrathink-system; `ULTRATHINK_ENDPOINT` in .env still works
+
+### Recovery commands
+```bash
+~/.openclaw/scripts/discover.py --restore profile:mac-only  # Win is down
+~/.openclaw/scripts/discover.py --restore latest            # revert last change
+~/.openclaw/scripts/discover.py --force                     # re-probe everything
+```

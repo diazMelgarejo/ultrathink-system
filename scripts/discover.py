@@ -245,7 +245,8 @@ def write_env_lmstudio(endpoints: dict, repo_paths: dict):
     mac_models = mac.get("models", [])
     win_models = win.get("models", [])
     mac_primary = next((m for m in mac_models if "embed" not in m.lower()), "")
-    win_primary = next((m for m in win_models if "27b" in m.lower() or "embed" not in m.lower()), "")
+    win_primary = (next((m for m in win_models if "27b" in m.lower()), None) or
+                   next((m for m in win_models if "embed" not in m.lower()), ""))
     win_fallback = next((m for m in win_models if m != win_primary and "embed" not in m.lower()), "")
     tier = (_load_json(LAST_DISCOVERY_JSON) or {}).get("recovery_tier", 1)
     content = (
@@ -344,6 +345,9 @@ def run_discovery(force: bool = False) -> int:
         last = _load_json(LAST_DISCOVERY_JSON)
         if last and last.get("hash") == new_hash:
             last["timestamp"] = datetime.now(timezone.utc).isoformat()
+            if tier != last.get("recovery_tier", 1):
+                last["recovery_tier"] = tier  # reflect actual recovery tier used this run
+                RECOVERY_SOURCE_TXT.write_text(f"tier{tier}\n")
             DISCOVERY_JSON.write_text(json.dumps(last, indent=2))
             print("✅ No changes. Config is current.", file=sys.stderr)
             return 0

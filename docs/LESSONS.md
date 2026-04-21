@@ -3,7 +3,7 @@
 > **Canonical path**: `docs/LESSONS.md`
 > **Previous path**: `.claude/lessons/LESSONS.md` (now redirects here)
 > **Purpose**: GitHub-auditable persistent memory across all ECC, AutoResearcher, and Claude sessions.
-> **Cross-repo companion**: [Perplexity-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/LESSONS.md)
+> **Cross-repo companion**: [Perpetua-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/LESSONS.md)
 >
 > **Rules**:
 > - Read this file at the start of every session
@@ -314,3 +314,8 @@ The `tee /dev/stderr` keeps progress messages visible while `grep '^export '` ca
 
 → [PT docs/MIGRATION.md §Gate 1](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/MIGRATION.md)
 → [PT orchestrator/alphaclaw_manager.py](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/orchestrator/alphaclaw_manager.py)
+
+## [2026-04-21] Configuration Portability: OS-Agnostic Paths
+- **Problem**: Absolute paths (e.g., /Users/user/...) in openclaw.json break cross-platform deployments (Linux/Windows/macOS).
+- **Solution**: Always use ${HOME} variables in configuration templates. The AlphaClaw gateway and onboarding runtime MUST resolve these variables relative to the OS-specific home directory.
+- **Action**: Enforce ${HOME} in all openclaw.json.template and active configuration files. Avoid hardcoding usernames or absolute paths.

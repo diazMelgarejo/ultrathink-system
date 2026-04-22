@@ -1,70 +1,9 @@
 #!/bin/bash
-
-# ── Symlink Validation ────────────────────────────────────────────────────────
-_ensure_symlink() {
-  local link="$1" target="$2"
-  if [ ! -L "$link" ]; then
-    echo "  [link] creating missing symlink: $link → $target"
-    ln -s "$target" "$link"
-  elif [ ! -e "$link" ]; then
-    echo "  [link] ⚠ broken symlink detected: $link"
-    echo "         ensure dependency exists at: $(cd "$(dirname "$link")" && cd "$(dirname "$target")" && pwd)/$(basename "$target")"
-  fi
-}
-
-_ensure_symlink "network_autoconfig.py" "../perplexity-api/Perpetua-Tools/packages/net_utils/network_autoconfig.py"
-_ensure_symlink "lib/shared/agentic_stack" "../../../perplexity-api/Perpetua-Tools/packages/agentic-stack"
-
-# ── Garbage Collection ──
-find . -name "*.pyc" -type f -delete
-find . -name "__pycache__" -type d -exec rm -rf {} +
-# ── IP auto-detection ─────────────────────────────────────────────────────────
-_IP_VARS="$(cd "$SCRIPT_DIR" && "$US_PYTHON" -c "
-import sys, io, contextlib
-sys.path.insert(0, '.')
-try:
-    from network_autoconfig import NetworkAutoConfig
-    cfg = NetworkAutoConfig()
-    with contextlib.redirect_stdout(io.StringIO()):
-        mac_ip = cfg.get_working_local_ip()
-    win_ip = cfg.preferred_ips.get('Windows', '192.168.254.100')
-    print('MAC_IP=' + mac_ip)
-    print('WIN_IP=' + win_ip)
-except Exception:
-    print('MAC_IP=192.168.254.105')
-    print('WIN_IP=192.168.254.100')
-" 2>/dev/null)"
-
-eval "$_IP_VARS"
-
-# ── Auto-repair environment ──
-if [ ! -x ".venv/bin/python" ]; then
-  echo "[!] Environment broken, running repair_env.sh..."
-  ./repair_env.sh
-fi
 # start.sh — orama-system thin delegator  v0.9.9.8
-#
 # orama-system is Layer 3 — orchestration / meta-intelligence / delegate runtime.
 # All gateway/backend/mode decisions are PT's responsibility (Perpetua-Tools).
-# This script: macOS preflight → delegate to PT lifecycle → start orama services.
-#
-# Starts three services:
-#   :8000  Perpetua-Tools orchestrator    (PT — Layer 2)
-#   :8001  orama-system reasoning engine  (US)
-#   :8002  Portal dashboard
-#
-# Usage:
-#   ./start.sh             — start all, open browser
-#   ./start.sh --no-open   — start all, skip browser
-#   ./start.sh --stop      — kill all three services
-#   ./start.sh --status    — show which ports are listening
-#   ./start.sh --discover  — re-run path discovery, rewrite .paths, exit
-#
-# Path config: .paths (gitignored, auto-generated, user-editable)
-# Template:    .paths.example
 
 set -euo pipefail
-
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PATHS_FILE="$SCRIPT_DIR/.paths"
 
@@ -115,6 +54,72 @@ if [ -z "${US_PYTHON:-}" ]; then
   US_PYTHON="$(_best_python "$SCRIPT_DIR")"
 fi
 
+# ── Symlink Validation ────────────────────────────────────────────────────────
+_ensure_symlink() {
+  local link="$1" target="$2"
+  # Target must be relative to the link location
+  if [ ! -L "$link" ]; then
+    echo "  [link] creating missing symlink: $link → $target"
+    ln -s "$target" "$link"
+  elif [ ! -e "$link" ]; then
+    echo "  [link] ⚠ broken symlink detected: $link"
+    # Attempt to fix by checking if target exists at the relative path
+    if [ -e "$target" ]; then
+        echo "         re-linking to $target"
+        rm "$link"
+        ln -s "$target" "$link"
+    fi
+  fi
+}
+
+# Ensure Sibling Symlinks are Wired to Live PT Paths
+# (Calculates relative path from SCRIPT_DIR to PT_DIR)
+if [ -n "${PT_DIR:-}" ]; then
+    # network_autoconfig.py
+    _PT_NET_CONFIG="${PT_DIR}/packages/net_utils/network_autoconfig.py"
+    if [ -f "$_PT_NET_CONFIG" ]; then
+        _REL_NET_CONFIG="$(python3 -c "import os.path; print(os.path.relpath('$_PT_NET_CONFIG', '$SCRIPT_DIR'))")"
+        _ensure_symlink "network_autoconfig.py" "$_REL_NET_CONFIG"
+    fi
+    
+    # agentic_stack
+    _PT_STACK="${PT_DIR}/packages/agentic-stack"
+    if [ -d "$_PT_STACK" ]; then
+        _REL_STACK="$(python3 -c "import os.path; print(os.path.relpath('$_PT_STACK', '$SCRIPT_DIR/lib/shared'))")"
+        mkdir -p lib/shared
+        cd lib/shared && _ensure_symlink "agentic_stack" "$_REL_STACK" && cd "$SCRIPT_DIR"
+    fi
+fi
+
+# ── Garbage Collection ──
+find . -name "*.pyc" -type f -delete
+find . -name "__pycache__" -type d -exec rm -rf {} +
+
+# ── IP auto-detection ─────────────────────────────────────────────────────────
+_IP_VARS="$(cd "$SCRIPT_DIR" && "$US_PYTHON" -c "
+import sys, io, contextlib
+sys.path.insert(0, '.')
+try:
+    from network_autoconfig import NetworkAutoConfig
+    cfg = NetworkAutoConfig()
+    with contextlib.redirect_stdout(io.StringIO()):
+        mac_ip = cfg.get_working_local_ip()
+    win_ip = cfg.preferred_ips.get('Windows', '192.168.254.100')
+    print('MAC_IP=' + mac_ip)
+    print('WIN_IP=' + win_ip)
+except Exception:
+    print('MAC_IP=192.168.254.105')
+    print('WIN_IP=192.168.254.100')
+" 2>/dev/null)"
+
+eval "$_IP_VARS"
+
+# ── Auto-repair environment ──
+if [ ! -x ".venv/bin/python" ]; then
+  echo "[!] Environment broken, running repair_env.sh..."
+  ./repair_env.sh
+fi
+
 # Write .paths on first run (or if --discover requested)
 if [ ! -f "$PATHS_FILE" ] || [[ "${1:-}" == "--discover" ]]; then
   cat > "$PATHS_FILE" << PATHSEOF
@@ -139,8 +144,6 @@ LOG_DIR="$SCRIPT_DIR/.logs"
 mkdir -p "$LOG_DIR"
 
 # ── macOS pre-flight ──────────────────────────────────────────────────────────
-# Applies idempotent fixes to the AlphaClaw binary (macOS compat patches).
-# Non-fatal — startup continues on any error.
 if [ -f "$SCRIPT_DIR/setup_macos.py" ]; then
   "$US_PYTHON" "$SCRIPT_DIR/setup_macos.py" --quiet 2>&1 | sed 's/^/  /' || true
 fi
@@ -151,13 +154,6 @@ WIN_IP="${WIN_IP:-192.168.254.100}"
 echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
 
 # ── PT resolve — backend probe + AlphaClaw bootstrap ─────────────────────────
-# Delegates ALL gateway decisions to Perpetua-Tools (Layer 2).
-# PT probes backends, determines mode, bootstraps AlphaClaw, and returns
-# a JSON payload. orama reads that payload — it makes zero gateway decisions.
-#
-# PT owns: backend probe (was start.sh §2a), AlphaClaw bootstrap (§2b),
-#          mode determination (was §2c).
-# See: orchestrator/alphaclaw_manager.py
 PT_RESOLVE_OK=0
 PT_MODE="offline"
 PT_DISTRIBUTED="no"
@@ -185,7 +181,6 @@ if [ -n "${PT_DIR:-}" ] && [ -f "${PT_DIR}/orchestrator/alphaclaw_manager.py" ];
     echo "  PT    resolve non-fatal — continuing with defaults"
   fi
 else
-  # Fallback: PT manager not available — delegate to bootstrap script directly
   PT_HOME="${PT_HOME:-$HOME/Perpetua-Tools}"
   ALPHACLAW_SCRIPT="$PT_HOME/alphaclaw_bootstrap.py"
   if [ -f "$ALPHACLAW_SCRIPT" ]; then
@@ -200,7 +195,7 @@ else
   fi
 fi
 
-# Export env vars all services read (with user overrides respected)
+# Export env vars all services read
 export OLLAMA_MAC_ENDPOINT="${OLLAMA_MAC_ENDPOINT:-http://${MAC_IP}:11434}"
 export OLLAMA_WINDOWS_ENDPOINT="${OLLAMA_WINDOWS_ENDPOINT:-http://${WIN_IP}:11434}"
 export LM_STUDIO_MAC_ENDPOINT="${LM_STUDIO_MAC_ENDPOINT:-http://${MAC_IP}:1234}"
@@ -208,27 +203,7 @@ export LM_STUDIO_WIN_ENDPOINTS="${LM_STUDIO_WIN_ENDPOINTS:-http://${WIN_IP}:1234
 export WINDOWS_IP="${WINDOWS_IP:-${WIN_IP}}"
 export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
 
-# AlphaClaw security warning — show if running on default password
-_AC_PT_HOME="${PT_DIR:-${PT_HOME:-$HOME/Perpetua-Tools}}"
-_AC_ONBOARDING="${_AC_PT_HOME}/.state/onboarding.json"
-if [ -f "$_AC_ONBOARDING" ]; then
-  if "$US_PYTHON" -c "
-import json, sys, pathlib
-f = pathlib.Path('${_AC_ONBOARDING}')
-d = json.loads(f.read_text(encoding='utf-8'))
-sys.exit(0 if d.get('alphaclaw', {}).get('password_is_default') else 1)
-" 2>/dev/null; then
-    echo ""
-    echo "  ┌────────────────────────────────────────────────────────────────┐"
-    echo "  │  SECURITY  AlphaClaw is running on the DEFAULT password         │"
-    echo "  │  Set SETUP_PASSWORD=<yourpassword> in .env and restart          │"
-    echo "  └────────────────────────────────────────────────────────────────┘"
-    echo ""
-  fi
-fi
-
-# ── helpers ───────────────────────────────────────────────────────────────────
-
+# helpers
 pid_on_port() { lsof -ti "tcp:$1" 2>/dev/null | head -1 || true; }
 
 wait_for_port() {
@@ -248,9 +223,7 @@ wait_for_port() {
       printf "  still waiting for %s (:%s)" "$label" "$port"
     fi
     if [ $tries -ge 150 ]; then
-      local logfile="$LOG_DIR/$(printf '%s' "$label" | tr '[:upper:]' '[:lower:]').log"
-      printf " TIMEOUT — check %s\n" "$logfile"
-      return 0  # non-fatal: continue starting remaining services
+      return 0
     fi
   done
   echo " UP"
@@ -263,80 +236,64 @@ open_browser() {
   fi
 }
 
-# ── --stop ────────────────────────────────────────────────────────────────────
-
 if [[ "${1:-}" == "--stop" ]]; then
   echo "Stopping orama-system services..."
   for port in $PT_PORT $US_PORT $PORTAL_PORT; do
     pid=$(pid_on_port "$port")
-    if [ -n "$pid" ]; then
-      kill "$pid" 2>/dev/null && echo "  killed PID $pid (:$port)" || true
-    else
-      echo "  nothing on :$port"
-    fi
+    [ -n "$pid" ] && kill "$pid" 2>/dev/null && echo "  killed PID $pid (:$port)" || true
   done
   exit 0
 fi
-
-# ── --status ──────────────────────────────────────────────────────────────────
 
 if [[ "${1:-}" == "--status" ]]; then
   echo ""
   echo "=== orama-system service status ==="
   for port in $PT_PORT $US_PORT $PORTAL_PORT; do
     pid=$(pid_on_port "$port")
-    if [ -n "$pid" ]; then
-      echo "  UP   :$port  (PID $pid)"
-    else
-      echo "  DOWN :$port"
-    fi
+    if [ -n "$pid" ]; then echo "  UP   :$port  (PID $pid)"; else echo "  DOWN :$port"; fi
   done
   echo ""
   exit 0
 fi
-
-# ── start services ────────────────────────────────────────────────────────────
 
 echo ""
 echo "=== orama-system v0.9.9.8 — starting ==="
 echo "  Mode: ${PT_MODE}  |  PT → http://localhost:${PT_PORT}"
 echo ""
 
-# 1. Perpetua-Tools (PT) orchestrator
+# 1. PT
 if [ -n "$PT_DIR" ] && [ -f "$PT_DIR/orchestrator.py" ]; then
-  if pid_on_port "$PT_PORT" | grep -q .; then
-    echo "  PT   :$PT_PORT already running"
-  else
+  if ! pid_on_port "$PT_PORT" | grep -q .; then
     echo "  PT   starting → $LOG_DIR/pt.log"
     (cd "$PT_DIR" && PYTHONPATH="$PT_DIR" "$PT_PYTHON" -m uvicorn orchestrator.fastapi_app:app \
       --host 0.0.0.0 --port "$PT_PORT" \
       >> "$LOG_DIR/pt.log" 2>&1) &
     wait_for_port "$PT_PORT" "PT"
+  else
+    echo "  PT   :$PT_PORT already running"
   fi
-else
-  echo "  PT   skipped (not found at ${PT_DIR:-unknown})"
 fi
 
-# 2. orama-system reasoning engine
-if pid_on_port "$US_PORT" | grep -q .; then
-  echo "  orama :$US_PORT already running"
-else
+# 2. orama
+if ! pid_on_port "$US_PORT" | grep -q .; then
   echo "  orama starting → $LOG_DIR/us.log"
   (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" "$US_PYTHON" -m uvicorn api_server:app \
     --host 0.0.0.0 --port "$US_PORT" \
     >> "$LOG_DIR/us.log" 2>&1) &
   wait_for_port "$US_PORT" "orama"
+else
+  echo "  orama :$US_PORT already running"
 fi
 
 # 3. Portal
-if pid_on_port "$PORTAL_PORT" | grep -q .; then
-  echo "  Portal :$PORTAL_PORT already running"
-else
+if ! pid_on_port "$PORTAL_PORT" | grep -q .; then
   echo "  Portal starting → $LOG_DIR/portal.log"
   (cd "$SCRIPT_DIR" && PYTHONPATH="$SCRIPT_DIR" "$US_PYTHON" -m uvicorn portal_server:app \
     --host 0.0.0.0 --port "$PORTAL_PORT" \
     >> "$LOG_DIR/portal.log" 2>&1) &
   wait_for_port "$PORTAL_PORT" "Portal"
+else
+  echo "  Portal :$PORTAL_PORT already running"
 fi
 
 echo ""
@@ -346,10 +303,7 @@ echo "  Portal ${PORTAL_URL}"
 echo "  JSON   ${PORTAL_URL}/api/status"
 echo ""
 
-if [[ "${1:-}" != "--no-open" ]]; then
-  open_browser "$PORTAL_URL"
-fi
-
+[[ "${1:-}" != "--no-open" ]] && open_browser "$PORTAL_URL"
 echo "Logs: $LOG_DIR/"
 echo "Stop: ./start.sh --stop"
 echo ""

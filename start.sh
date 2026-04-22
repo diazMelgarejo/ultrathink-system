@@ -1,5 +1,20 @@
 #!/bin/bash
 
+# ── Symlink Validation ────────────────────────────────────────────────────────
+_ensure_symlink() {
+  local link="$1" target="$2"
+  if [ ! -L "$link" ]; then
+    echo "  [link] creating missing symlink: $link → $target"
+    ln -s "$target" "$link"
+  elif [ ! -e "$link" ]; then
+    echo "  [link] ⚠ broken symlink detected: $link"
+    echo "         ensure dependency exists at: $(cd "$(dirname "$link")" && cd "$(dirname "$target")" && pwd)/$(basename "$target")"
+  fi
+}
+
+_ensure_symlink "network_autoconfig.py" "../perplexity-api/Perpetua-Tools/packages/net_utils/network_autoconfig.py"
+_ensure_symlink "lib/shared/agentic_stack" "../../../perplexity-api/Perpetua-Tools/packages/agentic-stack"
+
 # ── Garbage Collection ──
 find . -name "*.pyc" -type f -delete
 find . -name "__pycache__" -type d -exec rm -rf {} +

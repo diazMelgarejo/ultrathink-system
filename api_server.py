@@ -6,7 +6,7 @@ ultrathink System — REST API Entry Point
 POST /ultrathink on port 8001
 
 This is a stateless execution endpoint. No Redis dependency.
-Durable state is owned by the Perplexity-Tools orchestrator (Repo #1).
+Durable state is owned by the Perpetua-Tools orchestrator (Repo #1).
 
 Version: 0.9.9.2 | License: Apache 2.0
 """
@@ -104,7 +104,7 @@ async def _call_with_fallback(prompt: str, model: str, max_tokens: int, temperat
 
 app = FastAPI(
     title="ultrathink System API",
-    description="Stateless POST /ultrathink endpoint. State owned by Perplexity-Tools.",
+    description="Stateless POST /ultrathink endpoint. State owned by Perpetua-Tools.",
     version="0.9.9.2",
 )
 

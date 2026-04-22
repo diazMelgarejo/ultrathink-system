@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Imports Perplexity-Tools instincts → ultrathink-system on every session start.
+# Imports Perpetua-Tools instincts → ultrathink-system on every session start.
 # Idempotent. Local-first; clones companion repo if absent.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,19 +14,19 @@ for p in \
 done
 [[ -z "$INSTINCT_CLI" ]] && exit 0
 
-# 2. Find or clone Perplexity-Tools
+# 2. Find or clone Perpetua-Tools
 PT_REPO=""
-for p in "$PARENT_DIR/Perplexity-Tools" "$PARENT_DIR/perplexity-api/Perplexity-Tools"; do
+for p in "$PARENT_DIR/Perpetua-Tools" "$PARENT_DIR/perplexity-api/Perpetua-Tools"; do
   [[ -d "$p/.claude" ]] && { PT_REPO="$p"; break; }
 done
 
 if [[ -z "$PT_REPO" ]]; then
-  git clone --depth 1 https://github.com/diazMelgarejo/Perplexity-Tools \
-    "$PARENT_DIR/Perplexity-Tools" 2>/dev/null || exit 0
-  PT_REPO="$PARENT_DIR/Perplexity-Tools"
+  git clone --depth 1 https://github.com/diazMelgarejo/Perpetua-Tools \
+    "$PARENT_DIR/Perpetua-Tools" 2>/dev/null || exit 0
+  PT_REPO="$PARENT_DIR/Perpetua-Tools"
 fi
 
 # 3. Import
-YAML="$PT_REPO/.claude/homunculus/instincts/inherited/Perplexity-Tools-instincts.yaml"
+YAML="$PT_REPO/.claude/homunculus/instincts/inherited/Perpetua-Tools-instincts.yaml"
 [[ -f "$YAML" ]] || exit 0
 python3 "$INSTINCT_CLI" import "$YAML" --force

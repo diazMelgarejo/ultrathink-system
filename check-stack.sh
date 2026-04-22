@@ -1,6 +1,6 @@
 #!/bin/bash
 # check-stack.sh — Full 4-layer stack health check
-# ultrathink-system | Perplexity-Tools | Ollama | Redis
+# orama-system | Perpetua-Tools | Ollama | Redis
 #
 # Usage:
 #   chmod +x check-stack.sh
@@ -52,11 +52,11 @@ echo ""
 echo "=== Stack Health Check === $(date '+%Y-%m-%d %H:%M:%S') ==="
 echo ""
 
-echo "[Layer 1] Perplexity-Tools orchestrator"
+echo "[Layer 1] Perpetua-Tools orchestrator"
 check "PT health" "http://localhost:${PT_PORT}/health"
 
 echo ""
-echo "[Layer 2] ultrathink-system reasoning engine"
+echo "[Layer 2] orama-system reasoning engine"
 check "UltraThink health" "http://localhost:${UT_PORT}/health"
 
 echo ""

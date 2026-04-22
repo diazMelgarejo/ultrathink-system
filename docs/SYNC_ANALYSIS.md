@@ -1,4 +1,4 @@
-# Sync Analysis: ultrathink-system ↔ Perplexity-Tools
+# Sync Analysis: ultrathink-system ↔ Perpetua-Tools
 
 **Date:** 2026-04-11 | **Version:** ultrathink v0.9.9.7 · PT v0.9.9.7
 
@@ -37,7 +37,7 @@
 Both repos agree on the 4-layer stack:
 
 ```
-Perplexity-Tools    ← top-level orchestrator, model selection, fallback chain
+Perpetua-Tools    ← top-level orchestrator, model selection, fallback chain
 ultrathink-system   ← reasoning engine, 5-stage methodology, CIDF
 ECC Tools           ← Stage-4 parallel sub-agent auto-selection (up to 5x)
 autoresearch        ← research automation, idempotent sync
@@ -73,7 +73,7 @@ PT receives task → deep reasoning? → call ultrathink:8001
 
 ### 6. Tests — Both Repos Now Covered
 
-**Perplexity-Tools** `tests/` (6 files, 56+ tests):
+**Perpetua-Tools** `tests/` (6 files, 56+ tests):
 - `test_routing.py` — routing.yml contract, ultrathink routes, autoresearch routes
 - `test_resilience.py` — connectivity resilience + fallback behaviour
 - `test_lan_discovery.py` — LAN device discovery
@@ -111,7 +111,7 @@ Architecture decision locked: ultrathink remains **stateless** with no Redis req
 
 ### GAP 5: PT Has No Tests — ✅ RESOLVED (v0.9.8.0)
 
-6 test files now in `Perplexity-Tools/tests/` covering all critical orchestrator modules.
+6 test files now in `Perpetua-Tools/tests/` covering all critical orchestrator modules.
 
 ### GAP 6: PT Has No CI/CD — ✅ RESOLVED (v0.9.6.0)
 
@@ -129,7 +129,7 @@ ultrathink-system's `bin/skills/SKILL.md` should reference PT's hardware profile
 
 **Suggested addition to ultrathink SKILL.md:**
 ```
-When running inside Perplexity-Tools orchestration:
+When running inside Perpetua-Tools orchestration:
 - Respect PT's model selection for top-level agents (see hardware/SKILL.md)
 - Only override model choice when the backup HTTP path uses `reasoning_depth = ultra`
 - Accept model_hint in request payload; use DEFAULT_MODEL as fallback
@@ -139,7 +139,7 @@ When running inside Perplexity-Tools orchestration:
 
 **Status:** ✅ RESOLVED (rolling — pre-v1.0 RC)
 
-**Implemented:** `pyproject.toml` added to Perplexity-Tools root (commit `5082db6`). Includes `[project]` metadata, `[project.optional-dependencies]` for dev/test, and `[tool.pytest.ini_options]` config. PT is now pip-installable as `perplexity-tools`.
+**Implemented:** `pyproject.toml` added to Perpetua-Tools root (commit `5082db6`). Includes `[project]` metadata, `[project.optional-dependencies]` for dev/test, and `[tool.pytest.ini_options]` config. PT is now pip-installable as `perplexity-tools`.
 
 ultrathink-system is pip-installable. PT only has `requirements.txt`. Making PT installable enables consistent versioning and dependency pinning across the stack.
 
@@ -147,7 +147,7 @@ ultrathink-system is pip-installable. PT only has `requirements.txt`. Making PT 
 
 **Status:** ✅ RESOLVED (rolling — pre-v1.0 RC)
 
-**Implemented:** `tests/test_ultrathink_integration.py` added to Perplexity-Tools (commit `c84a5f6`). 12 tests in `TestRoutingYmlUltrathinkContract` verifying `deep_reasoning` + `code_analysis` routes declare `ULTRATHINK_ENDPOINT`, `fallback=local_qwen30b`, and `requires=[ultrathink_available]`.
+**Implemented:** `tests/test_ultrathink_integration.py` added to Perpetua-Tools (commit `c84a5f6`). 12 tests in `TestRoutingYmlUltrathinkContract` verifying `deep_reasoning` + `code_analysis` routes declare `ULTRATHINK_ENDPOINT`, `fallback=local_qwen30b`, and `requires=[ultrathink_available]`.
 
 A single integration test that fires a task at PT and verifies it correctly routes to ultrathink:
 
@@ -180,12 +180,12 @@ All critical integration gaps from the initial analysis have been addressed.
 
 **P1 — RESOLVED:**
 - ✅ ultrathink-system `.env.example` updated with required API/model vars
-- ✅ Perplexity-Tools `.env.example` updated with `ULTRATHINK_ENDPOINT`, `ULTRATHINK_TIMEOUT`, `ULTRATHINK_ENABLED`
+- ✅ Perpetua-Tools `.env.example` updated with `ULTRATHINK_ENDPOINT`, `ULTRATHINK_TIMEOUT`, `ULTRATHINK_ENABLED`
 - ✅ PT `config/routing.yml` now has `deep_reasoning` and `code_analysis` routes with ultrathink endpoint + fallback
 
 ### New in PT v0.9.5.0: Hardware Abstraction Layer
 
-Perplexity-Tools has added hardware-aware orchestration:
+Perpetua-Tools has added hardware-aware orchestration:
 
 #### Added Files:
 

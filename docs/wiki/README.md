@@ -3,7 +3,7 @@
 > **TL;DR for agents:** Read `docs/LESSONS.md` for the session log. Read pages here for deep dives.
 > For quick behavioral rules: **[SKILL.md →](../../SKILL.md)**
 
-This wiki organizes hard-won lessons by topic. Each page contains root cause, exact fix, verification commands, and prevention rules. It is derived from the session log in [docs/LESSONS.md](../LESSONS.md) and the companion [Perplexity-Tools wiki](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/wiki/README.md).
+This wiki organizes hard-won lessons by topic. Each page contains root cause, exact fix, verification commands, and prevention rules. It is derived from the session log in [docs/LESSONS.md](../LESSONS.md) and the companion [Perpetua-Tools wiki](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/wiki/README.md).
 
 ---
 
@@ -47,7 +47,7 @@ This wiki organizes hard-won lessons by topic. Each page contains root cause, ex
 
 ## Related
 - [Session log entry](../LESSONS.md#anchor)
-- [Companion repo lesson](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/wiki/README.md)
+- [Companion repo lesson](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/wiki/README.md)
 ```
 
 3. Add a row to the index table above
@@ -61,5 +61,5 @@ Some lessons span both repos. The canonical entry lives in the repo where the bu
 
 | Session | UTS Lesson | PT Lesson |
 | --- | --- | --- |
-| 2026-04-07 | [Idempotent Installs](02-idempotent-installs.md) | [same — shared commits](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/wiki/02-idempotent-installs.md) |
-| 2026-04-13 | [Startup IP Detection](07-startup-ip-detection.md) | [same topic, PT side](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/wiki/06-startup-ip-detection.md) |
+| 2026-04-07 | [Idempotent Installs](02-idempotent-installs.md) | [same — shared commits](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/wiki/02-idempotent-installs.md) |
+| 2026-04-13 | [Startup IP Detection](07-startup-ip-detection.md) | [same topic, PT side](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/wiki/06-startup-ip-detection.md) |

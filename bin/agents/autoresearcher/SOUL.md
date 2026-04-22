@@ -65,6 +65,6 @@ When `task_type` is `ml-experiment`, you may use the Windows GPU runner at
 ---
 
 ## Context Links
-- Perplexity-Tools `orchestrator/autoresearch_bridge.py` — bridge to GPU runner
+- Perpetua-Tools `orchestrator/autoresearch_bridge.py` — bridge to GPU runner
 - `swarm_state.md` — GPU lock + experiment baseline
 - `.claude/lessons/LESSONS.md` — shared cross-session knowledge base

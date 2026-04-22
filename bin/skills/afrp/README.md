@@ -24,7 +24,7 @@ afrp/
 
 - **Always** on non-trivial queries before the Execution Mode Router fires
 - **Explicitly** when queries contain: "write for," "guidance for," "framework for," "how should [group]," "develop this for," or any third-party audience indicator
-- **Cross-agent** when Perplexity-Tools delegates to ultrathink via the current MCP bridge, or via the implemented backup HTTP `/ultrathink` path
+- **Cross-agent** when Perpetua-Tools delegates to ultrathink via the current MCP bridge, or via the implemented backup HTTP `/ultrathink` path
 
 ## Core Principle
 

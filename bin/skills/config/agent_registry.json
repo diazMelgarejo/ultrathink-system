@@ -67,7 +67,7 @@
     }
   ],
   "autoresearch_agents": {
-    "_comment": "Pre-defined agent types for autoresearch swarm (task_type=autoresearch). Spawned by Perplexity-Tools AgentTracker; registered here for ultrathink Mode 3 awareness only.",
+    "_comment": "Pre-defined agent types for autoresearch swarm (task_type=autoresearch). Spawned by Perpetua-Tools AgentTracker; registered here for ultrathink Mode 3 awareness only.",
     "autoresearch-coder": {
       "id": "autoresearch-coder",
       "type": "worker",
@@ -103,7 +103,7 @@
       "responsibilities": [
         "Read swarm_state.md + git log to understand current experiment state",
         "Propose next hypothesis; write orchestrator_directive to swarm_state.md",
-        "Coordinate coder + evaluator lifecycle via Perplexity-Tools AgentTracker"
+        "Coordinate coder + evaluator lifecycle via Perpetua-Tools AgentTracker"
       ],
       "max_instances": 1,
       "idempotency": "AgentTracker.find_existing('autoresearch-orchestrator', task_hash)"

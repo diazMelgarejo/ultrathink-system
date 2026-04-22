@@ -1,4 +1,4 @@
-# ultrathink-system Agent Skills
+# orama-system Agent Skills
 
 > **For agents:** This file is your behavioral ruleset for this repo. Read it before making any change. Rules here are derived from real bugs — every "never" has a story behind it.
 >
@@ -175,5 +175,5 @@ Session logs:
 - [docs/LESSONS.md](docs/LESSONS.md) — chronological, all agents
 
 Companion repo:
-- [Perplexity-Tools/SKILL.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/SKILL.md)
-- [Perplexity-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/LESSONS.md)
+- [Perpetua-Tools/SKILL.md](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/SKILL.md)
+- [Perpetua-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/LESSONS.md)

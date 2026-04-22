@@ -3,7 +3,8 @@
 ## Scripts
 
 ### verify_before_done.py
-```
+
+```bash
 python verify_before_done.py [OPTIONS]
 
 Options:
@@ -17,7 +18,8 @@ Output: tasks/verification-report.json
 ```
 
 ### capture_lesson.py
-```
+
+```bash
 python capture_lesson.py [OPTIONS]
 
 Options:
@@ -29,7 +31,8 @@ Options:
 ```
 
 ### create_task_plan.sh
-```
+
+```bash
 ./create_task_plan.sh [TASK_NAME] [OPTIONS]
 
 Options:
@@ -43,6 +46,7 @@ Creates: tasks/todo.md, tasks/lessons.md (if not exists)
 ## MCP Tools (Multi-Agent)
 
 ### ultrathink_solve
+
 ```json
 {
   "task": "string (required)",
@@ -53,6 +57,7 @@ Creates: tasks/todo.md, tasks/lessons.md (if not exists)
 ```
 
 ### ultrathink_delegate
+
 ```json
 {
   "stage": "context|architecture|refinement|execution|verification|crystallization",
@@ -63,12 +68,14 @@ Creates: tasks/todo.md, tasks/lessons.md (if not exists)
 ```
 
 ### ultrathink_status
+
 ```json
 { "task_id": "uuid" }
 → TaskState object
 ```
 
 ### ultrathink_lessons
+
 ```json
 { "domain": "optional filter", "limit": 10 }
 → { "lessons": [...], "total": N }
@@ -77,6 +84,7 @@ Creates: tasks/todo.md, tasks/lessons.md (if not exists)
 ## Data Types
 
 ### TaskState
+
 ```typescript
 {
   task_id: string
@@ -91,6 +99,7 @@ Creates: tasks/todo.md, tasks/lessons.md (if not exists)
 ```
 
 ### ValidationReport
+
 ```typescript
 {
   symbol: string
@@ -120,6 +129,7 @@ curl http://localhost:8001/health
 ```
 
 ### Request Body
+
 ```json
 {
   "task_description": "string (required, max 10000 chars)",
@@ -142,4 +152,4 @@ curl http://localhost:8001/health
 }
 ```
 
-**Stateless**: no Redis dependency. Durable state owned by Perplexity-Tools (Repo #1).
+**Stateless**: no Redis dependency. Durable state owned by Perpetua-Tools (Repo #1).

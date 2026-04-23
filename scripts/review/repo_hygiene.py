@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -86,6 +87,8 @@ def check_private_generated_tracking(files: list[str]) -> list[str]:
 def check_identity(root: Path) -> list[str]:
     name = run_git(root, "config", "user.name").stdout.strip()
     email = run_git(root, "config", "user.email").stdout.strip()
+    if os.getenv("GITHUB_ACTIONS") == "true" and not name and not email:
+        return []
     if name != APPROVED_NAME or email != APPROVED_EMAIL:
         return [
             "git identity mismatch: "
@@ -101,6 +104,8 @@ def check_ecc(root: Path, files: list[str]) -> list[str]:
     ecc_path = root / ".ecc"
     mode = run_git(root, "ls-files", "-s", ".ecc").stdout.strip().split()
     is_gitlink = bool(mode and mode[0] == "160000")
+    if is_gitlink and not (root / ".gitmodules").exists():
+        return [".ecc is tracked as a gitlink but .gitmodules is absent"]
     if is_gitlink and ecc_path.is_symlink():
         return [".ecc is a gitlink in index but a symlink in the working tree"]
     return []

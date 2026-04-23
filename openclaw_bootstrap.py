@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 """
-openclaw_bootstrap.py — ultrathink-system delegation shim
+openclaw_bootstrap.py — orama-system delegation shim
 ----------------------------------------------------------
 Bootstrap logic has moved to Perplexity-Tools/alphaclaw_bootstrap.py.
 
@@ -270,7 +272,8 @@ async def _bootstrap_inline(force: bool = False) -> bool:
     print("[openclaw] → Starting AlphaClaw gateway…")
     try:
         install_dir = Path.home() / ".alphaclaw"
-        subprocess.Popen(["npx", "alphaclaw", "start"], cwd=str(install_dir))
+        env = {**os.environ, "SETUP_PASSWORD": os.getenv("SETUP_PASSWORD", "localdev123")}
+        subprocess.Popen(["npx", "alphaclaw", "start"], cwd=str(install_dir), env=env)
         gateway_url = f"http://127.0.0.1:{OPENCLAW_GATEWAY_PORT}"
         os.environ["OPENCLAW_GATEWAY_URL"] = gateway_url
     except Exception as e:
@@ -332,7 +335,7 @@ def apply_runtime_payload(payload: dict, force: bool = False) -> dict:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="ultrathink-system OpenClaw/AlphaClaw bootstrap shim",
+        description="orama-system OpenClaw/AlphaClaw bootstrap shim",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Delegates to Perplexity-Tools/alphaclaw_bootstrap.py when PT_HOME is set.\n"

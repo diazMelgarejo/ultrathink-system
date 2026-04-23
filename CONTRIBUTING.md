@@ -1,13 +1,13 @@
-# Contributing to ultrathink System
+# Contributing to orama-system
 
-Thank you for your interest in contributing! This project is built on the ultrathink methodology—so naturally, we apply it to contributions too.
+Thank you for your interest in contributing. This project is built on the orama/ultrathink methodology, so non-trivial contributions must preserve deliberate planning, verification, and auditability.
 
 ---
 
 ## How to Contribute
 
 1. **Fork** the repository
-2. **Create a branch**: `git checkout -b feature/your-feature-name`
+2. **Create a branch**: `git checkout -b yyyy-mm-dd-001-brief-summary`
 3. **Apply ultrathink**: Use the 5-stage methodology for any non-trivial change
 4. **Commit clearly**: Follow Conventional Commit standards
 5. **Push and open a PR**: Describe your changes and the problem solved
@@ -17,6 +17,9 @@ Thank you for your interest in contributing! This project is built on the ultrat
 ## Development Guidelines
 
 ### Before Submitting
+- [ ] Confirm Git identity with `bash scripts/git/check_identity.sh`
+- [ ] Preserve dirty work before risky Git operations with `git stash push --include-untracked`
+- [ ] Keep `.env`, `.env.local`, and `.paths` untracked; update examples instead
 - [ ] Run `./verify-package.sh` — all checks must pass
 - [ ] New skills follow the SKILL.md architecture standard (< 500 lines, YAML frontmatter)
 - [ ] Scripts include docstrings and error handling
@@ -28,6 +31,15 @@ Thank you for your interest in contributing! This project is built on the ultrat
 type(scope): short description
 
 Longer explanation if needed.
+
+Why:
+- rationale and affected component
+
+Risk:
+- compatibility or migration concerns
+
+Verification:
+- exact commands run
 
 Closes #issue-number
 ```

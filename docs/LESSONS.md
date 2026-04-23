@@ -314,3 +314,26 @@ The `tee /dev/stderr` keeps progress messages visible while `grep '^export '` ca
 
 → [PT docs/MIGRATION.md §Gate 1](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/MIGRATION.md)
 → [PT orchestrator/alphaclaw_manager.py](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/orchestrator/alphaclaw_manager.py)
+
+---
+
+## 2026-04-24 — Codex — Clean-lineage salvage guardrails
+
+### What was learned
+
+Directly replaying a useful tail is unsafe when commit metadata, tracked private
+config, generated path files, and symlink assumptions are mixed into the same
+range. The safer approach is to branch from the verified clean anchor, snapshot
+both repos, and manual-port only reviewed intent.
+
+### Decisions Made
+
+- Salvage branch format is `yyyy-mm-dd-001-brief-summary`.
+- Canonical commit identity is `cyre <Lawrence@cyre.me>`.
+- `.env`, `.env.local`, and `.paths` are ignored runtime files; examples are the only tracked contract.
+- `.ecc` must not be both a gitlink expectation and a symlink in the working tree.
+- `repo_hygiene.py` and `check_identity.sh` are the pre-commit guardrails for this recovery path.
+
+→ [docs/recovery/2026-04-24-001-orama-history-recovery.md](recovery/2026-04-24-001-orama-history-recovery.md)
+→ [docs/recovery/2026-04-24-002-commit-salvage-matrix.md](recovery/2026-04-24-002-commit-salvage-matrix.md)
+→ [docs/recovery/2026-04-24-003-git-safety-guardrails.md](recovery/2026-04-24-003-git-safety-guardrails.md)

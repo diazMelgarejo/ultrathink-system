@@ -6,6 +6,7 @@ Run: pytest tests/test_orchestrator.py -v
 from __future__ import annotations
 
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -62,6 +63,11 @@ class TestTaskState:
         for key in ["task_id", "current_stage", "elegance_score", "stage_outputs"]:
             assert key in payload
 
+    def test_created_at_is_timezone_aware_utc(self):
+        parsed = datetime.fromisoformat(TaskState().created_at)
+        assert parsed.tzinfo is not None
+        assert parsed.utcoffset() == timezone.utc.utcoffset(parsed)
+
 
 @pytest.mark.skipif(not IMPORTS_OK, reason="shared module import failed")
 class TestEleganceScoring:
@@ -92,6 +98,17 @@ class TestAgentMessage:
         assert msg.trace_id
         assert msg.message_id
         assert msg.timestamp
+
+    def test_timestamp_is_timezone_aware_utc(self):
+        msg = AgentMessage(
+            from_agent="orchestrator",
+            to_agent="context-agent",
+            message_type=MessageType.DELEGATE_TASK,
+            payload={"task": "test"},
+        )
+        parsed = datetime.fromisoformat(msg.timestamp)
+        assert parsed.tzinfo is not None
+        assert parsed.utcoffset() == timezone.utc.utcoffset(parsed)
 
     def test_to_dict_has_all_fields(self):
         msg = AgentMessage(

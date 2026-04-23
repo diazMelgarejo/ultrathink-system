@@ -11,7 +11,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 
@@ -46,6 +46,10 @@ class OptimizeFor(str, Enum):
 
 # ── Core data types ───────────────────────────────────────────────────────────
 
+def utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
 @dataclass
 class AgentMessage:
     """Message passed between agents via the message bus."""
@@ -55,7 +59,7 @@ class AgentMessage:
     payload:      dict[str, Any]
     trace_id:     str = field(default_factory=lambda: str(uuid.uuid4()))
     message_id:   str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp:    str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    timestamp:    str = field(default_factory=utc_now_iso)
     priority:     str = "medium"  # high | medium | low
     metadata:     dict = field(default_factory=dict)
 
@@ -87,7 +91,7 @@ class TaskState:
     stage_outputs:     dict[str, Any] = field(default_factory=dict)
     agents_active:     list[dict] = field(default_factory=list)
     lessons_learned:   list[dict] = field(default_factory=list)
-    created_at:        str = field(default_factory=lambda: datetime.utcnow().isoformat())
+    created_at:        str = field(default_factory=utc_now_iso)
     completed_at:      Optional[str] = None
 
     def needs_refinement(self) -> bool:

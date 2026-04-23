@@ -108,4 +108,4 @@ LangGraph, AutoGPT, and any MCP-compatible framework.
 
 ---
 
-*CIDF v1.2 | Apache 2.0 | Part of ultrathink-system*
+*CIDF v1.2 | Apache 2.0 | Part of orama-system*

@@ -22,10 +22,10 @@ jobs:
       - name: Create ZIP
         run: |
           cd ..
-          zip -r ultrathink-system-${{ github.ref_name }}.zip ultrathink-system/ \
+          zip -r orama-system-${{ github.ref_name }}.zip orama-system/ \
             --exclude "*/\.*" --exclude "*/__pycache__/*"
-          mv ultrathink-system-${{ github.ref_name }}.zip ultrathink-system/
+          mv orama-system-${{ github.ref_name }}.zip orama-system/
       - uses: softprops/action-gh-release@v2
         with:
-          files: ultrathink-system-${{ github.ref_name }}.zip
+          files: orama-system-${{ github.ref_name }}.zip
           generate_release_notes: true

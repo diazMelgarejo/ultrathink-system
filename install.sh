@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # install.sh
-# ultrathink System — Single-Agent + ECC/Codex Harness Installer
+# orama-system — Single-Agent + ECC/Codex Harness Installer
 # =================================================================
-# Installs the ultrathink skill to ~/.claude/skills/ultrathink-system/
+# Installs the orama skill to ~/.claude/skills/orama-system/
 # Works with Claude Code CLI, Codex/OpenCode, and ECC.
 #
 # Usage:
-#   curl -sL https://raw.githubusercontent.com/diazMelgarejo/ultrathink-system/main/install.sh | bash
+#   curl -sL https://raw.githubusercontent.com/diazMelgarejo/orama-system/main/install.sh | bash
 #   # or locally:
 #   bash install.sh
 #   bash install.sh --project     # install to ./.claude/skills/ instead of global
@@ -20,8 +20,8 @@ ok()   { echo -e "  ${GREEN}✓${RESET} $1"; }
 warn() { echo -e "  ${YELLOW}⚠${RESET}  $1"; }
 info() { echo -e "  ${BLUE}→${RESET} $1"; }
 
-SKILL_NAME="ultrathink-system"
-REPO_URL="https://github.com/diazMelgarejo/ultrathink-system"
+SKILL_NAME="orama-system"
+REPO_URL="https://github.com/diazMelgarejo/orama-system"
 BRANCH="main"
 SKILL_SOURCE="bin/skills"
 

@@ -1,6 +1,6 @@
 # ultrathink 5-Stage Methodology: Deep Dive
 
-## Reference Document for ultrathink-system
+## Reference Document for orama-system
 
 ---
 

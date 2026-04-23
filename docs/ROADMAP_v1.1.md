@@ -187,7 +187,7 @@ class SwarmOrchestrator:
 
 ### Required work:
 
-#### Tier 2 — MCP server pipeline (real Ollama backend, ultrathink-system side)
+#### Tier 2 — MCP server pipeline (real Ollama backend, orama-system side)
 
 - [ ] Extract Ollama pipeline into `bin/shared/ollama_client.py`
   - Move `_build_prompt()`, `_call_ollama()`, `_call_with_fallback()`, `_select_model()` out of `api_server.py`

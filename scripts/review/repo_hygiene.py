@@ -14,6 +14,10 @@ FORBIDDEN_TOKENS = (
     "Lawrence " + "Melgarejo",
     "Lawrence" + "@bettermind.ph",
 )
+IDENTITY_DOC_EXCEPTIONS = {
+    ".mailmap",
+    "docs/wiki/08-git-hygiene-and-branching.md",
+}
 PRIVATE_GENERATED_TRACKED = {".env", ".env.local", ".paths"}
 WORKFLOW_WRITE_MARKERS = (
     "softprops/action-gh-release",
@@ -62,6 +66,8 @@ def is_binary(path: Path) -> bool:
 def scan_forbidden_identity(root: Path, files: list[str]) -> list[str]:
     errors: list[str] = []
     for rel in files:
+        if rel in IDENTITY_DOC_EXCEPTIONS:
+            continue
         path = root / rel
         if not path.is_file() or is_binary(path):
             continue

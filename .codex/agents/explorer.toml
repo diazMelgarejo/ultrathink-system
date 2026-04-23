@@ -2,4 +2,4 @@
 [agent]
 role = "explorer"
 read_only = true
-description = "Read-only explorer role for ultrathink-system Codex multi-agent work."
+description = "Read-only explorer role for orama-system Codex multi-agent work."

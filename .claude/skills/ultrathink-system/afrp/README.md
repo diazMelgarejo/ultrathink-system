@@ -1,7 +1,7 @@
 # AFRP — Audience-First Response Protocol
 
 **Version:** 0.9.9.0
-**Status:** Active — mandatory pre-router gate for ultrathink-system
+**Status:** Active — mandatory pre-router gate for orama-system
 
 ## Quick Start
 

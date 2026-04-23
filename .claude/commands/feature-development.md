@@ -1,12 +1,12 @@
 ---
 name: feature-development
-description: Workflow command scaffold for feature-development in ultrathink-system.
+description: Workflow command scaffold for feature-development in orama-system.
 allowed_tools: ["Bash", "Read", "Write", "Grep", "Glob"]
 ---
 
 # /feature-development
 
-Use this when working on **feature-development** in `ultrathink-system`.
+Use this when working on **feature-development** in `orama-system`.
 
 ## Mother Skill
 

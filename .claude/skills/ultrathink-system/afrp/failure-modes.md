@@ -1,6 +1,6 @@
 # AFRP Failure Mode Taxonomy — Extended Reference
 
-**Parent skill:** [`afrp/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/bin/skills/afrp/SKILL.md)
+**Parent skill:** [`afrp/SKILL.md`](https://github.com/diazMelgarejo/orama-system/blob/main/bin/skills/afrp/SKILL.md)
 
 This document provides extended examples and recovery procedures for each AFRP failure mode. Load on demand when diagnosing a response quality issue.
 
@@ -16,7 +16,7 @@ This document provides extended examples and recovery procedures for each AFRP f
 
 **Example:**
 - Query: "Write guidance for Filipinos around the world"
-- Agent finds: Mac mini, RTX 3080, ultrathink-system, multi-agent architecture
+- Agent finds: Mac mini, RTX 3080, orama-system, multi-agent architecture
 - Output: Advice about building distributed AI systems for economic resilience
 - Actual audience need: Practical steps for OFW families managing remittances
 

@@ -1,4 +1,4 @@
-# Sync Analysis: ultrathink-system ↔ Perplexity-Tools
+# Sync Analysis: orama-system ↔ Perplexity-Tools
 
 **Date:** 2026-04-11 | **Version:** ultrathink v0.9.9.7 · PT v0.9.9.7
 
@@ -21,7 +21,7 @@
 | **SKILL.md cross-ref** | ✅ IN SYNC | PT SKILL.md references ultrathink routing methodology |
 | **ECC Tools integration** | ✅ IN SYNC | Both agree on ECC as Stage-4 sub-agent selector |
 | **autoresearch integration** | ✅ IN SYNC | Both reference uditgoenka/autoresearch equally |
-| **Cross-repo README links** | ✅ IN SYNC | PT README links to ultrathink-system; ultrathink README lists PT |
+| **Cross-repo README links** | ✅ IN SYNC | PT README links to orama-system; ultrathink README lists PT |
 | **CI/CD** | ✅ IN SYNC | Both repos have `.github/workflows/ci.yml` with pytest + lint |
 | **Tests** | ✅ RESOLVED | PT now has 6 test files (56+ tests); ultrathink has 86+ tests |
 | **routing.yml** | ✅ IN SYNC | PT `config/routing.yml` has `deep_reasoning` + `code_analysis` ultrathink routes |
@@ -38,7 +38,7 @@ Both repos agree on the 4-layer stack:
 
 ```
 Perplexity-Tools    ← top-level orchestrator, model selection, fallback chain
-ultrathink-system   ← reasoning engine, 5-stage methodology, CIDF
+orama-system   ← reasoning engine, 5-stage methodology, CIDF
 ECC Tools           ← Stage-4 parallel sub-agent auto-selection (up to 5x)
 autoresearch        ← research automation, idempotent sync
 ```
@@ -51,7 +51,7 @@ Aligned same day (2026-03-28). Releases match.
 
 ### 3. Cross-Reference Links — Complete
 
-- PT README → links ultrathink-system (GitHub URL + role description)
+- PT README → links orama-system (GitHub URL + role description)
 - ultrathink README → lists PT in "Compatible with" + architecture table
 - PERPLEXITY_BRIDGE.md → full integration doc with code examples
 
@@ -81,7 +81,7 @@ PT receives task → deep reasoning? → call ultrathink:8001
 - `test_cost_guard.py` — 16 tests: CostGuard budget, spend, alert, auto-reset, snapshot
 - `test_autoresearch_bridge.py` — 22 tests: SwarmState parsing, GPU lock, preflight (all SSH mocked)
 
-**ultrathink-system** `tests/` — 86+ tests, full CI coverage.
+**orama-system** `tests/` — 86+ tests, full CI coverage.
 
 ### 7. CI/CD — Both Repos Active
 
@@ -125,7 +125,7 @@ Architecture decision locked: ultrathink remains **stateless** with no Redis req
 
 **Implemented:** ultrathink `bin/skills/SKILL.md` updated (commit `ac292db`) with hardware-aware routing section referencing PT `hardware/SKILL.md`. `orchestrator/__init__.py` also updated with `__version__` for package metadata consistency.
 
-ultrathink-system's `bin/skills/SKILL.md` should reference PT's hardware profiles so that when running inside PT orchestration, ultrathink knows to respect PT's hardware-aware routing.
+orama-system's `bin/skills/SKILL.md` should reference PT's hardware profiles so that when running inside PT orchestration, ultrathink knows to respect PT's hardware-aware routing.
 
 **Suggested addition to ultrathink SKILL.md:**
 ```
@@ -141,7 +141,7 @@ When running inside Perplexity-Tools orchestration:
 
 **Implemented:** `pyproject.toml` added to Perplexity-Tools root (commit `5082db6`). Includes `[project]` metadata, `[project.optional-dependencies]` for dev/test, and `[tool.pytest.ini_options]` config. PT is now pip-installable as `perplexity-tools`.
 
-ultrathink-system is pip-installable. PT only has `requirements.txt`. Making PT installable enables consistent versioning and dependency pinning across the stack.
+orama-system is pip-installable. PT only has `requirements.txt`. Making PT installable enables consistent versioning and dependency pinning across the stack.
 
 ### OPT 3: Unified Integration Test
 
@@ -179,7 +179,7 @@ All critical integration gaps from the initial analysis have been addressed.
   - v0.9.8.0: rate limiting, Pydantic V2 validators, security hardening
 
 **P1 — RESOLVED:**
-- ✅ ultrathink-system `.env.example` updated with required API/model vars
+- ✅ orama-system `.env.example` updated with required API/model vars
 - ✅ Perplexity-Tools `.env.example` updated with `ULTRATHINK_ENDPOINT`, `ULTRATHINK_TIMEOUT`, `ULTRATHINK_ENABLED`
 - ✅ PT `config/routing.yml` now has `deep_reasoning` and `code_analysis` routes with ultrathink endpoint + fallback
 
@@ -211,19 +211,19 @@ Perplexity-Tools has added hardware-aware orchestration:
 ### Sync Impactdocs(sync): mark Recommended Next Action #2 DONE in SYNC_ANALYSIS.md
 
 **No Breaking Changes:**
-- ultrathink-system API contract unchanged
+- orama-system API contract unchanged
 - 4-layer architecture priority rule preserved
 - ultrathink remains stateless; PT owns dedup via `.state/agents.json`
 
 **Coordination Items (updated):**
 - [x] PERPLEXITY_BRIDGE.md updated with Hardware Abstraction Layer section
-- [x] ultrathink-system SKILL.md should reference hardware profiles from PT for optimal model selection
+- [x] orama-system SKILL.md should reference hardware profiles from PT for optimal model selection
 - [x] Consider adding hardware profile awareness to ultrathink's model selection if it needs to make autonomous model choices
 
 **Tests & CI (P2 items RESOLVED):**
 - ✅ PT now has `tests/` with 6 test files (56+ tests)
 - ✅ PT now has `.github/workflows/ci.yml`
-- ✅ ultrathink-system maintains 86+ tests + CI
+- ✅ orama-system maintains 86+ tests + CI
 
 ### Recommended Next Actions
 
@@ -233,7 +233,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 ### Architecture Decision Record: ADR-001 (v0.9.9.0)
 
-**Decision:** ultrathink-system remains fully hardware-agnostic at its core.
+**Decision:** orama-system remains fully hardware-agnostic at its core.
 
 **Context:** PT v0.9.5.0 added a Hardware Abstraction Layer (`hardware/SKILL.md`, `agent_launcher.py`) that detects mac-studio (MLX) vs win-rtx3080 (Ollama/CUDA) and assigns optimal models per hardware profile. The question arose: should ultrathink replicate this hardware detection internally?
 
@@ -281,7 +281,7 @@ Perplexity-Tools has added hardware-aware orchestration:
 
 ### Test Count
 - PT: 108 tests passing (up from 93 before v0.9.9.0 refinements).
-- ultrathink-system: unchanged, CI green.
+- orama-system: unchanged, CI green.
 
 ---
 

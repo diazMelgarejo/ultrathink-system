@@ -2,4 +2,4 @@
 [agent]
 role = "reviewer"
 read_only = true
-description = "Read-only reviewer role for ultrathink-system Codex multi-agent work."
+description = "Read-only reviewer role for orama-system Codex multi-agent work."

@@ -29,7 +29,7 @@ Rules:
 The only approved author identity for commits in the clean lineage is:
 
 ```text
-cyre <Lawrence@cyre.me> or Codex <codex@openai.com>
+cyre <Lawrence@cyre.me>
 ```
 
 Forbidden identity:
@@ -48,7 +48,7 @@ If this fails, do not commit. Correct your Git identity first:
 
 ```bash
 git config user.name "cyre"
-git config user.email "codex@openai.com"  # or Lawrence@cyre.me
+git config user.email "Lawrence@cyre.me"
 ```
 
 ---

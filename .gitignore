@@ -10,6 +10,7 @@ PR_BODY.md
 .env
 .env.local
 .paths
+.ecc
 dist/
 build/
 .venv*/

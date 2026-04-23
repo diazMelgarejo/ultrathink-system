@@ -337,3 +337,37 @@ both repos, and manual-port only reviewed intent.
 → [docs/recovery/2026-04-24-001-orama-history-recovery.md](recovery/2026-04-24-001-orama-history-recovery.md)
 → [docs/recovery/2026-04-24-002-commit-salvage-matrix.md](recovery/2026-04-24-002-commit-salvage-matrix.md)
 → [docs/recovery/2026-04-24-003-git-safety-guardrails.md](recovery/2026-04-24-003-git-safety-guardrails.md)
+
+---
+
+## 2026-04-24 — Claude — Salvage forensics + systematic rename + hygiene pipeline
+
+### What was learned
+
+1. **Forensics First, Action Last**: Gemini's corrupted commits involved not just metadata shifts but destructive configuration purges (stripping `.env`). Never rebase a corrupted tail blindly. Map the drift first.
+2. **Identity Restoration via `.mailmap`**: Git's identity corruption (unauthorized email/name) is best fixed at the repo level with a canonical `.mailmap` file, ensuring all historical logs attribute correctly without rewriting every commit object.
+3. **Systematic Rename Strategy**: Moving from `ultrathink-system` to `orama-system` required a multi-stage approach:
+    - `sed` batch for internal references (excluding historical docs and hygiene configs).
+    - `git mv` for folders and individual filenames.
+    - Automated hygiene check to verify no "active" legacy references remained.
+4. **Idempotent Setup Bug**: A `TypeError` in `setup_macos.py` (incorrect `_skip` signature) proved that even "no-op" dry-runs must be tested. Idempotent guards must accept optional detail strings consistently.
+
+### Decisions made
+
+- `orama-system` is the authoritative name and directory.
+- `scripts/review/repo_hygiene.py` is the primary guardrail for identity and naming consistency.
+- `docs/wiki/08-orama-system-sync-status.md` tracks the bridge state.
+
+### Prevention Rules
+
+1. Always run `python3 scripts/review/repo_hygiene.py` before committing a major refactor.
+2. Maintain `.mailmap` as the "Source of Truth" for author identity.
+3. Use `yyyy-mm-dd-NNN-summary` branch naming for salvage work.
+4. Verify `_skip` and `_log` signatures in setup scripts after any logging refactor.
+
+### Commits
+- `dc45482` — chore(rename): systematic migration to orama-system
+- `f43a9b2` — fix(setup): fix _skip call signature in setup_macos.py
+
+→ [docs/wiki/08-orama-system-sync-status.md](wiki/08-orama-system-sync-status.md)
+→ [scripts/review/repo_hygiene.py](scripts/review/repo_hygiene.py)

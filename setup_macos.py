@@ -57,7 +57,9 @@ def _log(sym: str, msg: str) -> None:
         return
     print(f"  [{sym}] {msg}", flush=True)
 
-def _skip(tag: str) -> None:    _log("·", f"skip  {tag}")
+def _skip(tag: str, detail: str = "") -> None:
+    _log("·", f"skip  {tag}" + (f" — {detail}" if detail else ""))
+
 def _applied(tag: str, detail: str = "") -> None:
     _fixes.append(tag)
     _log("✓", f"fixed {tag}" + (f" — {detail}" if detail else ""))

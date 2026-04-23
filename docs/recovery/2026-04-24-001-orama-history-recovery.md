@@ -13,7 +13,7 @@ configuration. Those commits are audit input only.
 
 ## Recovery Rules
 
-- New commits must use `cyre <Lawrence@cyre.me> or Codex <codex@openai.com>`.
+- New commits must use `cyre <Lawrence@cyre.me>`.
 - Do not cherry-pick or merge the polluted tail directly.
 - Manual-port only reviewed intent into new commits with precise conventional subjects.
 - Treat `.env` as private and ignored.

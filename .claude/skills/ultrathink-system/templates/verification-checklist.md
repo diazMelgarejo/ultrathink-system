@@ -113,4 +113,4 @@ Answer honestly. If "no" or "unsure" — keep refining.
 
 ---
 
-*Template: ultrathink-system v0.9.9.0 | Never trust visual alone. Always verify programmatically.*
+*Template: orama-system v0.9.9.0 | Never trust visual alone. Always verify programmatically.*

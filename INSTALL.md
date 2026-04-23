@@ -8,13 +8,13 @@
 ### Option A: Remote install (recommended)
 
 ```bash
-curl -sL https://raw.githubusercontent.com/diazMelgarejo/ultrathink-system/main/install.sh | bash
+curl -sL https://raw.githubusercontent.com/diazMelgarejo/orama-system/main/install.sh | bash
 ```
 
 ### Option B: Local install (if you've cloned the repo)
 
 ```bash
-cd ultrathink-system/
+cd orama-system/
 bash install.sh
 ```
 
@@ -22,20 +22,20 @@ bash install.sh
 
 ```bash
 cd your-project/
-bash /path/to/ultrathink-system/install.sh --project
+bash /path/to/orama-system/install.sh --project
 ```
 
 ### Option D: Manual install
 
 ```bash
 # Copy the skill folder to your Claude skills directory
-cp -R bin/skills ~/.claude/skills/ultrathink-system
+cp -R bin/skills ~/.claude/skills/orama-system
 ```
 
 ## What Gets Installed
 
 ```
-~/.claude/skills/ultrathink-system/
+~/.claude/skills/orama-system/
 ├── SKILL.md                              <- Master skill (5-stage + router + 6 directives)
 ├── afrp/
 │   └── SKILL.md                          <- Audience-First Response Protocol (pre-router gate)
@@ -66,7 +66,7 @@ cp -R bin/skills ~/.claude/skills/ultrathink-system
 
 ### Auto-Activation
 
-Claude detects the skill from `~/.claude/skills/ultrathink-system/SKILL.md` and loads it
+Claude detects the skill from `~/.claude/skills/orama-system/SKILL.md` and loads it
 when your query matches the description triggers:
 
 - "ultrathink", "think deeply", "5-stage"
@@ -108,13 +108,13 @@ from `references/`, `afrp/`, and `cidf/` — keeping your context window clean.
 
 ```bash
 # Create a task plan (Directive #1)
-bash ~/.claude/skills/ultrathink-system/scripts/create_task_plan.sh "Build auth system"
+bash ~/.claude/skills/orama-system/scripts/create_task_plan.sh "Build auth system"
 
 # Verify before marking done (Directive #4)
-python3 ~/.claude/skills/ultrathink-system/scripts/verify_before_done.py --task "Auth system" --dir .
+python3 ~/.claude/skills/orama-system/scripts/verify_before_done.py --task "Auth system" --dir .
 
 # Capture a lesson (Directive #3)
-python3 ~/.claude/skills/ultrathink-system/scripts/capture_lesson.py
+python3 ~/.claude/skills/orama-system/scripts/capture_lesson.py
 ```
 
 ## Uninstall
@@ -122,10 +122,10 @@ python3 ~/.claude/skills/ultrathink-system/scripts/capture_lesson.py
 ```bash
 bash install.sh --uninstall
 # or manually:
-rm -rf ~/.claude/skills/ultrathink-system
+rm -rf ~/.claude/skills/orama-system
 ```
 
 ## Source
 
-Distilled from [diazMelgarejo/ultrathink-system](https://github.com/diazMelgarejo/ultrathink-system)
+Distilled from [diazMelgarejo/orama-system](https://github.com/diazMelgarejo/orama-system)
 bin/skills/SKILL.md v0.9.9.7 -> unified install script v1.1.0

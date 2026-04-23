@@ -1,14 +1,14 @@
-# Instincts generated from https://github.com/diazMelgarejo/ultrathink-system
+# Instincts generated from https://github.com/diazMelgarejo/orama-system
 # Generated: 2026-03-29T00:00:00.000Z
 # Version: 2.0
 
 ---
-id: ultrathink-system-commit-length
+id: orama-system-commit-length
 trigger: "when writing a commit message"
 confidence: 0.6
 domain: git
 source: repo-analysis
-source_repo: https://github.com/diazMelgarejo/ultrathink-system
+source_repo: https://github.com/diazMelgarejo/orama-system
 ---
 
 # Ultrathink System Commit Length
@@ -23,12 +23,12 @@ Write moderate-length commit messages (~50 characters)
 - Based on 51 commits
 
 ---
-id: ultrathink-system-commit-prefix
+id: orama-system-commit-prefix
 trigger: "when writing a commit message"
 confidence: 0.9
 domain: git
 source: repo-analysis
-source_repo: https://github.com/diazMelgarejo/ultrathink-system
+source_repo: https://github.com/diazMelgarejo/orama-system
 ---
 
 # Ultrathink System Commit Prefix
@@ -44,12 +44,12 @@ Use conventional commit prefixes with optional scope: `feat`, `fix`, `refactor`,
 - Examples: `feat(api): ...`, `sec(api_server): ...`, `fix(api_server): ...`, `arch: ...`
 
 ---
-id: ultrathink-system-naming-files
+id: orama-system-naming-files
 trigger: "when creating a new file"
 confidence: 0.8
 domain: code-style
 source: repo-analysis
-source_repo: https://github.com/diazMelgarejo/ultrathink-system
+source_repo: https://github.com/diazMelgarejo/orama-system
 ---
 
 # Ultrathink System Naming Files
@@ -64,12 +64,12 @@ Use snake_case naming convention
 - Dominant pattern: snake_case
 
 ---
-id: ultrathink-system-import-relative
+id: orama-system-import-relative
 trigger: "when importing modules within a package"
 confidence: 0.75
 domain: code-style
 source: repo-analysis
-source_repo: https://github.com/diazMelgarejo/ultrathink-system
+source_repo: https://github.com/diazMelgarejo/orama-system
 ---
 
 # Ultrathink System Import Relative
@@ -84,12 +84,12 @@ Use relative imports for project files within the same package
 - Example: `from .core.content_insertion_framework import Task, Env, decide`
 
 ---
-id: ultrathink-system-pydantic-v2
+id: orama-system-pydantic-v2
 trigger: "when writing Pydantic validators"
 confidence: 0.9
 domain: code-style
 source: repo-analysis
-source_repo: https://github.com/diazMelgarejo/ultrathink-system
+source_repo: https://github.com/diazMelgarejo/orama-system
 ---
 
 # Ultrathink System Pydantic V2
@@ -104,12 +104,12 @@ Use `@field_validator` (Pydantic V2), not the deprecated `@validator`
 - Commit: `fix(api_server): migrate task_description validator to Pydantic V2`
 
 ---
-id: ultrathink-system-export-style
+id: orama-system-export-style
 trigger: "when exporting from a module"
 confidence: 0.7
 domain: code-style
 source: repo-analysis
-source_repo: https://github.com/diazMelgarejo/ultrathink-system
+source_repo: https://github.com/diazMelgarejo/orama-system
 ---
 
 # Ultrathink System Export Style
@@ -124,12 +124,12 @@ Prefer named exports
 - Dominant style: named
 
 ---
-id: ultrathink-system-workflow-feature-development
+id: orama-system-workflow-feature-development
 trigger: "when implementing a new feature"
 confidence: 0.9
 domain: workflow
 source: repo-analysis
-source_repo: https://github.com/diazMelgarejo/ultrathink-system
+source_repo: https://github.com/diazMelgarejo/orama-system
 ---
 
 # Ultrathink System Workflow Feature Development

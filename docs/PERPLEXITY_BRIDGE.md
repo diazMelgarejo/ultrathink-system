@@ -9,7 +9,7 @@ MCP-Optional transport is planned for v1.1 — see [MCP-Optional Transport (v1.1
 
 - `Perplexity-Tools` remains the top-level orchestrator and selects ultrathink
   behavior through `task_type` routing (`deep_reasoning`, `code_analysis`).
-- `ultrathink-system` serves the HTTP bridge via `api_server.py` (FastAPI, port 8001).
+- `orama-system` serves the HTTP bridge via `api_server.py` (FastAPI, port 8001).
 - The MCP server (`bin/mcp_servers/ultrathink_orchestration_server.py`)
   exposes the tool surface below but its `_solve()` is a stub — it does not yet
   call Ollama. All production traffic flows through the HTTP bridge.
@@ -55,7 +55,7 @@ Perplexity-Tools owns hardware-aware routing before tasks reach ultrathink.
 Run the current in-repo bridge with:
 
 ```bash
-cd ultrathink-system
+cd orama-system
 python bin/mcp_servers/ultrathink_orchestration_server.py
 ```
 
@@ -110,7 +110,7 @@ any MCP client will fall back to HTTP automatically.
 
 ### Implementation sequencing (Tier 2 before Tier 1)
 
-**Step 1 — Tier 2 (ultrathink-system, do this first):**
+**Step 1 — Tier 2 (orama-system, do this first):**
 Extract Ollama pipeline into `bin/shared/ollama_client.py`, then implement
 `_solve()` to call Ollama synchronously and return the full result inline —
 matching the HTTP synchronous contract, no polling loop needed.
@@ -133,7 +133,7 @@ Nothing breaks if work is paused or abandoned between tiers:
 
 ### Checklist links
 - Tier 1 TODO: [Perplexity-Tools/docs/ROADMAP_v1.1.md](../../perplexity-api/Perplexity-Tools/docs/ROADMAP_v1.1.md)
-- Tier 2 TODO: [ultrathink-system/docs/ROADMAP_v1.1.md](ROADMAP_v1.1.md)
+- Tier 2 TODO: [orama-system/docs/ROADMAP_v1.1.md](ROADMAP_v1.1.md)
 
 ---
 
@@ -154,12 +154,12 @@ implemented backup method rather than a future-only note.
 
 This bridge documentation assumes:
 
-- ultrathink-system >= v0.9.9.7
+- orama-system >= v0.9.9.7
 - Perplexity-Tools >= v0.9.0.0
 - Python >= 3.8
 
 ## Related Documentation
 
 - Perplexity-Tools: `SKILL.md`, `README.md`
-- ultrathink-system: `README.md`, `docs/api-reference.md`
+- orama-system: `README.md`, `docs/api-reference.md`
 - MCP runtime: `bin/mcp_servers/README.md`

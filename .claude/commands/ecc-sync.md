@@ -16,7 +16,7 @@ git pull origin main
 Then in Claude Code:
 
 ```
-/instinct-import .claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml
+/instinct-import .claude/homunculus/instincts/inherited/orama-system-instincts.yaml
 /instinct-status
 ```
 
@@ -31,6 +31,6 @@ git push origin main
 ## Related
 
 - Lessons file: `.claude/lessons/LESSONS.md`
-- Instincts YAML: `.claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml`
+- Instincts YAML: `.claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
 - Mother skill: `bin/skills/SKILL.md` (load this before and after any major merge)
 - Companion repo sync: run the same command in Perplexity-Tools after merging PT ECC PRs

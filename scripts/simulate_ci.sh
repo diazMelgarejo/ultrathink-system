@@ -37,7 +37,7 @@ banner() { echo -e "\n${BOLD}${1}${RESET}\n$(printf '─%.0s' {1..60})"; }
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-banner "🚀 CI Simulation — ultrathink-system"
+banner "🚀 CI Simulation — orama-system"
 echo "Mirrors: test.yml + ci.yml"
 echo "Mode: $([ "$QUICK" = true ] && echo "quick (tests only)" || echo "full")"
 

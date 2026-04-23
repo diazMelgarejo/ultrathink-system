@@ -4,7 +4,7 @@ Status: Active Design → Controlled Implementation
 
 Scope:
 - Perplexity-Tools (PT) = execution + orchestration layer
-- ultrathink-system (US)= cognition + learning + memory layer
+- orama-system (US)= cognition + learning + memory layer
 
 Core Principle:
 Less rules. Fewer changes. High signal only.
@@ -45,13 +45,13 @@ PT executes → UTS evaluates → UTS mutates → PT improves
 
 # 2. Tier Structure (Reordered for v1.2)
 
-## Tier 2 FIRST — ultrathink-system (Cognitive Core)
+## Tier 2 FIRST — orama-system (Cognitive Core)
 
 PT depends on this. Do not proceed to PT upgrades until stable.
 
 ---
 
-# 3. ultrathink-system v1.2 (Cognitive Engine)
+# 3. orama-system v1.2 (Cognitive Engine)
 
 ## 3.1 Memory System
 

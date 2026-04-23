@@ -2,7 +2,7 @@
 """
 setup_macos.py
 --------------
-Idempotent macOS pre-flight setup for ultrathink-system.
+Idempotent macOS pre-flight setup for orama-system.
 Safe to call on every start.sh run — every step skips itself when already done.
 
 What it does:

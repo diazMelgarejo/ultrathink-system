@@ -54,7 +54,7 @@ python bin/skills/scripts/verify_before_done.py --task "Build my feature"
 ## Repository Structure
 
 ```ascii
-ultrathink-system/
+orama-system/
 │
 ├── bin/skills/                   ← Install here for Claude Code / Cowork
 │   ├── SKILL.md                    ← Main intelligence layer (<500 lines)
@@ -102,9 +102,9 @@ ultrathink-system/
 
 | Platform | Directory |
 |---------|-----------|
-| Claude Code | `~/.claude/skills/ultrathink-system/` |
-| Cowork | `~/.cowork/skills/ultrathink-system/` |
-| ECC Tools | `~/.claude/skills/ultrathink-system/` |
+| Claude Code | `~/.claude/skills/orama-system/` |
+| Cowork | `~/.cowork/skills/orama-system/` |
+| ECC Tools | `~/.claude/skills/orama-system/` |
 | everything-claude-code | Drop into skills dir |
 
 ### Multi-Agent Network (Distributed / Parallel)
@@ -204,7 +204,7 @@ This skill follows the SKILL.md open standard and is compatible with
 
 ```bash
 # Add to your ECC profile
-cp -r bin/skills ~/.claude/skills/ultrathink-system
+cp -r bin/skills ~/.claude/skills/orama-system
 
 # Then use with any ECC-compatible harness
 ```

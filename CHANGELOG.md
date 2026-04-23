@@ -28,7 +28,7 @@
 - 7 Claude Code native subagent files at `.claude/agents/ultrathink-*.md`
 - Harness path map in `CLAUDE.md` (section 7) — source→runtime→global paths
 - CIDF v1.2 canonical source in `single_agent/cidf/`; install scripts copy idempotently
-- Reference docs in `.agents/skills/ultrathink-system/references/`
+- Reference docs in `.agents/skills/orama-system/references/`
 ### Changed
 - `install-multi-agent.sh`: deploy to `.claude/agents/` + `~/.claude/agents/` + platform dirs
 - `install-single-agent.sh`: harness path map; CIDF installed idempotently to all runtime locations

@@ -7,13 +7,13 @@
 
 ```bash
 # Claude Code
-cp -r . ~/.claude/skills/ultrathink-system
+cp -r . ~/.claude/skills/orama-system
 
 # Cowork
-cp -r . ~/.cowork/skills/ultrathink-system
+cp -r . ~/.cowork/skills/orama-system
 
 # Symlink (easier updates)
-ln -s $(pwd) ~/.claude/skills/ultrathink-system
+ln -s $(pwd) ~/.claude/skills/orama-system
 ```
 
 ## Activation

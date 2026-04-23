@@ -1,16 +1,16 @@
 ---
-name: ultrathink-system-conventions
-description: Development conventions and patterns for ultrathink-system. Python multi-agent system with conventional commits and ultrathink 5-stage methodology.
+name: orama-system-conventions
+description: Development conventions and patterns for orama-system. Python multi-agent system with conventional commits and ultrathink 5-stage methodology.
 ---
 
 # Ultrathink System Conventions
 
-> Generated from [diazMelgarejo/ultrathink-system](https://github.com/diazMelgarejo/ultrathink-system) on 2026-03-29
-> Mother skill: [`bin/skills/SKILL.md`](https://github.com/diazMelgarejo/ultrathink-system/blob/main/bin/skills/SKILL.md) (v0.9.9.3)
+> Generated from [diazMelgarejo/orama-system](https://github.com/diazMelgarejo/orama-system) on 2026-03-29
+> Mother skill: [`bin/skills/SKILL.md`](https://github.com/diazMelgarejo/orama-system/blob/main/bin/skills/SKILL.md) (v0.9.9.3)
 
 ## Overview
 
-This skill teaches Claude the development patterns and conventions used in ultrathink-system — a Python multi-agent system implementing the ultrathink 5-stage methodology with an AFRP pre-router gate, CIDF v1.2 content insertion framework, and a 7-agent execution network.
+This skill teaches Claude the development patterns and conventions used in orama-system — a Python multi-agent system implementing the ultrathink 5-stage methodology with an AFRP pre-router gate, CIDF v1.2 content insertion framework, and a 7-agent execution network.
 
 ## Mother Skill
 
@@ -38,7 +38,7 @@ Sub-skills (load on demand):
 ## Architecture
 
 ```
-ultrathink-system/
+orama-system/
 ├── bin/skills/SKILL.md      ← mother skill (v0.9.9.3)
 ├── bin/skills/afrp/         ← AFRP sub-skill
 ├── bin/skills/cidf/         ← CIDF v1.2 sub-skill

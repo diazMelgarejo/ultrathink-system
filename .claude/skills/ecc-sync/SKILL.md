@@ -12,7 +12,7 @@ git pull origin main
 
 Then in Claude Code:
 ```
-/instinct-import .claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml
+/instinct-import .claude/homunculus/instincts/inherited/orama-system-instincts.yaml
 /instinct-status
 ```
 

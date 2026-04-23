@@ -1,5 +1,5 @@
 # SKILL.md Architecture Guide
-**Reference Document for ultrathink-system**
+**Reference Document for orama-system**
 **Source**: Derived from "The Architectural Optimization of Agent Capability" technical analysis
 
 ---

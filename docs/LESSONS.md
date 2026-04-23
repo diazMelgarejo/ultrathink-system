@@ -1,4 +1,4 @@
-# Lessons — ultrathink-system
+# Lessons — orama-system
 
 > **Canonical path**: `docs/LESSONS.md`
 > **Previous path**: `.claude/lessons/LESSONS.md` (now redirects here)
@@ -17,8 +17,8 @@
 ## continuous-learning-v2
 
 This repo uses [continuous-learning-v2](https://github.com/affaan-m/everything-claude-code/tree/main/skills/continuous-learning-v2).
-Instincts: `.claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml`
-Import command: `/instinct-import .claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml`
+Instincts: `.claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
+Import command: `/instinct-import .claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
 
 ---
 

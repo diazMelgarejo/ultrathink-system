@@ -1,5 +1,5 @@
 # Core Operational Directives: Deep Dive
-**Reference Document for ultrathink-system**
+**Reference Document for orama-system**
 
 These six directives form the operational backbone of the ultrathink system.
 They're always active, regardless of which stage of the methodology you're in.

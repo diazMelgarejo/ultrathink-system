@@ -1,0 +1,6 @@
+# .mailmap — canonical identity normalization for orama-system
+# Map any unintended commits to the approved canonical identity.
+# Forbidden identity: Lawrence Melgarejo <Lawrence@bettermind.ph>
+# Approved identity: cyre <Lawrence@cyre.me>
+
+cyre <Lawrence@cyre.me> Lawrence Melgarejo <Lawrence@bettermind.ph>

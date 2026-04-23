@@ -1,5 +1,5 @@
 ---
-name: ultrathink-system
+name: orama-system
 description: >-
   Elegant problem-solving methodology with 5-stage process, AFRP pre-router gate,
   CIDF v1.2 content insertion framework, and 7-agent execution network. Activates
@@ -18,7 +18,7 @@ sub_skills:
     trigger: "Any content insertion, file write, paste, upload, or scripted output"
 ---
 
-# ultrathink System Skill
+# orama-system Skill
 
 > "Technology married with humanities yields solutions that make hearts sing.
 > Every solution should feel inevitable — so elegant it couldn't be done any other way."

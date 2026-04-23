@@ -11,13 +11,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 from typing import Any
-from datetime import datetime
 
 _SHARED_DIR = Path(__file__).resolve().parents[2] / "shared"
 if str(_SHARED_DIR) not in sys.path:
     sys.path.insert(0, str(_SHARED_DIR))
 
-from ultrathink_core import OptimizeFor, Stage, TaskState, ValidationResult, Verdict
+from ultrathink_core import OptimizeFor, Stage, TaskState, ValidationResult, Verdict, utc_now_iso
 
 
 STAGE_SEQUENCE = [
@@ -101,7 +100,7 @@ def advance_stage(
 
     if current_stage == Stage.CRYSTALLIZATION:
         state.current_stage = Stage.DONE
-        state.completed_at = state.completed_at or datetime.utcnow().isoformat()
+        state.completed_at = state.completed_at or utc_now_iso()
         return state
 
     return state

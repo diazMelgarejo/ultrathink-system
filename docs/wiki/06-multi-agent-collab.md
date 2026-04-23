@@ -40,6 +40,17 @@ All canonical locations that MUST be kept in sync:
 5. **Never hardcode ephemeral runtime values** — `127.0.0.1` as default in source code, real IP in `.env` only
 6. **One canonical source per constant** — if two files both define the same IP string, they will diverge
 
+## Clean-Lineage Git Hygiene
+
+For recovery branches and other high-risk Git work:
+
+1. Use dated branch names: `yyyy-mm-dd-001-brief-summary`
+2. Verify identity before commit: `bash scripts/git/check_identity.sh`
+3. Stash untracked files before branch surgery: `git stash push --include-untracked`
+4. Do not replay polluted commits directly; manual-port reviewed intent into clean commits
+5. Keep `.env`, `.env.local`, and `.paths` untracked; update example files instead
+6. Run `python scripts/review/repo_hygiene.py .` before opening a PR
+
 ---
 
 ## Orphan Branch Recovery
@@ -68,6 +79,7 @@ git checkout -b feature/xyz origin/main
 3. **One canonical source per constant** — if two files define the same value, they will diverge
 4. **Test isolation requires `autouse` fixtures** that restore module-level state after `importlib.reload()`
 5. **Commit body must name changed constants/APIs** — it's the only async communication channel between concurrent agents
+6. **Detailed salvage commit bodies are mandatory** — include `Why`, `What changed`, `Risk`, and `Verification`
 
 ---
 

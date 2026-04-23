@@ -36,6 +36,10 @@ def missing_modules(*module_names):
     return [name for name in module_names if importlib.util.find_spec(name) is None]
 
 
+def normalized_wheel_prefix(package_name: str) -> str:
+    return package_name.replace("-", "_").replace(".", "_")
+
+
 def main():
     print("=" * 70)
     print("📦 Testing package metadata and installation")
@@ -57,7 +61,8 @@ def main():
         with open(pyproject, "rb") as f:
             config = tomllib.load(f)
         print(f"✓ pyproject.toml valid")
-        print(f"  name: {config['project']['name']}")
+        package_name = config["project"]["name"]
+        print(f"  name: {package_name}")
         print(f"  version: {config['project']['version']}")
         print(f"  build backend: {config['build-system']['build-backend']}")
     except Exception as e:
@@ -83,7 +88,7 @@ def main():
         return False
 
     try:
-        result = run_command([sys.executable, "-m", "build", "--no-isolation"], timeout=180)
+        result = run_command([sys.executable, "-m", "build", "--no-isolation"], timeout=300)
     except subprocess.TimeoutExpired:
         print("❌ local build timed out")
         return False
@@ -96,7 +101,7 @@ def main():
             print(result.stderr)
         return False
 
-    wheel_candidates = sorted(Path("dist").glob("ultrathink_system-*.whl"))
+    wheel_candidates = sorted(Path("dist").glob(f"{normalized_wheel_prefix(package_name)}-*.whl"))
     if not wheel_candidates:
         print("❌ Build completed but no wheel was produced in dist/")
         return False

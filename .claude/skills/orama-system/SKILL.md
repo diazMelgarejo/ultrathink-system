@@ -330,7 +330,7 @@ When bumping version, update ALL of these atomically:
 | File | Field |
 |------|-------|
 | `pyproject.toml` | `version` |
-| `bin/skills/SKILL.md` | frontmatter `version:` |
+| `bin/orama-system/SKILL.md` | frontmatter `version:` |
 | `bin/config/agent_registry.json` | `"version"` |
 | `portal_server.py` | `VERSION` |
 | `bin/agents/*/agent.md` | `version:` frontmatter (each agent) |
@@ -339,7 +339,7 @@ When bumping version, update ALL of these atomically:
 
 **Legacy markers** (do not auto-bump — they pin a stable API baseline):
 - `api_server.py` / `bin/shared/*.py` / `bin/mcp_servers/*.py` → `0.9.9.2`
-- `bin/skills/config/`, templates, `afrp/README.md` → `0.9.9.0`
+- `bin/orama-system/config/`, templates, `afrp/README.md` → `0.9.9.0`
 
 **Current version: `0.9.9.6`** — do not bump until explicitly instructed.
 

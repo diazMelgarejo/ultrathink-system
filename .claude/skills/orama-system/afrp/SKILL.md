@@ -94,7 +94,7 @@ Scope: Implement CIDF-compliant content insertion for the form submission flow.
 
 ## Integration
 
-AFRP is the first step in `bin/skills/SKILL.md` Mode Router.
+AFRP is the first step in `bin/orama-system/SKILL.md` Mode Router.
 It runs before the complexity signals are evaluated.
 The router is compatible with Perplexity-Tools via the current bridge, OR via the implemented backup HTTP `/ultrathink` path.
 
@@ -102,4 +102,4 @@ The router is compatible with Perplexity-Tools via the current bridge, OR via th
 Query arrives → AFRP Gate → Mode Router → MODE 1 / 2 / 3
 ```
 
-*See `bin/skills/SKILL.md` for the full execution mode router.*
+*See `bin/orama-system/SKILL.md` for the full execution mode router.*

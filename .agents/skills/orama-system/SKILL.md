@@ -6,7 +6,7 @@ description: Development conventions and patterns for orama-system. Python multi
 # The ὅραμα System Conventions
 
 > Generated from [diazMelgarejo/orama-system](https://github.com/diazMelgarejo/orama-system) on 2026-03-29
-> Mother skill: [`bin/skills/SKILL.md`](https://github.com/diazMelgarejo/orama-system/blob/main/bin/skills/SKILL.md) (v0.9.9.7)
+> Mother skill: [`bin/orama-system/SKILL.md`](https://github.com/diazMelgarejo/orama-system/blob/main/bin/orama-system/SKILL.md) (v0.9.9.7)
 
 ## Overview
 
@@ -14,12 +14,12 @@ This skill teaches Claude the development patterns and conventions used in orama
 
 ## Mother Skill
 
-The canonical system skill lives at `bin/skills/SKILL.md` (since v0.9.9.7). Always load it when working on this repository for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
+The canonical system skill lives at `bin/orama-system/SKILL.md` (since v0.9.9.7). Always load it when working on this repository for the full ultrathink methodology, AFRP gate, CIDF rules, and 6 directives.
 
 Sub-skills (load on demand):
 
-- `bin/skills/afrp/SKILL.md` — Audience-First Response Protocol (mandatory pre-router gate)
-- `bin/skills/cidf/SKILL.md` — Content Insertion Decision Framework v1.2
+- `bin/orama-system/afrp/SKILL.md` — Audience-First Response Protocol (mandatory pre-router gate)
+- `bin/orama-system/cidf/SKILL.md` — Content Insertion Decision Framework v1.2
 
 ## Tech Stack
 
@@ -40,9 +40,9 @@ Sub-skills (load on demand):
 
 ```
 orama-system/
-├── bin/skills/SKILL.md      ← mother skill (v0.9.9.7)
-├── bin/skills/afrp/         ← AFRP sub-skill
-├── bin/skills/cidf/         ← CIDF v1.2 sub-skill
+├── bin/orama-system/SKILL.md      ← mother skill (v0.9.9.7)
+├── bin/orama-system/afrp/         ← AFRP sub-skill
+├── bin/orama-system/cidf/         ← CIDF v1.2 sub-skill
 ├── bin/                   ← unified package (agents/, mcp_servers/, shared/)
 ├── api_server.py              ← POST /ultrathink (port 8001, stateless)
 └── tests/
@@ -50,7 +50,7 @@ orama-system/
 
 ## Best Practices
 
-- Load `bin/skills/SKILL.md` before any significant change
+- Load `bin/orama-system/SKILL.md` before any significant change
 - Run AFRP gate before generating non-trivial output
 - Use CIDF `decide()` before any content insertion
 - Use `@field_validator` (Pydantic V2), never `@validator`

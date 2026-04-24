@@ -80,4 +80,4 @@ Output schema addition:
 }
 ```
 
-**Reference**: `bin/skills/cidf/core/content_insertion_policy.json` (v1.2)
+**Reference**: `bin/orama-system/cidf/core/content_insertion_policy.json` (v1.2)

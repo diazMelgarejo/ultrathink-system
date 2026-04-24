@@ -21,8 +21,8 @@ allowed-tools: bash, file-operations
 ## Quick API
 
 ```python
-from bin.skills.cidf.core.content_insertion_framework import Task, Env, decide
-from bin.skills.cidf.linter.policy_linter import lint_strict
+from cidf.core.content_insertion_framework import Task, Env, decide
+from cidf.linter.policy_linter import lint_strict
 
 decision = decide(task, env)      # always starts at rank 1
 lint_strict(decision, task, env)  # raises LintError on LINT-001–005

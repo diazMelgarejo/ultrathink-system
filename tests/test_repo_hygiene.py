@@ -109,6 +109,28 @@ def test_markdown_size_warnings_for_changed_files(tmp_path):
     ]
 
 
+def test_stale_skill_path_refs_are_blocked_in_hidden_tracked_files(tmp_path):
+    repo_hygiene = load_repo_hygiene()
+    workflow_dir = tmp_path / ".github" / "workflows"
+    workflow_dir.mkdir(parents=True)
+    workflow = workflow_dir / "ci.yml"
+    stale_path = "bin/" + "skills"
+    stale_module = "bin" + ".skills"
+    workflow.write_text(f"grep -q Quick Start {stale_path}/SKILL.md\n", encoding="utf-8")
+    package_check = tmp_path / "test-package-install.py"
+    package_check.write_text(f"from {stale_module}.cidf.core import x\n", encoding="utf-8")
+
+    errors = repo_hygiene.check_stale_skill_path_refs(
+        tmp_path,
+        [".github/workflows/ci.yml", "test-package-install.py"],
+    )
+
+    assert errors == [
+        f"stale skill path/module reference in tracked file: .github/workflows/ci.yml -> {stale_path}",
+        f"stale skill path/module reference in tracked file: test-package-install.py -> {stale_module}",
+    ]
+
+
 def test_repo_hygiene_script_runs_clean():
     result = subprocess.run(
         [sys.executable, "scripts/review/repo_hygiene.py", "."],

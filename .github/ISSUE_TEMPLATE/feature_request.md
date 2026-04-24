@@ -11,7 +11,7 @@ labels: enhancement
 [How would you like ultrathink to solve it?]
 
 ## Which Component
-- [ ] SKILL.md (bin/skills)
+- [ ] SKILL.md (bin/orama-system)
 - [ ] References documentation
 - [ ] Scripts (verify/capture/plan)
 - [ ] Templates

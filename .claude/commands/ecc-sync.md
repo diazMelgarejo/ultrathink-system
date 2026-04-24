@@ -32,5 +32,5 @@ git push origin main
 
 - Lessons file: `.claude/lessons/LESSONS.md`
 - Instincts YAML: `.claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
-- Mother skill: `bin/skills/SKILL.md` (load this before and after any major merge)
+- Mother skill: `bin/orama-system/SKILL.md` (load this before and after any major merge)
 - Companion repo sync: run the same command in Perplexity-Tools after merging PT ECC PRs

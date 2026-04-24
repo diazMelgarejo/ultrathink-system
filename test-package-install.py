@@ -141,9 +141,10 @@ def main():
                     str(python_bin),
                     "-c",
                     (
-                        "import bin; "
+                        "import bin, pathlib, sys; "
+                        "sys.path.insert(0, str(pathlib.Path(bin.__file__).parent / 'orama-system')); "
                         "from bin.shared.ultrathink_core import Stage, TaskState; "
-                        "from bin.skills.cidf.core.content_insertion_framework import decide; "
+                        "from cidf.core.content_insertion_framework import decide; "
                         "print('imports ok')"
                     ),
                 ],
@@ -159,7 +160,7 @@ def main():
             print("✓ import bin")
             
             print("✓ import bin.shared.ultrathink_core")
-            print("✓ import bin.skills.cidf.core.content_insertion_framework")
+            print("✓ import cidf.core.content_insertion_framework")
     except subprocess.TimeoutExpired:
         print("❌ install or import verification timed out")
         return False

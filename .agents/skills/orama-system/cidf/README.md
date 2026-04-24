@@ -77,10 +77,10 @@ print(result.status)  # "success" or "failed"
 
 ```bash
 # Python (from repo root)
-pytest bin/skills/cidf/tests/test_conformance.py -v
+pytest bin/orama-system/cidf/tests/test_conformance.py -v
 
 # TypeScript (requires Node + jest)
-cd bin/skills/cidf && npx jest tests/conformance.test.ts
+cd bin/orama-system/cidf && npx jest tests/conformance.test.ts
 ```
 
 ---
@@ -101,7 +101,7 @@ cd bin/skills/cidf && npx jest tests/conformance.test.ts
 
 The CIDF is triggered during **Stage 2 (Visionary Architecture)** whenever a task
 involves content or data insertion. It enforces the Content Insertion principle from
-`bin/skills/SKILL.md` with executable code instead of just documentation.
+`bin/orama-system/SKILL.md` with executable code instead of just documentation.
 
 The `content_insertion_policy.json` is machine-parseable by LangChain, CrewAI,
 LangGraph, AutoGPT, and any MCP-compatible framework.

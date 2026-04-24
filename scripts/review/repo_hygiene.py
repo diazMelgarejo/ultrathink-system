@@ -60,6 +60,10 @@ WORKFLOW_WRITE_MARKERS = (
     "git push",
 )
 LEGACY_NAME = "ultrathink-system"
+STALE_SKILL_REF_TOKENS = (
+    "bin/" + "skills",
+    "bin" + ".skills",
+)
 HISTORICAL_HINTS = (
     "previous identity",
     "renamed",
@@ -259,6 +263,23 @@ def check_workflow_permissions(root: Path) -> list[str]:
     return errors
 
 
+def check_stale_skill_path_refs(root: Path, files: list[str]) -> list[str]:
+    errors: list[str] = []
+    for rel in files:
+        path = root / rel
+        if not path.is_file() or is_binary(path):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for token in STALE_SKILL_REF_TOKENS:
+            if token in text:
+                errors.append(f"stale skill path/module reference in tracked file: {rel} -> {token}")
+                break
+    return errors
+
+
 def classify_legacy_name_refs(root: Path, files: list[str]) -> tuple[int, int]:
     active = 0
     historical = 0
@@ -312,6 +333,7 @@ def main() -> int:
     errors.extend(check_generated_artifact_tracking(files))
     errors.extend(check_ecc(root, files))
     errors.extend(check_workflow_permissions(root))
+    errors.extend(check_stale_skill_path_refs(root, files))
     errors.extend(check_git_internal_junk(root))
     warnings = check_markdown_size_warnings(root, files)
     active_legacy, historical_legacy = classify_legacy_name_refs(root, files)

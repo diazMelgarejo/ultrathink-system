@@ -206,7 +206,7 @@ A batch `sed -i` to replace old `multi_agent\.` import-style path references wit
   - `chk_f tests/test_multi_agent.py` → `chk_f tests/test_bin.py` (wrong — file does not exist)
   - `pytest tests/test_multi_agent.py` → `pytest tests/test_bin.py` (docs reference broken)
   - `test_multi_agent.py` docstring self-reference → `test_bin.py`
-- The same issue had previously hit `single_agent\.` → `test_bin.skills.py` in README
+- The same issue had previously hit `single_agent\.` → `test_bin_orama_system.py` in README
 - These substitutions introduced CI failures: `chk_f` could not find `test_bin.py`
 
 Root cause: **the pattern was designed for Python import statements** (`from multi_agent.foo`) but was applied broadly — it also matched shell commands, docstrings, and doc prose referencing actual filenames.
@@ -263,7 +263,7 @@ what broke, what worked, and the protocol we are encoding for all future agents.
 | File | Field | Status |
 |------|-------|--------|
 | `pyproject.toml:7` | `version = "0.9.9.7"` | ✓ current |
-| `bin/skills/SKILL.md:10` | `version: 0.9.9.7` | ✓ current |
+| `bin/orama-system/SKILL.md:10` | `version: 0.9.9.7` | ✓ current |
 | `bin/config/agent_registry.json:2` | `"version": "0.9.9.7"` | ✓ current |
 | `portal_server.py:26` | `VERSION = "0.9.9.7"` | ✓ current |
 | `bin/agents/*/agent.md:4` | `version: 0.9.9.7` | ✓ current (all 7 agents) |
@@ -272,7 +272,7 @@ what broke, what worked, and the protocol we are encoding for all future agents.
 
 Legacy markers (stable, do not auto-bump):
 - `api_server.py`, `bin/shared/*.py`, `bin/mcp_servers/*.py` → `0.9.9.2`
-- `bin/skills/config/`, `afrp/README.md`, `templates/` → `0.9.9.0`
+- `bin/orama-system/config/`, `afrp/README.md`, `templates/` → `0.9.9.0`
 
 #### Perplexity-Tools (PT) — see PT LESSONS.md for full table
 
@@ -339,7 +339,7 @@ git grep "<<<<<<< \|>>>>>>> " -- '*.py' '*.md' '*.yml'
 
 ### 5. Multi-Agent Synchronization Protocol
 
-Key principles (see also `bin/skills/SKILL.md` — Multi-Agent Collaboration Protocol section):
+Key principles (see also `bin/orama-system/SKILL.md` — Multi-Agent Collaboration Protocol section):
 
 1. **Read LESSONS.md first** — mandatory, already in CLAUDE.md
 2. **Scope claim** — append `[IN PROGRESS]` marker before touching files

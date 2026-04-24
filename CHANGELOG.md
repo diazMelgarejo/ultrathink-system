@@ -3,16 +3,16 @@
 ## [0.9.9.4] - 2026-04-11
 ### Changed
 - Version: synchronized active package and skill metadata to 0.9.9.4
-- Docs: `README.md`, `CLAUDE.md`, `docs/PERPLEXITY_BRIDGE.md`, and `docs/SYNC_ANALYSIS.md` now reference the active `bin/skills/SKILL.md` path and current version
+- Docs: `README.md`, `CLAUDE.md`, `docs/PERPLEXITY_BRIDGE.md`, and `docs/SYNC_ANALYSIS.md` now reference the active `bin/orama-system/SKILL.md` path and current version
 - Docs: `portal_server.py` and `network_autoconfig.py` are now documented as active LAN/runtime helpers
 - Runtime defaults: LAN helper defaults now align with the canonical Mac/Win LM Studio endpoints used by Perplexity-Tools
 - Historical `0.9.9.0` and `1.0.0-rc` notes preserved below for context
 
 ## [0.9.9.3] - 2026-04-07
 ### Changed
-- Docs: all `single_agent/` path references updated to `bin/skills/` across README, docs/, .claude/, .agents/, .codex/, .github/, bin/skills/ skills files
+- Docs: all `single_agent/` path references updated to `bin/orama-system/` across README, docs/, .claude/, .agents/, .codex/, .github/, bin/orama-system/ skills files
 - Docs: `install-single-agent.sh` references updated to `install.sh`
-- Docs: all `single-agent` concept labels updated to `bin/skills`
+- Docs: all `single-agent` concept labels updated to `bin/orama-system`
 - Version: synchronized to 0.9.9.3 across all agent.md frontmatter, SKILL.md, CLAUDE.md, INSTALL.md
 - CHANGELOG.md: historical entries for pre-0.9.9.3 versions intentionally preserved as-is
 
@@ -28,7 +28,7 @@
 - 7 Claude Code native subagent files at `.claude/agents/ultrathink-*.md`
 - Harness path map in `CLAUDE.md` (section 7) — source→runtime→global paths
 - CIDF v1.2 canonical source in `single_agent/cidf/`; install scripts copy idempotently
-- Reference docs in `.agents/skills/ultrathink-system/references/`
+- Reference docs in `.agents/skills/orama-system/references/`
 ### Changed
 - `install-multi-agent.sh`: deploy to `.claude/agents/` + `~/.claude/agents/` + platform dirs
 - `install-single-agent.sh`: harness path map; CIDF installed idempotently to all runtime locations
@@ -40,7 +40,7 @@
 ---
 
 
-All notable changes to ultrathink System are documented here.
+All notable changes to The ὅραμα System are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 Versioning follows [Semantic Versioning](https://semver.org/).
 

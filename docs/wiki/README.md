@@ -1,4 +1,4 @@
-# ultrathink-system — Knowledge Wiki
+# orama-system — Knowledge Wiki
 
 > **TL;DR for agents:** Read `docs/LESSONS.md` for the session log. Read pages here for deep dives.
 > For quick behavioral rules: **[SKILL.md →](../../SKILL.md)**

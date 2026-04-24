@@ -2,13 +2,15 @@
 """
 setup_macos.py
 --------------
-Idempotent macOS pre-flight setup for ultrathink-system.
+Idempotent macOS pre-flight setup for orama-system.
 Safe to call on every start.sh run — every step skips itself when already done.
 
 What it does:
   1. Create ~/.local/bin  (user-writable binary dir in PATH)
   2. Add ~/.local/bin to PATH in ~/.zshrc (if not already present)
   3. Validate and repair ~/.openclaw/openclaw.json (models arrays)
+  5. Install ~/.openclaw/scripts/discover.py (LM Studio auto-discovery hub)
+  6. Guard /self-discovery skill against version downgrade; announce on startup
   4. Patch ~/.alphaclaw/.../alphaclaw.js — 6 macOS compatibility fixes:
        a) git auth shim dest  → ~/.local/bin/git      (not /usr/local/bin/git)
        b) git auth shim mkdir → add mkdirSync guard
@@ -55,7 +57,9 @@ def _log(sym: str, msg: str) -> None:
         return
     print(f"  [{sym}] {msg}", flush=True)
 
-def _skip(tag: str) -> None:    _log("·", f"skip  {tag}")
+def _skip(tag: str, detail: str = "") -> None:
+    _log("·", f"skip  {tag}" + (f" — {detail}" if detail else ""))
+
 def _applied(tag: str, detail: str = "") -> None:
     _fixes.append(tag)
     _log("✓", f"fixed {tag}" + (f" — {detail}" if detail else ""))
@@ -410,6 +414,64 @@ def step_patch_alphaclaw() -> None:
         )
 
 
+
+# ── step 5: install discover.py hub ──────────────────────────────────────────
+
+OPENCLAW_SCRIPTS = HOME / ".openclaw" / "scripts"
+DISCOVER_HUB_SRC = Path(__file__).parent / "scripts" / "discover.py"
+DISCOVER_HUB_DST = OPENCLAW_SCRIPTS / "discover.py"
+
+def step_install_discover_hub() -> None:
+    """Copy scripts/discover.py to ~/.openclaw/scripts/discover.py (idempotent)."""
+    if not DISCOVER_HUB_SRC.exists():
+        _warn("discover hub", f"source not found at {DISCOVER_HUB_SRC} — skipping install")
+        return
+    src_content = DISCOVER_HUB_SRC.read_bytes()
+    if DISCOVER_HUB_DST.exists() and DISCOVER_HUB_DST.read_bytes() == src_content:
+        _skip("discover hub", f"already up-to-date at {DISCOVER_HUB_DST}")
+        return
+    if DRY_RUN:
+        print(f"  [dry-run] would install {DISCOVER_HUB_SRC} → {DISCOVER_HUB_DST}", flush=True)
+        return
+    import shutil
+    OPENCLAW_SCRIPTS.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(DISCOVER_HUB_SRC, DISCOVER_HUB_DST)
+    DISCOVER_HUB_DST.chmod(0o755)
+    _applied("discover hub", f"installed to {DISCOVER_HUB_DST}")
+
+
+# ── step 6: self-discovery skill version guard ────────────────────────────────
+
+SELF_DISC_SKILL = Path(__file__).parent / ".claude" / "skills" / "self-discovery" / "SKILL.md"
+SELF_DISC_VERSION = "0.9.9.7"
+
+def _skill_version(path: Path) -> tuple:
+    """Parse `version: X.Y.Z` from SKILL.md frontmatter. Returns (0,0,0) if absent."""
+    try:
+        for line in path.read_text().splitlines():
+            s = line.strip()
+            if s.startswith("version:"):
+                v = s.split(":", 1)[1].strip().strip('"\' ')
+                return tuple(int(x) for x in v.split("."))
+    except Exception:
+        pass
+    return (0, 0, 0)
+
+def step_self_discovery_skill() -> None:
+    """Announce /self-discovery and guard against version downgrade."""
+    bundled = tuple(int(x) for x in SELF_DISC_VERSION.split("."))
+    if SELF_DISC_SKILL.exists():
+        installed = _skill_version(SELF_DISC_SKILL)
+        v_str = ".".join(str(x) for x in installed)
+        if installed >= bundled:
+            _skip("self-discovery skill", f"installed v{v_str} >= bundled v{SELF_DISC_VERSION}")
+            return
+        _warn("self-discovery skill",
+              f"installed v{v_str} < bundled v{SELF_DISC_VERSION} — update SKILL.md from GitHub")
+        return
+    _warn("self-discovery skill",
+          f"not found at {SELF_DISC_SKILL} — clone the full repo or restore from GitHub")
+
 # ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> int:
@@ -420,6 +482,8 @@ def main() -> int:
     step_path_entry()
     step_openclaw_json()
     step_patch_alphaclaw()
+    step_install_discover_hub()
+    step_self_discovery_skill()
 
     if _fixes:
         print(f"  setup_macos: applied {len(_fixes)} fix(es): {', '.join(_fixes)}", flush=True)

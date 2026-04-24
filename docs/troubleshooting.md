@@ -4,9 +4,9 @@
 
 **Symptom**: "ultrathink this" does nothing different.
 **Solutions**:
-1. Verify installation: `ls ~/.claude/skills/ultrathink-system/SKILL.md`
+1. Verify installation: `ls ~/.claude/skills/orama-system/SKILL.md`
 2. Check YAML frontmatter: no tabs, no trailing spaces on `---` lines
-3. Use explicit trigger: "Apply the ultrathink system to: [your task]"
+3. Use explicit trigger: "Apply The ὅραμα System to: [your task]"
 4. Check Claude version supports Skills (Claude Code, Cowork, or compatible platform)
 
 ---

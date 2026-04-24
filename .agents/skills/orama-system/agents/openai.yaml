@@ -1,0 +1,6 @@
+interface:
+  display_name: "Ultrathink System"
+  short_description: "Ultrathink 5-stage methodology, AFRP gate, CIDF v1.2, and multi-agent patterns for orama-system"
+  default_prompt: "Load single_agent/SKILL.md (the mother skill, v0.9.9.0) and follow the ultrathink architecture, AFRP gate, CIDF rules, and conventional commit conventions for this repository."
+policy:
+  allow_implicit_invocation: true

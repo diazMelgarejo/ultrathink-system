@@ -1,4 +1,4 @@
-# .paths — machine-local path configuration for ultrathink start.sh
+# .paths — machine-local path configuration for orama-system start.sh
 # This file is gitignored. Copy to .paths and edit for your install.
 # Auto-generated on first ./start.sh run using git-based discovery.
 #
@@ -9,8 +9,9 @@
 #   - PT_PYTHON: python binary with PT's deps installed (its .venv preferred)
 #   - US_PYTHON: python binary with US's deps installed (its .venv preferred)
 #   - All paths are absolute. Env vars and ~ are NOT expanded here.
+#   - This file is documentation only; .paths is generated/runtime-local.
 
 # Quote paths that contain spaces (common on macOS with "Terminal xCode" etc.)
 # PT_DIR="/Users/you/projects/Perplexity-Tools"
 # PT_PYTHON="/Users/you/projects/Perplexity-Tools/.venv/bin/python"
-# US_PYTHON="/Users/you/projects/ultrathink-system/.venv/bin/python"
+# US_PYTHON="/Users/you/projects/orama-system/.venv/bin/python"

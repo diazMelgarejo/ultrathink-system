@@ -1,4 +1,4 @@
-# ultrathink-system Agent Skills
+# orama-system Agent Skills
 
 > **For agents:** This file is your behavioral ruleset for this repo. Read it before making any change. Rules here are derived from real bugs — every "never" has a story behind it.
 >
@@ -128,8 +128,11 @@ When two agents may be working simultaneously:
 4. **Commit body must name changed constants/APIs** — it's the only async channel between agents
 5. **Never hardcode LAN IPs in source defaults** — `127.0.0.1` in code, real IPs in `.env` only
 6. **Branch from `origin/main`** — never from a detached HEAD or agent-created branch
+7. **Use dated salvage branches** for risky Git work: `yyyy-mm-dd-001-brief-summary`
+8. **Confirm Git identity before committing**: `bash scripts/git/check_identity.sh`
+9. **Stash untracked files before branch surgery**: `git stash push --include-untracked -m "preserve work before <operation>"`
 
-Version registry: **current version is `0.9.9.7`**. Never bump without explicit user instruction. All 7 canonical locations are listed in [docs/wiki/06-multi-agent-collab.md](docs/wiki/06-multi-agent-collab.md).
+Version registry: **current version is `0.9.9.7`**. Never bump without explicit user instruction. All canonical locations are listed in [docs/wiki/06-multi-agent-collab.md](docs/wiki/06-multi-agent-collab.md).
 
 → [docs/wiki/06-multi-agent-collab.md](docs/wiki/06-multi-agent-collab.md)
 
@@ -145,6 +148,18 @@ Version registry: **current version is `0.9.9.7`**. Never bump without explicit 
 6. **`_persist_detected_ips()`** after successful probes — config becomes self-correcting
 
 → [docs/wiki/07-startup-ip-detection.md](docs/wiki/07-startup-ip-detection.md)
+
+---
+
+## Skill 9 — Markdown Redirect & Size Rules
+
+Before editing any `*.md` file:
+
+1. Read `docs/LESSONS.md` and `docs/wiki/README.md` when the edit touches repo guidance, lessons, or moved docs.
+2. Keep links relative and GitHub-renderable. Do not write absolute filesystem links into tracked markdown.
+3. Preserve redirect/canonical-path notes when moving or renaming markdown.
+4. Warn and ask the user before adding a new markdown file over 200 lines or growing an existing markdown file over 500 lines. Suggest moving details to `references/`, `docs/wiki/`, or a sub-skill.
+5. Run `python3 scripts/review/repo_hygiene.py .` before committing markdown.
 
 ---
 

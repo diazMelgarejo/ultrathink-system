@@ -61,7 +61,7 @@ jobs:
         run: |
           pip install -q ".[test]"
           python -c "from bin.shared.ultrathink_core import Stage, TaskState; print('✓ ultrathink_core imports OK')"
-          python -c "from bin.skills.cidf.core.content_insertion_framework import decide; print('✓ CIDF imports OK')" || true
+          python -c "import bin, pathlib, sys; sys.path.insert(0, str(pathlib.Path(bin.__file__).parent / 'orama-system')); from cidf.core.content_insertion_framework import decide; print('✓ CIDF imports OK')"
 
   build:
     needs: [test, lint]
@@ -101,7 +101,7 @@ jobs:
 
       - name: Verify SKILL.md frontmatter version is not 1.x (no premature major bump)
         run: |
-          VERSION=$(grep '^version:' bin/skills/SKILL.md | head -1 | awk '{print $2}')
+          VERSION=$(grep '^version:' bin/orama-system/SKILL.md | head -1 | awk '{print $2}')
           echo "SKILL.md version: $VERSION"
           MAJOR=$(echo "$VERSION" | cut -d. -f1)
           if [ "$MAJOR" -gt 1 ]; then
@@ -112,15 +112,15 @@ jobs:
 
       - name: Verify Quick Start section exists
         run: |
-          if ! grep -q "Quick Start" bin/skills/SKILL.md; then
-            echo "FAIL: Quick Start section missing from bin/skills/SKILL.md"
+          if ! grep -q "Quick Start" bin/orama-system/SKILL.md; then
+            echo "FAIL: Quick Start section missing from bin/orama-system/SKILL.md"
             exit 1
           fi
           echo "OK: Quick Start section present"
 
       - name: Verify mcp-ultrathink-openclaw in allowed-tools
         run: |
-          if ! grep -q "mcp-ultrathink-openclaw" bin/skills/SKILL.md; then
+          if ! grep -q "mcp-ultrathink-openclaw" bin/orama-system/SKILL.md; then
             echo "FAIL: mcp-ultrathink-openclaw missing from allowed-tools in SKILL.md"
             exit 1
           fi

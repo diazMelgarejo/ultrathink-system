@@ -15,6 +15,6 @@ or directly as a Claude Code subagent from `.claude/agents/`.
 
 ## References
 
-- Skill framework: `bin/skills/SKILL.md`
-- CIDF: `bin/skills/cidf/FRAMEWORK.md`
+- Skill framework: `bin/orama-system/SKILL.md`
+- CIDF: `bin/orama-system/cidf/FRAMEWORK.md`
 - Config: `bin/config/agent_registry.json`

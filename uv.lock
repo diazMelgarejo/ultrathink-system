@@ -12,7 +12,7 @@ wheels = [
 ]
 
 [[package]]
-name = "ultrathink-system"
+name = "orama-system"
 version = "2.0.0"
 source = { editable = "." }
 dependencies = [

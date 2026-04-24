@@ -59,4 +59,4 @@ blueprint["content_insertion"]["cidf_decision"] = decision
 ```
 
 **The CIDF decision is made once in Stage 2 — all executor agents inherit it.**
-**Reference**: `bin/skills/cidf/FRAMEWORK.md` (v1.2)
+**Reference**: `bin/orama-system/cidf/FRAMEWORK.md` (v1.2)

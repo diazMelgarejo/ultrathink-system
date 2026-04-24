@@ -58,4 +58,4 @@ Include in the assumptions ledger:
 - Whether automation gate was open or closed
 - Any LINT violations caught and resolved
 
-**Reference**: `bin/skills/cidf/FRAMEWORK.md`
+**Reference**: `bin/orama-system/cidf/FRAMEWORK.md`

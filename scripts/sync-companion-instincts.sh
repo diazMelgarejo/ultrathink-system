@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Imports Perplexity-Tools instincts → ultrathink-system on every session start.
+# Imports Perplexity-Tools instincts → orama-system on every session start.
 # Idempotent. Local-first; clones companion repo if absent.
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

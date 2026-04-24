@@ -1,4 +1,4 @@
-# Lessons — ultrathink-system
+# Lessons — orama-system
 
 > **MOVED**: The canonical lessons file is now **[docs/LESSONS.md](../../docs/LESSONS.md)**.
 >
@@ -12,8 +12,8 @@
 ## continuous-learning-v2
 
 This repo uses [continuous-learning-v2](https://github.com/affaan-m/everything-claude-code/tree/main/skills/continuous-learning-v2).
-Instincts: `.claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml`
-Import command: `/instinct-import .claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml`
+Instincts: `.claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
+Import command: `/instinct-import .claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
 
 ---
 
@@ -206,7 +206,7 @@ A batch `sed -i` to replace old `multi_agent\.` import-style path references wit
   - `chk_f tests/test_multi_agent.py` → `chk_f tests/test_bin.py` (wrong — file does not exist)
   - `pytest tests/test_multi_agent.py` → `pytest tests/test_bin.py` (docs reference broken)
   - `test_multi_agent.py` docstring self-reference → `test_bin.py`
-- The same issue had previously hit `single_agent\.` → `test_bin.skills.py` in README
+- The same issue had previously hit `single_agent\.` → `test_bin_orama_system.py` in README
 - These substitutions introduced CI failures: `chk_f` could not find `test_bin.py`
 
 Root cause: **the pattern was designed for Python import statements** (`from multi_agent.foo`) but was applied broadly — it also matched shell commands, docstrings, and doc prose referencing actual filenames.
@@ -258,12 +258,12 @@ what broke, what worked, and the protocol we are encoding for all future agents.
 
 **Current version: `0.9.9.7`.** Do NOT bump without explicit user instruction.
 
-#### ultrathink-system (UTS) — canonical locations
+#### orama-system (UTS) — canonical locations
 
 | File | Field | Status |
 |------|-------|--------|
 | `pyproject.toml:7` | `version = "0.9.9.7"` | ✓ current |
-| `bin/skills/SKILL.md:10` | `version: 0.9.9.7` | ✓ current |
+| `bin/orama-system/SKILL.md:10` | `version: 0.9.9.7` | ✓ current |
 | `bin/config/agent_registry.json:2` | `"version": "0.9.9.7"` | ✓ current |
 | `portal_server.py:26` | `VERSION = "0.9.9.7"` | ✓ current |
 | `bin/agents/*/agent.md:4` | `version: 0.9.9.7` | ✓ current (all 7 agents) |
@@ -272,7 +272,7 @@ what broke, what worked, and the protocol we are encoding for all future agents.
 
 Legacy markers (stable, do not auto-bump):
 - `api_server.py`, `bin/shared/*.py`, `bin/mcp_servers/*.py` → `0.9.9.2`
-- `bin/skills/config/`, `afrp/README.md`, `templates/` → `0.9.9.0`
+- `bin/orama-system/config/`, `afrp/README.md`, `templates/` → `0.9.9.0`
 
 #### Perplexity-Tools (PT) — see PT LESSONS.md for full table
 
@@ -339,7 +339,7 @@ git grep "<<<<<<< \|>>>>>>> " -- '*.py' '*.md' '*.yml'
 
 ### 5. Multi-Agent Synchronization Protocol
 
-Key principles (see also `bin/skills/SKILL.md` — Multi-Agent Collaboration Protocol section):
+Key principles (see also `bin/orama-system/SKILL.md` — Multi-Agent Collaboration Protocol section):
 
 1. **Read LESSONS.md first** — mandatory, already in CLAUDE.md
 2. **Scope claim** — append `[IN PROGRESS]` marker before touching files
@@ -435,7 +435,7 @@ correct macOS pattern for user-space tool installs that alphaclaw should use by 
 
 ### Automation: `setup_macos.py`
 
-Created `ultrathink-system/setup_macos.py` — runs idempotently on every `./start.sh`:
+Created `orama-system/setup_macos.py` — runs idempotently on every `./start.sh`:
 
 - **Step 1**: Create `~/.local/bin` if missing
 - **Step 2**: Add `~/.local/bin` to PATH in `~/.zshrc` if not present
@@ -468,8 +468,8 @@ fi
 | ------ | -------- |
 | `~/.alphaclaw/node_modules/@chrysb/alphaclaw/bin/alphaclaw.js` | 6 macOS compat patches (lines 277, 539, 596, 866, 893, 906) |
 | `~/.openclaw/openclaw.json` | Fixed 2 missing `models[]` arrays + 4 stale provider IPs |
-| `ultrathink-system/setup_macos.py` | **NEW** — idempotent pre-flight automation |
-| `ultrathink-system/start.sh` | Added `setup_macos.py` call after LOG_DIR creation |
+| `orama-system/setup_macos.py` | **NEW** — idempotent pre-flight automation |
+| `orama-system/start.sh` | Added `setup_macos.py` call after LOG_DIR creation |
 
 ---
 
@@ -513,7 +513,7 @@ fi
 - `.env.lmstudio` is auto-generated and gitignored — safe to delete and re-run discover.py
 - `~/.openclaw/scripts/discover.py --status` is the first check when endpoints seem wrong
 - Gossip TTL is 5 min — for fresh data NOW: `discover.py --force`
-- Repo renamed from ultrathink-system; `ULTRATHINK_ENDPOINT` in .env still works
+- Repo renamed from orama-system; `ULTRATHINK_ENDPOINT` in .env still works
 
 ### Recovery commands
 ```bash

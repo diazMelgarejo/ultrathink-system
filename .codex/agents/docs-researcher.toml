@@ -2,4 +2,4 @@
 [agent]
 role = "docs-researcher"
 read_only = true
-description = "Read-only docs-researcher role for ultrathink-system Codex multi-agent work."
+description = "Read-only docs-researcher role for orama-system Codex multi-agent work."

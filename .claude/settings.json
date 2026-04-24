@@ -14,6 +14,12 @@
             "command": "bash scripts/sync-companion-instincts.sh 2>/dev/null || true",
             "statusMessage": "Syncing companion instincts...",
             "async": true
+          },
+          {
+            "type": "command",
+            "command": "echo '\ud83d\udca1 Skills: /self-discovery  /ecc-sync  /agent-methodology' || true",
+            "statusMessage": "Skills ready",
+            "async": true
           }
         ]
       }
@@ -34,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "git diff --name-only HEAD -- .claude/lessons/ 2>/dev/null | grep -q . || echo '⚠️  LESSONS.md not updated this session — CLAUDE.md requires a write-back before ending.'"
+            "command": "git diff --name-only HEAD -- .claude/lessons/ 2>/dev/null | grep -q . || echo '\u26a0\ufe0f  LESSONS.md not updated this session \u2014 CLAUDE.md requires a write-back before ending.'"
           }
         ]
       }

@@ -4,7 +4,7 @@ Demonstrates ultrathink applied to integrating a third-party REST API with retry
 
 ## The Task
 ```
-Apply ultrathink system to: Integrate the OpenWeatherMap API with retry, circuit breaking, and full error handling
+Apply The ὅραμα System to: Integrate the OpenWeatherMap API with retry, circuit breaking, and full error handling
 Optimize for: reliability
 ```
 

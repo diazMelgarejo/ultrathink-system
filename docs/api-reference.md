@@ -104,7 +104,7 @@ Creates: tasks/todo.md, tasks/lessons.md (if not exists)
 
 ## REST API (`api_server.py`)
 
-The ultrathink system exposes a stateless HTTP API.
+The ὅραμα System exposes a stateless HTTP API.
 
 ```bash
 # Start (requires: pip install fastapi uvicorn pydantic)

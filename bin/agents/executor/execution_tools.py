@@ -7,7 +7,7 @@
 
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "skills"))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "orama-system"))
 
 try:
     from cidf.core.content_insertion_framework import (
@@ -49,7 +49,7 @@ def cidf_insert(
     """
     if not CIDF_AVAILABLE:
         raise RuntimeError(
-            "CIDF package not found. Ensure bin/skills/cidf/ is in the Python path."
+            "CIDF package not found. Ensure bin/orama-system/cidf/ is in the Python path."
         )
 
     task = Task(

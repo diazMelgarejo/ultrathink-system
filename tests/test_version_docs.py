@@ -9,7 +9,7 @@ ROOT = Path(__file__).parent.parent
 def test_active_version_surfaces_are_09994():
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     claude = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    skill = (ROOT / "bin" / "skills" / "SKILL.md").read_text(encoding="utf-8")
+    skill = (ROOT / "bin" / "orama-system" / "SKILL.md").read_text(encoding="utf-8")
 
     assert 'version = "0.9.9.7"' in pyproject
     assert "v0.9.9.7" in claude

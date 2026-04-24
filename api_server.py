@@ -2,7 +2,7 @@
 """
 api_server.py
 =============
-ultrathink System — REST API Entry Point
+The ὅραμα System — REST API Entry Point
 POST /ultrathink on port 8001
 
 This is a stateless execution endpoint. No Redis dependency.
@@ -103,7 +103,7 @@ async def _call_with_fallback(prompt: str, model: str, max_tokens: int, temperat
 # ── App ───────────────────────────────────────────────────────────────────────
 
 app = FastAPI(
-    title="ultrathink System API",
+    title="The ὅραμα System API",
     description="Stateless POST /ultrathink endpoint. State owned by Perplexity-Tools.",
     version="0.9.9.2",
 )

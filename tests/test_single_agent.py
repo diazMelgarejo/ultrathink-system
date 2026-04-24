@@ -2,7 +2,7 @@
 """
 test_single_agent.py
 ====================
-Test suite for the ultrathink single-agent skill package.
+Test suite for the orama-system single-agent skill package.
 Run: pytest tests/test_single_agent.py -v
 """
 import os
@@ -10,7 +10,7 @@ import pytest
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-SINGLE = ROOT / "bin" / "skills"
+SINGLE = ROOT / "bin" / "orama-system"
 
 
 class TestPackageIntegrity:
@@ -20,7 +20,7 @@ class TestPackageIntegrity:
     def test_skill_md_has_frontmatter(self):
         content = (SINGLE / "SKILL.md").read_text(encoding="utf-8")
         assert content.startswith("---"), "SKILL.md must start with YAML frontmatter"
-        assert "name: ultrathink-system" in content
+        assert "name: orama-system" in content
         assert "version:" in content
         assert "license: Apache 2.0" in content
 
@@ -102,10 +102,10 @@ class TestContentQuality:
 class TestCIDF:
     """Verify the full CIDF runnable package is present and functional."""
 
-    CIDF = Path(__file__).parent.parent / "bin" / "skills" / "cidf"
+    CIDF = Path(__file__).parent.parent / "bin" / "orama-system" / "cidf"
 
     def test_cidf_directory_exists(self):
-        assert self.CIDF.is_dir(), "bin/skills/cidf/ not found"
+        assert self.CIDF.is_dir(), "bin/orama-system/cidf/ not found"
 
     def test_core_python_exists(self):
         assert (self.CIDF / "core" / "content_insertion_framework.py").exists()

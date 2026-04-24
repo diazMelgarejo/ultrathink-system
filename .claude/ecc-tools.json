@@ -3,7 +3,7 @@
   "schemaVersion": "1.0",
   "generatedBy": "ecc-tools",
   "generatedAt": "2026-04-06T00:00:00.000Z",
-  "repo": "https://github.com/diazMelgarejo/ultrathink-system",
+  "repo": "https://github.com/diazMelgarejo/orama-system",
   "profiles": {
     "requested": "full",
     "recommended": "full",
@@ -109,59 +109,59 @@
     "workflow-pack"
   ],
   "managedFiles": [
-    ".claude/skills/ultrathink-system/SKILL.md",
-    ".agents/skills/ultrathink-system/SKILL.md",
-    ".agents/skills/ultrathink-system/agents/openai.yaml",
+    ".claude/skills/orama-system/SKILL.md",
+    ".agents/skills/orama-system/SKILL.md",
+    ".agents/skills/orama-system/agents/openai.yaml",
     ".claude/identity.json",
     ".codex/config.toml",
     ".codex/AGENTS.md",
     ".codex/agents/explorer.toml",
     ".codex/agents/reviewer.toml",
     ".codex/agents/docs-researcher.toml",
-    ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml"
+    ".claude/homunculus/instincts/inherited/orama-system-instincts.yaml"
   ],
   "packageFiles": {
     "runtime-core": [
-      ".claude/skills/ultrathink-system/SKILL.md",
-      ".agents/skills/ultrathink-system/SKILL.md",
-      ".agents/skills/ultrathink-system/agents/openai.yaml",
+      ".claude/skills/orama-system/SKILL.md",
+      ".agents/skills/orama-system/SKILL.md",
+      ".agents/skills/orama-system/agents/openai.yaml",
       ".claude/identity.json",
       ".codex/config.toml",
       ".codex/AGENTS.md",
       ".codex/agents/explorer.toml",
       ".codex/agents/reviewer.toml",
       ".codex/agents/docs-researcher.toml",
-      ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml"
+      ".claude/homunculus/instincts/inherited/orama-system-instincts.yaml"
     ]
   },
   "moduleFiles": {
     "runtime-core": [
-      ".claude/skills/ultrathink-system/SKILL.md",
-      ".agents/skills/ultrathink-system/SKILL.md",
-      ".agents/skills/ultrathink-system/agents/openai.yaml",
+      ".claude/skills/orama-system/SKILL.md",
+      ".agents/skills/orama-system/SKILL.md",
+      ".agents/skills/orama-system/agents/openai.yaml",
       ".claude/identity.json",
       ".codex/config.toml",
       ".codex/AGENTS.md",
       ".codex/agents/explorer.toml",
       ".codex/agents/reviewer.toml",
       ".codex/agents/docs-researcher.toml",
-      ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml"
+      ".claude/homunculus/instincts/inherited/orama-system-instincts.yaml"
     ]
   },
   "files": [
     {
       "moduleId": "runtime-core",
-      "path": ".claude/skills/ultrathink-system/SKILL.md",
+      "path": ".claude/skills/orama-system/SKILL.md",
       "description": "Repository-specific Claude Code skill generated from git history."
     },
     {
       "moduleId": "runtime-core",
-      "path": ".agents/skills/ultrathink-system/SKILL.md",
+      "path": ".agents/skills/orama-system/SKILL.md",
       "description": "Codex-facing copy of the generated repository skill."
     },
     {
       "moduleId": "runtime-core",
-      "path": ".agents/skills/ultrathink-system/agents/openai.yaml",
+      "path": ".agents/skills/orama-system/agents/openai.yaml",
       "description": "Codex skill metadata so the repo skill appears cleanly in the skill interface."
     },
     {
@@ -196,21 +196,21 @@
     },
     {
       "moduleId": "runtime-core",
-      "path": ".claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml",
+      "path": ".claude/homunculus/instincts/inherited/orama-system-instincts.yaml",
       "description": "Continuous-learning instincts derived from repository patterns."
     }
   ],
   "workflows": [],
   "adapters": {
     "claudeCode": {
-      "skillPath": ".claude/skills/ultrathink-system/SKILL.md",
+      "skillPath": ".claude/skills/orama-system/SKILL.md",
       "identityPath": ".claude/identity.json",
       "commandPaths": []
     },
     "codex": {
       "configPath": ".codex/config.toml",
       "agentsGuidePath": ".codex/AGENTS.md",
-      "skillPath": ".agents/skills/ultrathink-system/SKILL.md"
+      "skillPath": ".agents/skills/orama-system/SKILL.md"
     }
   }
 }

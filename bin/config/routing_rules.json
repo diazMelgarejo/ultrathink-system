@@ -104,8 +104,8 @@
   },
   "cidf_policy": {
     "version": "1.2",
-    "policy_file": "bin/skills/cidf/core/content_insertion_policy.json",
-    "linter": "bin/skills/cidf/linter/policy_linter.py",
+    "policy_file": "bin/orama-system/cidf/core/content_insertion_policy.json",
+    "linter": "bin/orama-system/cidf/linter/policy_linter.py",
     "enforcement": "strict",
     "note": "All content insertion routed through CIDF-aware executors only"
   }

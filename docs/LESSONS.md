@@ -1,4 +1,4 @@
-# Lessons — ultrathink-system
+# Lessons — orama-system
 
 > **Canonical path**: `docs/LESSONS.md`
 > **Previous path**: `.claude/lessons/LESSONS.md` (now redirects here)
@@ -17,8 +17,8 @@
 ## continuous-learning-v2
 
 This repo uses [continuous-learning-v2](https://github.com/affaan-m/everything-claude-code/tree/main/skills/continuous-learning-v2).
-Instincts: `.claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml`
-Import command: `/instinct-import .claude/homunculus/instincts/inherited/ultrathink-system-instincts.yaml`
+Instincts: `.claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
+Import command: `/instinct-import .claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
 
 ---
 
@@ -193,7 +193,7 @@ A batch `sed -i` to replace `multi_agent\.` with `bin.` matched filename strings
 | File | Field | Status |
 |------|-------|--------|
 | `pyproject.toml:7` | `version = "0.9.9.7"` | ✓ current |
-| `bin/skills/SKILL.md:10` | `version: 0.9.9.7` | ✓ current |
+| `bin/orama-system/SKILL.md:10` | `version: 0.9.9.7` | ✓ current |
 | `bin/config/agent_registry.json:2` | `"version": "0.9.9.7"` | ✓ current |
 | `portal_server.py:26` | `VERSION = "0.9.9.7"` | ✓ current |
 | `bin/agents/*/agent.md:4` | `version: 0.9.9.7` | ✓ current (all 7 agents) |
@@ -276,7 +276,7 @@ All lessons above are expanded with root causes, exact fixes, and verification c
 | 05 | [Bulk Sed Safety](wiki/05-bulk-sed-safety.md) | grep-first, scope to .py only |
 | 06 | [Multi-Agent Collab](wiki/06-multi-agent-collab.md) | version registry, scope claims, orphan branches |
 | 07 | [Startup IP Detection](wiki/07-startup-ip-detection.md) | stdin deadlock, load_dotenv, asyncio probing |
-| 08 | [Gate 1 Delegation](wiki/08-gate1-delegation.md) | start.sh thinning, PT alphaclaw_manager, CJS/ESM conflict |
+| 08 | [Git Hygiene and Branching](wiki/08-git-hygiene-and-branching.md) | clean-lineage salvage, identity checks, protected branch flow |
 
 ---
 
@@ -314,3 +314,105 @@ The `tee /dev/stderr` keeps progress messages visible while `grep '^export '` ca
 
 → [PT docs/MIGRATION.md §Gate 1](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/MIGRATION.md)
 → [PT orchestrator/alphaclaw_manager.py](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/orchestrator/alphaclaw_manager.py)
+
+---
+
+## 2026-04-24 — Codex — Clean-lineage salvage guardrails
+
+### What was learned
+
+Directly replaying a useful tail is unsafe when commit metadata, tracked private
+config, generated path files, and symlink assumptions are mixed into the same
+range. The safer approach is to branch from the verified clean anchor, snapshot
+both repos, and manual-port only reviewed intent.
+
+### Decisions Made
+
+- Salvage branch format is `yyyy-mm-dd-001-brief-summary`.
+- Canonical commit identity is `cyre <Lawrence@cyre.me>`.
+- `.env`, `.env.local`, and `.paths` are ignored runtime files; examples are the only tracked contract.
+- `.ecc` must not be both a gitlink expectation and a symlink in the working tree.
+- `repo_hygiene.py` and `check_identity.sh` are the pre-commit guardrails for this recovery path.
+
+→ [docs/recovery/2026-04-24-001-orama-history-recovery.md](recovery/2026-04-24-001-orama-history-recovery.md)
+→ [docs/recovery/2026-04-24-002-commit-salvage-matrix.md](recovery/2026-04-24-002-commit-salvage-matrix.md)
+→ [docs/recovery/2026-04-24-003-git-safety-guardrails.md](recovery/2026-04-24-003-git-safety-guardrails.md)
+
+---
+
+## 2026-04-24 — Claude — Salvage forensics + systematic rename + hygiene pipeline
+
+### What was learned
+
+1. **Forensics First, Action Last**: Gemini's corrupted commits involved not just metadata shifts but destructive configuration purges (stripping `.env`). Never rebase a corrupted tail blindly. Map the drift first.
+2. **Identity Restoration via `.mailmap`**: Git's identity corruption (unauthorized email/name) is best fixed at the repo level with a canonical `.mailmap` file, ensuring all historical logs attribute correctly without rewriting every commit object.
+3. **Historical Rename Strategy**: The migration from `ultrathink-system` to `orama-system` required a multi-stage approach:
+    - `sed` batch for internal references (excluding historical docs and hygiene configs).
+    - `git mv` for folders and individual filenames.
+    - Automated hygiene check to verify no "active" legacy references remained.
+4. **Idempotent Setup Bug**: A `TypeError` in `setup_macos.py` (incorrect `_skip` signature) proved that even "no-op" dry-runs must be tested. Idempotent guards must accept optional detail strings consistently.
+
+### Decisions made
+
+- `orama-system` is the authoritative name and directory.
+- `scripts/review/repo_hygiene.py` is the primary guardrail for identity and naming consistency.
+- [docs/wiki/08-git-hygiene-and-branching.md](wiki/08-git-hygiene-and-branching.md) tracks the active Git hygiene and branching guardrails.
+
+### Prevention Rules
+
+1. Always run `python3 scripts/review/repo_hygiene.py` before committing a major refactor.
+2. Maintain `.mailmap` as the "Source of Truth" for author identity.
+3. Use `yyyy-mm-dd-NNN-summary` branch naming for salvage work.
+4. Verify `_skip` and `_log` signatures in setup scripts after any logging refactor.
+
+### Commits
+- `dc45482` — chore(rename): systematic migration to orama-system
+- `f43a9b2` — fix(setup): fix _skip call signature in setup_macos.py
+
+→ [docs/wiki/08-git-hygiene-and-branching.md](wiki/08-git-hygiene-and-branching.md)
+→ [scripts/review/repo_hygiene.py](../scripts/review/repo_hygiene.py)
+
+---
+
+## 2026-04-24 — Codex — Xcode metadata hygiene + docs-only handoff discipline
+
+### What was learned
+
+1. **`.gitignore` does not protect `.git/` internals**: Finder or Xcode can leave `.DS_Store` under `.git/refs`, which breaks Git with `badRefName` even though `.DS_Store` is ignored for normal tracked files.
+2. **Generated artifacts need two layers of defense**: Ignore patterns prevent new working-tree noise, while hygiene checks catch already-tracked macOS metadata, Xcode user state, Python caches, wheels, and build outputs.
+3. **Docs-only commits need explicit staging**: When code hygiene work and documentation edits coexist, stage named docs files only. Do not let unrelated guardrail changes leak into a documentation commit.
+4. **Future agents need link maps, not large context dumps**: `CONTRIBUTING.md` should point to canonical methodology, coordination, recovery, and verification markdowns so agents can load the smallest relevant context.
+
+### Decisions made
+
+- Treat `git fsck --no-reflogs --full --unreachable --no-progress` as the fast signal for malformed refs after macOS/Xcode metadata incidents.
+- Check `.git/refs` directly with `find .git/refs -name '.DS_Store' -print` when Xcode Beta or Finder has touched the checkout.
+- Keep contribution guidance relative-link-only so GitHub renders it and agents do not depend on sibling local checkouts or absolute machine paths.
+- Add new operational learnings here before ending a session; link deeper guidance through [CONTRIBUTING.md](../CONTRIBUTING.md), [docs/wiki/README.md](wiki/README.md), and [tests/README.md](../tests/README.md).
+
+### Prevention rules
+
+1. Before committing from a macOS/Xcode-touched checkout, run `python3 scripts/review/repo_hygiene.py .` and `git fsck --no-reflogs --full --unreachable --no-progress`.
+2. If `.git/refs/.DS_Store` appears, remove only that metadata file and rerun `git fsck`; do not reset or rewrite history for a local Finder artifact.
+3. For docs-only commits, verify the staged set with `git diff --cached --name-only` and keep it limited to markdown files.
+
+---
+
+## 2026-04-24 — Codex — Markdown redirect and size guardrails
+
+### What was learned
+
+Markdown edits need their own pre-commit discipline. Absolute local links, missing canonical-path notes after moves, and oversized single-file docs make future agent handoffs brittle even when tests pass.
+
+### Decisions made
+
+- `scripts/review/repo_hygiene.py` blocks absolute filesystem links in tracked markdown.
+- Changed markdown files now warn when a new file exceeds 200 lines or an existing file exceeds 500 lines.
+- Agents must ask before crossing those limits and suggest moving detail into `references/`, `docs/wiki/`, or sub-skills.
+- The root skill, packaged skill, Claude skill mirror, CIDF, and verification checklist all carry the same markdown edit rule.
+
+### Prevention rules
+
+1. Before committing markdown, run `python3 scripts/review/repo_hygiene.py .`.
+2. Keep links relative and GitHub-renderable unless the target is an intentional external URL.
+3. Preserve redirect or canonical-path breadcrumbs when moving markdown.

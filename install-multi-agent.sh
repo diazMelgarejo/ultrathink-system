@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # install-multi-agent.sh
-# ultrathink System — Multi-Agent Network Installer
+# The ὅραμα System — Multi-Agent Network Installer
 # Installs the 7 agent markdown files to .claude/agents/ (Claude Code native
 # subagent path) AND to the Clawdbot/MoltBot/OpenClaw-specific paths.
 set -euo pipefail

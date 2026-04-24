@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Network auto-configuration helper for ultrathink-system.
+Network auto-configuration helper for orama-system.
 Auto-detects a useful LAN address and can scan for PT, ultrathink, LM Studio,
 Ollama, and portal services on the local subnet.
 """
@@ -188,7 +188,7 @@ class NetworkAutoConfig:
         return config
 
 def main():
-    print("=== Network Auto-Configuration for ultrathink-system ===")
+    print("=== Network Auto-Configuration for orama-system ===")
 
     configurer = NetworkAutoConfig()
     config = configurer.get_optimal_server_config()

@@ -22,22 +22,22 @@
 
 ```bash
 # Claude Code
-cp -r bin/skills ~/.claude/skills/ultrathink-system
+cp -r bin/orama-system ~/.claude/skills/orama-system
 
 # Cowork
-cp -r bin/skills ~/.cowork/skills/ultrathink-system
+cp -r bin/orama-system ~/.cowork/skills/orama-system
 
 # Any Claude platform — place in skills dir
-cp -r bin/skills /path/to/your/skills/ultrathink-system
+cp -r bin/orama-system /path/to/your/skills/orama-system
 ```
 
 ### ECC Tools / everything-claude-code
 
 ```bash
 # Drop into existing skill library
-cp -r bin/skills ~/.claude/skills/ultrathink-system
+cp -r bin/orama-system ~/.claude/skills/orama-system
 # or if using ecc-tools profile
-cp -r bin/skills ~/.ecc/skills/ultrathink-system
+cp -r bin/orama-system ~/.ecc/skills/orama-system
 ```
 
 ---
@@ -92,7 +92,7 @@ Expected output:
 
 ```
 ✓ LICENSE found
-✓ bin/skills/SKILL.md found
+✓ bin/orama-system/SKILL.md found
 ✓ All 7 agent files found
 ✅ Package integrity: VERIFIED
 ```

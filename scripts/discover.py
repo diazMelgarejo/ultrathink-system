@@ -22,6 +22,7 @@ DISCOVERY_JSON      = STATE_DIR / "discovery.json"
 LAST_DISCOVERY_JSON = STATE_DIR / "last_discovery.json"
 RECOVERY_SOURCE_TXT = STATE_DIR / "recovery_source.txt"
 LOCK_FILE           = STATE_DIR / ".discover.lock"
+DEFAULT_LOCK_FILE   = LOCK_FILE
 OPENCLAW_JSON       = OPENCLAW_DIR / "openclaw.json"
 
 LM_STUDIO_PORT     = 1234
@@ -138,6 +139,11 @@ def _load_json(path: Path):
     try: return json.loads(path.read_text())
     except Exception: return None
 
+def _lock_path() -> Path:
+    if LOCK_FILE != DEFAULT_LOCK_FILE:
+        return LOCK_FILE
+    return STATE_DIR / ".discover.lock"
+
 def save_discovery_state(endpoints: dict, tier: int = 1):
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     mac = endpoints.get("mac") or {}
@@ -245,7 +251,8 @@ def write_env_lmstudio(endpoints: dict, repo_paths: dict):
     mac_models = mac.get("models", [])
     win_models = win.get("models", [])
     mac_primary = next((m for m in mac_models if "embed" not in m.lower()), "")
-    win_primary = next((m for m in win_models if "27b" in m.lower() or "embed" not in m.lower()), "")
+    win_primary = (next((m for m in win_models if "27b" in m.lower()), None) or
+                   next((m for m in win_models if "embed" not in m.lower()), ""))
     win_fallback = next((m for m in win_models if m != win_primary and "embed" not in m.lower()), "")
     tier = (_load_json(LAST_DISCOVERY_JSON) or {}).get("recovery_tier", 1)
     content = (
@@ -290,7 +297,9 @@ class _Lock:
         self._timeout = timeout; self._fd = None
     def __enter__(self):
         STATE_DIR.mkdir(parents=True, exist_ok=True)
-        self._fd = open(LOCK_FILE, "w")
+        lock_path = _lock_path()
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        self._fd = open(lock_path, "w")
         deadline = time.time() + self._timeout
         while True:
             try:
@@ -301,7 +310,7 @@ class _Lock:
     def __exit__(self, *_):
         if self._fd:
             fcntl.flock(self._fd, fcntl.LOCK_UN); self._fd.close()
-            try: LOCK_FILE.unlink()
+            try: _lock_path().unlink()
             except FileNotFoundError: pass
 
 # ── Main discovery flow ───────────────────────────────────────────────────────
@@ -344,7 +353,11 @@ def run_discovery(force: bool = False) -> int:
         last = _load_json(LAST_DISCOVERY_JSON)
         if last and last.get("hash") == new_hash:
             last["timestamp"] = datetime.now(timezone.utc).isoformat()
+            if tier != last.get("recovery_tier", 1):
+                last["recovery_tier"] = tier  # reflect actual recovery tier used this run
+                RECOVERY_SOURCE_TXT.write_text(f"tier{tier}\n")
             DISCOVERY_JSON.write_text(json.dumps(last, indent=2))
+            LAST_DISCOVERY_JSON.write_text(json.dumps(last, indent=2))
             print("✅ No changes. Config is current.", file=sys.stderr)
             return 0
 

@@ -17,14 +17,14 @@ ultrathink this
 or
 
 ```
-Apply ultrathink system to: [your task]
+Apply The ὅραμα System to: [your task]
 Optimize for: reliability
 ```
 
 ### 3. Create a Task Plan
 
 ```bash
-./bin/skills/scripts/create_task_plan.sh "Build my feature"
+./bin/orama-system/scripts/create_task_plan.sh "Build my feature"
 ```
 
 ### 4. Build It
@@ -34,13 +34,13 @@ Work through the 5 stages. Claude will guide you.
 ### 5. Verify Before Done
 
 ```bash
-python bin/skills/scripts/verify_before_done.py --task "Build my feature"
+python bin/orama-system/scripts/verify_before_done.py --task "Build my feature"
 ```
 
 ### 6. Capture Lessons
 
 ```bash
-python bin/skills/scripts/capture_lesson.py
+python bin/orama-system/scripts/capture_lesson.py
 ```
 
 ---
@@ -59,7 +59,7 @@ python bin/skills/scripts/capture_lesson.py
 
 ## Trigger Phrases
 
-These phrases automatically activate the ultrathink system:
+These phrases automatically activate The ὅραμα System:
 
 | Phrase | What happens |
 |--------|-------------|

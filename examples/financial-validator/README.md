@@ -4,7 +4,7 @@ Demonstrates ultrathink applied to building a production-ready LSEG equity data 
 
 ## The Task
 ```
-Apply ultrathink system to: Build a financial data validator for LSEG market data
+Apply The ὅραμα System to: Build a financial data validator for LSEG market data
 Optimize for: reliability
 ```
 

@@ -276,7 +276,7 @@ All lessons above are expanded with root causes, exact fixes, and verification c
 | 05 | [Bulk Sed Safety](wiki/05-bulk-sed-safety.md) | grep-first, scope to .py only |
 | 06 | [Multi-Agent Collab](wiki/06-multi-agent-collab.md) | version registry, scope claims, orphan branches |
 | 07 | [Startup IP Detection](wiki/07-startup-ip-detection.md) | stdin deadlock, load_dotenv, asyncio probing |
-| 08 | [Gate 1 Delegation](wiki/08-gate1-delegation.md) | start.sh thinning, PT alphaclaw_manager, CJS/ESM conflict |
+| 08 | [Git Hygiene and Branching](wiki/08-git-hygiene-and-branching.md) | clean-lineage salvage, identity checks, protected branch flow |
 
 ---
 
@@ -356,7 +356,7 @@ both repos, and manual-port only reviewed intent.
 
 - `orama-system` is the authoritative name and directory.
 - `scripts/review/repo_hygiene.py` is the primary guardrail for identity and naming consistency.
-- `docs/wiki/08-orama-system-sync-status.md` tracks the bridge state.
+- [docs/wiki/08-git-hygiene-and-branching.md](wiki/08-git-hygiene-and-branching.md) tracks the active Git hygiene and branching guardrails.
 
 ### Prevention Rules
 
@@ -369,5 +369,29 @@ both repos, and manual-port only reviewed intent.
 - `dc45482` — chore(rename): systematic migration to orama-system
 - `f43a9b2` — fix(setup): fix _skip call signature in setup_macos.py
 
-→ [docs/wiki/08-orama-system-sync-status.md](wiki/08-orama-system-sync-status.md)
-→ [scripts/review/repo_hygiene.py](scripts/review/repo_hygiene.py)
+→ [docs/wiki/08-git-hygiene-and-branching.md](wiki/08-git-hygiene-and-branching.md)
+→ [scripts/review/repo_hygiene.py](../scripts/review/repo_hygiene.py)
+
+---
+
+## 2026-04-24 — Codex — Xcode metadata hygiene + docs-only handoff discipline
+
+### What was learned
+
+1. **`.gitignore` does not protect `.git/` internals**: Finder or Xcode can leave `.DS_Store` under `.git/refs`, which breaks Git with `badRefName` even though `.DS_Store` is ignored for normal tracked files.
+2. **Generated artifacts need two layers of defense**: Ignore patterns prevent new working-tree noise, while hygiene checks catch already-tracked macOS metadata, Xcode user state, Python caches, wheels, and build outputs.
+3. **Docs-only commits need explicit staging**: When code hygiene work and documentation edits coexist, stage named docs files only. Do not let unrelated guardrail changes leak into a documentation commit.
+4. **Future agents need link maps, not large context dumps**: `CONTRIBUTING.md` should point to canonical methodology, coordination, recovery, and verification markdowns so agents can load the smallest relevant context.
+
+### Decisions made
+
+- Treat `git fsck --no-reflogs --full --unreachable --no-progress` as the fast signal for malformed refs after macOS/Xcode metadata incidents.
+- Check `.git/refs` directly with `find .git/refs -name '.DS_Store' -print` when Xcode Beta or Finder has touched the checkout.
+- Keep contribution guidance relative-link-only so GitHub renders it and agents do not depend on sibling local checkouts or absolute machine paths.
+- Add new operational learnings here before ending a session; link deeper guidance through [CONTRIBUTING.md](../CONTRIBUTING.md), [docs/wiki/README.md](wiki/README.md), and [tests/README.md](../tests/README.md).
+
+### Prevention rules
+
+1. Before committing from a macOS/Xcode-touched checkout, run `python3 scripts/review/repo_hygiene.py .` and `git fsck --no-reflogs --full --unreachable --no-progress`.
+2. If `.git/refs/.DS_Store` appears, remove only that metadata file and rerun `git fsck`; do not reset or rewrite history for a local Finder artifact.
+3. For docs-only commits, verify the staged set with `git diff --cached --name-only` and keep it limited to markdown files.

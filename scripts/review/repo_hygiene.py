@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import os
 import subprocess
 import sys
@@ -19,6 +20,34 @@ IDENTITY_DOC_EXCEPTIONS = {
     "docs/wiki/08-git-hygiene-and-branching.md",
 }
 PRIVATE_GENERATED_TRACKED = {".env", ".env.local", ".paths"}
+GENERATED_ARTIFACT_PATTERNS = (
+    ".DS_Store",
+    "*/.DS_Store",
+    "._*",
+    "*/._*",
+    "__pycache__/*",
+    "*/__pycache__/*",
+    "*.pyc",
+    "*.pyo",
+    ".pytest_cache/*",
+    "*/.pytest_cache/*",
+    ".mypy_cache/*",
+    "*/.mypy_cache/*",
+    "dist/*",
+    "*/dist/*",
+    "build/*",
+    "*/build/*",
+    "DerivedData/*",
+    "*/DerivedData/*",
+    "*.egg-info/*",
+    "*.whl",
+    "*.tar.gz",
+    "*.xcuserstate",
+    "*.xcscmblueprint",
+    "*.xcodeproj/xcuserdata/*",
+    "*.xcworkspace/xcuserdata/*",
+    "*.xcuserdatad/*",
+)
 WORKFLOW_WRITE_MARKERS = (
     "softprops/action-gh-release",
     "peter-evans/create-pull-request",
@@ -87,6 +116,25 @@ def check_private_generated_tracking(files: list[str]) -> list[str]:
         f"private/generated config is tracked: {rel}"
         for rel in files
         if rel in PRIVATE_GENERATED_TRACKED
+    ]
+
+
+def check_generated_artifact_tracking(files: list[str]) -> list[str]:
+    errors: list[str] = []
+    for rel in files:
+        if any(fnmatch.fnmatch(rel, pattern) for pattern in GENERATED_ARTIFACT_PATTERNS):
+            errors.append(f"generated artifact is tracked: {rel}")
+    return errors
+
+
+def check_git_internal_junk(root: Path) -> list[str]:
+    git_dir = root / ".git"
+    refs_dir = git_dir / "refs"
+    if not refs_dir.exists():
+        return []
+    return [
+        f"macOS metadata file inside git refs: {path.relative_to(root)}"
+        for path in refs_dir.rglob(".DS_Store")
     ]
 
 
@@ -180,8 +228,10 @@ def main() -> int:
     errors.extend(check_identity(root))
     errors.extend(scan_forbidden_identity(root, files))
     errors.extend(check_private_generated_tracking(files))
+    errors.extend(check_generated_artifact_tracking(files))
     errors.extend(check_ecc(root, files))
     errors.extend(check_workflow_permissions(root))
+    errors.extend(check_git_internal_junk(root))
     active_legacy, historical_legacy = classify_legacy_name_refs(root, files)
 
     for line in report_status(root):

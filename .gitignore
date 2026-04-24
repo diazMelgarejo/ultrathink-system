@@ -4,6 +4,13 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .DS_Store
+**/.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+Icon?
 *.log
 .state/
 PR_BODY.md
@@ -13,6 +20,12 @@ PR_BODY.md
 .ecc
 dist/
 build/
+DerivedData/
+*.xcuserstate
+*.xcscmblueprint
+*.xcodeproj/xcuserdata/
+*.xcworkspace/xcuserdata/
+*.xcuserdatad/
 .venv*/
 *.whl
 *.tar.gz

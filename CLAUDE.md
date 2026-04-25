@@ -194,12 +194,90 @@ eval "$(python -m orchestrator.alphaclaw_manager --resolve --env-only)"
 
 ## 9. gstack
 
-gstack v1.3 is ingested as the agent skill framework for web browsing, planning, and review.
+gstack v1.12.2.0 is installed at `~/.claude/skills/gstack` (global-git) as the agent skill framework for web browsing, planning, and review.
 
 **Rules:**
 
-- ALWAYS use `/browse` for web browsing — NEVER `mcp__Claude_in_Chrome__*` directly
+- ALWAYS use `/browse` for all web browsing — NEVER use `mcp__claude-in-chrome__*` tools directly
 - Use `/investigate` for root-cause analysis of adapter or orchestration failures
 - Use `/ship` before any `npm publish`
 
-Install: `bash scripts/install-gstack.sh` (requires bun). See AlphaClaw `CLAUDE.md §gstack` for full skill table.
+**Available skills:**
+
+| Skill | Purpose |
+|-------|---------|
+| `/browse` | Headless browser for web browsing and site docs |
+| `/qa` | Systematically QA test a web application and fix issues |
+| `/qa-only` | Report-only QA testing |
+| `/design-review` | Designer's eye QA: visual inconsistency, spacing, contrast |
+| `/design-html` | Generate production-quality HTML designs |
+| `/design-shotgun` | Generate multiple AI design variants |
+| `/design-consultation` | Understand your product and provide design guidance |
+| `/review` | Pre-landing PR review |
+| `/ship` | Ship workflow: detect + merge base branch, run tests, deploy |
+| `/land-and-deploy` | Land and deploy workflow |
+| `/canary` | Post-deploy canary monitoring |
+| `/benchmark` | Performance regression detection |
+| `/office-hours` | YC Office Hours — startup or project mode |
+| `/plan-ceo-review` | CEO/founder-mode plan review |
+| `/plan-eng-review` | Eng manager-mode plan review |
+| `/plan-design-review` | Designer's eye plan review |
+| `/plan-devex-review` | Interactive developer experience plan review |
+| `/autoplan` | Auto-review pipeline |
+| `/devex-review` | Live developer experience audit |
+| `/retro` | Weekly engineering retrospective |
+| `/investigate` | Systematic debugging with root cause investigation |
+| `/document-release` | Post-ship documentation update |
+| `/codex` | OpenAI Codex CLI wrapper |
+| `/cso` | Chief Security Officer mode |
+| `/learn` | Manage project learnings |
+| `/careful` | Safety guardrails for destructive commands |
+| `/freeze` | Restrict file edits to a specific directory |
+| `/unfreeze` | Clear the freeze boundary set by /freeze |
+| `/guard` | Full safety mode: destructive command warnings |
+| `/setup-browser-cookies` | Import cookies from real Chromium browser |
+| `/setup-deploy` | Configure deployment settings |
+| `/setup-gbrain` | Set up gbrain for this coding agent |
+| `/connect-chrome` | Pair a remote AI agent with your browser |
+| `/gstack-upgrade` | Upgrade gstack to the latest version |
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. The
+skill has multi-step workflows, checklists, and quality gates that produce better
+results than an ad-hoc answer. When in doubt, invoke the skill. A false positive is
+cheaper than a false negative.
+
+Key routing rules:
+- Product ideas, "is this worth building", brainstorming → invoke /office-hours
+- Strategy, scope, "think bigger", "what should we build" → invoke /plan-ceo-review
+- Architecture, "does this design make sense" → invoke /plan-eng-review
+- Design system, brand, "how should this look" → invoke /design-consultation
+- Design review of a plan → invoke /plan-design-review
+- Developer experience of a plan → invoke /plan-devex-review
+- "Review everything", full review pipeline → invoke /autoplan
+- Bugs, errors, "why is this broken", "wtf", "this doesn't work" → invoke /investigate
+- Test the site, find bugs, "does this work" → invoke /qa (or /qa-only for report only)
+- Code review, check the diff, "look at my changes" → invoke /review
+- Visual polish, design audit, "this looks off" → invoke /design-review
+- Developer experience audit, try onboarding → invoke /devex-review
+- Ship, deploy, create a PR, "send it" → invoke /ship
+- Merge + deploy + verify → invoke /land-and-deploy
+- Configure deployment → invoke /setup-deploy
+- Post-deploy monitoring → invoke /canary
+- Update docs after shipping → invoke /document-release
+- Weekly retro, "how'd we do" → invoke /retro
+- Second opinion, codex review → invoke /codex
+- Safety mode, careful mode, lock it down → invoke /careful or /guard
+- Restrict edits to a directory → invoke /freeze or /unfreeze
+- Upgrade gstack → invoke /gstack-upgrade
+- Save progress, "save my work" → invoke /context-save
+- Resume, restore, "where was I" → invoke /context-restore
+- Security audit, OWASP, "is this secure" → invoke /cso
+- Make a PDF, document, publication → invoke /make-pdf
+- Launch real browser for QA → invoke /open-gstack-browser
+- Import cookies for authenticated testing → invoke /setup-browser-cookies
+- Performance regression, page speed, benchmarks → invoke /benchmark
+- Review what gstack has learned → invoke /learn
+- Tune question sensitivity → invoke /plan-tune
+- Code quality dashboard → invoke /health

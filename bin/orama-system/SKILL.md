@@ -16,6 +16,10 @@ sub_skills:
     trigger: "Query is non-trivial, audience-dependent, or open-ended (Type B/C/D)"
   - path: cidf/SKILL.md
     trigger: "Any content insertion, file write, paste, upload, or scripted output"
+  - path: gstack/SKILL.md
+    trigger: "/browse, /qa, /ship, /review, /investigate, gbrain, web browsing, QA, deploy, design review, gstack skills, canary, benchmark"
+  - path: skillify/SKILL.md
+    trigger: "create a skill, new skill, /skillify, add sub-skill, build a skill, make a skill"
 ---
 
 # The ὅραμα System Skill

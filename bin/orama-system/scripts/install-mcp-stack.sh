@@ -94,7 +94,7 @@ _log "Step 5b: Register ai-cli-mcp in Claude Code"
 if claude mcp list 2>/dev/null | grep -q "ai-cli" && ! $FORCE; then
   _skip "ai-cli already registered in Claude Code"
 else
-  _run "claude mcp add ai-cli '{\"name\":\"ai-cli\",\"command\":\"npx\",\"args\":[\"-y\",\"ai-cli-mcp@latest\"]}'"
+  _run "claude mcp add ai-cli -- npx -y ai-cli-mcp@latest"
   _ok "ai-cli registered in Claude Code"
 fi
 

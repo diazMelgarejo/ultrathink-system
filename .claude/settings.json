@@ -1,4 +1,13 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(command -v *)",
+      "Bash(claude mcp list *)",
+      "Bash(~/.claude/skills/gstack/bin/gstack-config get *)",
+      "Bash(openclaw mcp list *)",
+      "Bash(openclaw mcp show *)"
+    ]
+  },
   "hooks": {
     "SessionStart": [
       {

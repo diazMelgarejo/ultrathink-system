@@ -20,6 +20,8 @@ sub_skills:
     trigger: "/browse, /qa, /ship, /review, /investigate, gbrain, web browsing, QA, deploy, design review, gstack skills, canary, benchmark"
   - path: skillify/SKILL.md
     trigger: "create a skill, new skill, /skillify, add sub-skill, build a skill, make a skill"
+  - path: mcp-install/SKILL.md
+    trigger: "install mcp stack, setup gemini mcp, register ai-cli, mcp orchestration setup, install mcp tools, run install-mcp-stack.sh, mcp install"
 ---
 
 # The ὅραμα System Skill

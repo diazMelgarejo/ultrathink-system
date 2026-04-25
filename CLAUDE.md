@@ -210,3 +210,8 @@ gstack v1.12.2.0 is installed at `~/.claude/skills/gstack` (global-git).
 ```
 /skill bin/orama-system/skillify/SKILL.md
 ```
+
+**Install the MCP orchestration stack (gemini-mcp-tool + ai-cli-mcp + OpenClaw registry):**
+```
+/skill bin/orama-system/mcp-install/SKILL.md
+```

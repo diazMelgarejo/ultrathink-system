@@ -552,3 +552,77 @@ that reads `device_affinity` needs to be audited.
 ### Follow-up plan
 
 `docs/tripartite-plan/2026-04-26-hardware-model-routing-004-PART2-PLAN.md`
+
+---
+
+# 2026-04-27 — Part 2 Complete: Disaster Recovery, Gemini Plan Review, AlphaClaw Fixes
+
+## G3 + G2 closed (Part 2 Plan phases 7 + 8)
+
+**G3 — device_affinity → affinity key rename:**
+- `PT/config/routing.yml` autoresearch routes: renamed `device_affinity` → `affinity` (key only; value `win-rtx3080` preserved intentionally — future Windows hardware profiles will share the windows_only blocklist but have distinct whitelists, so specific device IDs are required)
+- `orama/bin/config/agent_registry.json` autoresearch_agents: same rename
+- Added regression guard `test_routing_affinity_keys_normalized` (PT) and `test_no_device_affinity_anywhere_in_registry` (orama)
+- **Lesson: never normalize `win-rtx3080` to generic `win`** — device-specific affinity values are the extension point for multi-Windows-profile support
+
+**G2 — PERPETUA_TOOLS_ROOT documented:**
+- Added to `PT/.env.example` and `orama/.env.example` with cross-repo usage notes
+
+**G1 — shared: section:**
+- Commented out in `PT/config/model_hardware_policy.yml` with TODO block pointing to Part 2 Phase 5
+- Added parametrized tests for both PyYAML and `_simple_policy_parse` paths (3 YAML variants: commented, absent, explicit-empty)
+- Added `_POLICY_CACHE` autouse fixture to prevent cross-test contamination
+
+## Disaster Recovery: HardwarePolicyResolver
+
+**Problem:** PT is authoritative for hardware policy, but orama needs to run even if PT is temporarily unreachable. Previous design silently disabled enforcement on import failure.
+
+**Solution:** 3-layer `HardwarePolicyResolver` in `api_server.py`:
+- L1: sys.path import from PERPETUA_TOOLS_ROOT → PT-authoritative (preferred)
+- L2: `config/hardware_policy_cache.yml` → vendored YAML snapshot, logs CRITICAL warning
+- L3: hard fail if cache also missing — never silently skip enforcement
+
+**PT final handoff audit trail:** Every response includes `metadata.policy_source` and `metadata.pt_authoritative`. `/health` endpoint exposes `hardware_policy.source`. This lets callers and ops know whether any routing decision was PT-authoritative or cache-degraded.
+
+**FastAPI lifespan:** Moved policy initialization from module-level (breaks test imports + `--reload`) to `@asynccontextmanager lifespan`. Startup probe happens once; result is stable for the server lifetime.
+
+**`hardware_policy_cache.yml`:** Created at `orama-system/config/hardware_policy_cache.yml` — refresh instructions in the file header.
+
+## Gemini v3.1 Plan Review
+
+**Accepted:**
+- Step 2 (PERPETUA_TOOLS_ROOT env consolidation) — already done via .env.example
+- Step 4 (hallucination purge) — already done in prior session; bad IDs live only in docs warning about them
+
+**Rejected:**
+- Step 1.1 (symlink orama/utils/hardware_policy.py → PT/utils/hardware_policy.py): fragile across machines, breaks on Windows (no Unix symlinks), breaks in Docker/CI, breaks when repos at different paths. sys.path approach is more portable.
+- Step 1.2 (remove _simple_policy_parse fallback): this IS the disaster recovery fallback for PyYAML-absent environments. Removing it reduces resilience.
+
+## AlphaClaw Plugin Config Fixes
+
+**Problem 1 — duplicate plugin ID:** `usage-tracker` was being loaded twice — once as a bundled built-in AND again because startup code adds `lib/plugin/usage-tracker` to `plugins.load.paths`. Harmless but noisy.
+
+**Problem 2 — restart unavailable:** `openclaw restart` requires `"restart"` in `plugins.allow`. It was absent.
+
+**Fix:** Added to both `~/.alphaclaw/openclaw.json` and `alphaclaw-observability/config/openclaw.json`:
+```json
+"plugins": {
+  "allow": ["usage-tracker", "restart", "memory-core"],
+  "entries": { "usage-tracker": { "enabled": true }, "restart": { "enabled": true } },
+  "load": { "paths": [] }
+}
+```
+Setting `load.paths: []` prevents the startup code from adding the dev-repo path (which caused the duplicate).
+
+**Architecture clarification:** AlphaClaw is a WRAPPER that orchestrates OpenClaw instances. OpenClaw runs standalone. AlphaClaw manages the gateway, plugins, and agent lifecycle AROUND OpenClaw sessions. This is the opposite of what the config file naming suggests — `openclaw.json` is AlphaClaw's config for managing OpenClaw.
+
+## Tests Summary
+
+- PT: 24/24 pass (16 original + 5 new: parametrized YAML parser + routing affinity key guard + ORAMA_ENDPOINT fix)
+- orama: 23/23 pass (16 original + 7 new: agent_registry schema consistency tests)
+
+## Open
+
+- G1 (shared models): blocked — needs both machines online simultaneously
+- G4 (live openclaw.json repair): blocked — needs both machines online
+- Codex: `@openai/codex-darwin-arm64` native binary missing; use Gemini as second voice until fixed

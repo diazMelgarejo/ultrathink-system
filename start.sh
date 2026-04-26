@@ -25,6 +25,34 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PATHS_FILE="$SCRIPT_DIR/.paths"
 
+# ── structured logging ─────────────────────────────────────────────────────────
+# Levels: INFO (normal flow), WARN (non-fatal, needs attention), ERROR (fatal),
+#         DEBUG (variable tracing — set ORAMA_DEBUG=1 to enable)
+# Format: [HH:MM:SS] LEVEL  stage  message
+#   stage = path|ip|pt|svc — makes grep-based debugging trivial:
+#   e.g.  grep '\[ip\]' start.sh.log
+#         grep 'WARN'    start.sh.log
+_LOG_START="$(date +%s)"
+_log() {
+  local level="$1" stage="$2"; shift 2
+  local ts; ts="$(date +%H:%M:%S)"
+  local elapsed=$(( $(date +%s) - _LOG_START ))
+  local msg="[${ts}] ${level}  [${stage}]  $*  (+${elapsed}s)"
+  echo "$msg"
+  # Append to session log for post-mortem analysis
+  echo "$msg" >> "${SCRIPT_DIR}/.logs/startup-$(date +%Y%m%d).log" 2>/dev/null || true
+}
+_info()  { _log "INFO " "$@"; }
+_warn()  { _log "WARN " "$@"; }
+_err()   { _log "ERROR" "$@"; }
+_debug() { [[ "${ORAMA_DEBUG:-0}" == "1" ]] && _log "DEBUG" "$@" || true; }
+_var()   {
+  # Trace a variable: _var stage VAR_NAME value [source]
+  local stage="$1" name="$2" val="$3" src="${4:-}"
+  local src_tag="${src:+  ← ${src}}"
+  _debug "$stage" "${name}=${val}${src_tag}"
+}
+
 # ── path resolution: .paths → git siblings → hardcoded sibling default ─────────
 
 _discover_pt_dir() {
@@ -59,17 +87,29 @@ PT_DIR=""; PT_PYTHON=""; US_PYTHON=""
 if [ -f "$PATHS_FILE" ]; then
   # shellcheck source=/dev/null
   source "$PATHS_FILE"
+  _debug "path" "loaded .paths — PT_DIR=${PT_DIR}"
+else
+  _debug "path" ".paths not found — will discover"
 fi
 
 # Fill in any missing values via discovery
 if [ -z "${PT_DIR:-}" ]; then
   PT_DIR="$(_discover_pt_dir)"
+  _debug "path" "PT_DIR discovered=${PT_DIR}"
 fi
 if [ -z "${PT_PYTHON:-}" ]; then
   PT_PYTHON="$(_best_python "${PT_DIR:-$SCRIPT_DIR}")"
+  _debug "path" "PT_PYTHON=${PT_PYTHON}"
 fi
 if [ -z "${US_PYTHON:-}" ]; then
   US_PYTHON="$(_best_python "$SCRIPT_DIR")"
+  _debug "path" "US_PYTHON=${US_PYTHON}"
+fi
+
+if [ -z "${PT_DIR:-}" ] || [ ! -f "${PT_DIR}/orchestrator/alphaclaw_manager.py" ]; then
+  _warn "path" "PT_DIR not found or missing alphaclaw_manager.py — PT resolve will be skipped"
+else
+  _info "path" "PT_DIR=${PT_DIR}"
 fi
 
 # Write .paths on first run (or if --discover requested)
@@ -175,7 +215,12 @@ MAC_IP="${MAC_IP:-localhost}"
 WIN_IP="${WIN_IP:-192.168.254.103}"
 IP_SOURCE="${IP_SOURCE:-last-resort-constant}"
 
-echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}  (source: ${IP_SOURCE})"
+_info  "ip" "MAC_IP=${MAC_IP}  WIN_IP=${WIN_IP}  source=${IP_SOURCE}"
+if [[ "$IP_SOURCE" == "last-resort-constant" ]]; then
+  _warn "ip" "IP detection fell through to last-resort constant — run 'discover.py --force' if Win is unreachable"
+fi
+_var   "ip" "MAC_IP" "$MAC_IP" "$IP_SOURCE"
+_var   "ip" "WIN_IP" "$WIN_IP" "$IP_SOURCE"
 
 # ── PT resolve — backend probe + AlphaClaw bootstrap ─────────────────────────
 # Delegates ALL gateway decisions to Perpetua-Tools (Layer 2).
@@ -191,7 +236,7 @@ PT_DISTRIBUTED="no"
 PT_ALPHACLAW_PORT=""
 
 if [ -n "${PT_DIR:-}" ] && [ -f "${PT_DIR}/orchestrator/alphaclaw_manager.py" ]; then
-  echo "  PT    resolving runtime (backends + AlphaClaw)…"
+  _info "pt" "resolving runtime — passing MAC_IP=${MAC_IP} WIN_IP=${WIN_IP}"
   _PT_ENV_EXPORTS="$(
     MAC_IP="${MAC_IP}" WIN_IP="${WIN_IP}" \
     PYTHONPATH="${PT_DIR}" \
@@ -206,34 +251,46 @@ if [ -n "${PT_DIR:-}" ] && [ -f "${PT_DIR}/orchestrator/alphaclaw_manager.py" ];
     PT_MODE="${PT_MODE:-offline}"
     PT_DISTRIBUTED="${PT_DISTRIBUTED:-no}"
     PT_ALPHACLAW_PORT="${PT_ALPHACLAW_PORT:-}"
-    echo "  PT    mode=${PT_MODE}  AlphaClaw=:${PT_ALPHACLAW_PORT}"
     export PT_AGENTS_STATE="${PT_DIR}/.state/routing.json"
+    _info "pt" "resolved — mode=${PT_MODE}  distributed=${PT_DISTRIBUTED}  alphaclaw_port=${PT_ALPHACLAW_PORT}"
+    _var  "pt" "PT_MODE"          "$PT_MODE"          "alphaclaw_manager"
+    _var  "pt" "PT_DISTRIBUTED"   "$PT_DISTRIBUTED"   "alphaclaw_manager"
+    _var  "pt" "PT_ALPHACLAW_PORT" "$PT_ALPHACLAW_PORT" "alphaclaw_manager"
+    _var  "pt" "PT_AGENTS_STATE"  "$PT_AGENTS_STATE"  "derived"
   else
-    echo "  PT    resolve non-fatal — continuing with defaults"
+    _warn "pt" "resolve non-fatal (exit=${PT_RESOLVE_OK}) — continuing with offline defaults"
   fi
 else
   # Fallback: PT manager not available — delegate to bootstrap script directly
   PT_HOME="${PT_HOME:-$HOME/Perpetua-Tools}"
   ALPHACLAW_SCRIPT="$PT_HOME/alphaclaw_bootstrap.py"
   if [ -f "$ALPHACLAW_SCRIPT" ]; then
-    echo "  AlphaClaw  bootstrapping via PT fallback ($ALPHACLAW_SCRIPT)…"
+    _warn "pt" "alphaclaw_manager.py not found — using fallback bootstrap at ${ALPHACLAW_SCRIPT}"
     PT_HOME="$PT_HOME" UTS_HOME="$SCRIPT_DIR" \
       MAC_IP="${MAC_IP}" WIN_IP="${WIN_IP}" \
       "$US_PYTHON" "$ALPHACLAW_SCRIPT" --bootstrap \
       </dev/null 2>&1 | sed 's/^/  /' \
-      || echo "  AlphaClaw  non-fatal — continuing without gateway"
+      || _warn "pt" "fallback bootstrap non-fatal — continuing without gateway"
   else
-    echo "  PT    not found at ${PT_DIR:-$PT_HOME} — skipping AlphaClaw bootstrap"
+    _warn "pt" "PT not found at ${PT_DIR:-$PT_HOME} — skipping AlphaClaw bootstrap entirely"
   fi
 fi
 
 # Export env vars all services read (with user overrides respected)
-export OLLAMA_MAC_ENDPOINT="${OLLAMA_MAC_ENDPOINT:-http://${MAC_IP}:11434}"
+# _var traces show exactly what value each service will receive
+export OLLAMA_MAC_ENDPOINT="${OLLAMA_MAC_ENDPOINT:-http://localhost:11434}"
 export OLLAMA_WINDOWS_ENDPOINT="${OLLAMA_WINDOWS_ENDPOINT:-http://${WIN_IP}:11434}"
-export LM_STUDIO_MAC_ENDPOINT="${LM_STUDIO_MAC_ENDPOINT:-http://${MAC_IP}:1234}"
+export LM_STUDIO_MAC_ENDPOINT="${LM_STUDIO_MAC_ENDPOINT:-http://localhost:1234}"
 export LM_STUDIO_WIN_ENDPOINTS="${LM_STUDIO_WIN_ENDPOINTS:-http://${WIN_IP}:1234}"
 export WINDOWS_IP="${WINDOWS_IP:-${WIN_IP}}"
 export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
+
+_info "env" "endpoints exported to child processes"
+_var  "env" "OLLAMA_MAC_ENDPOINT"    "$OLLAMA_MAC_ENDPOINT"    "derived"
+_var  "env" "OLLAMA_WINDOWS_ENDPOINT" "$OLLAMA_WINDOWS_ENDPOINT" "derived"
+_var  "env" "LM_STUDIO_MAC_ENDPOINT" "$LM_STUDIO_MAC_ENDPOINT" "derived"
+_var  "env" "LM_STUDIO_WIN_ENDPOINTS" "$LM_STUDIO_WIN_ENDPOINTS" "derived"
+_var  "env" "WINDOWS_IP"             "$WINDOWS_IP"             "derived"
 
 # AlphaClaw security warning — show if running on default password
 _AC_PT_HOME="${PT_DIR:-${PT_HOME:-$HOME/Perpetua-Tools}}"

@@ -416,3 +416,56 @@ Markdown edits need their own pre-commit discipline. Absolute local links, missi
 1. Before committing markdown, run `python3 scripts/review/repo_hygiene.py .`.
 2. Keep links relative and GitHub-renderable unless the target is an intentional external URL.
 3. Preserve redirect or canonical-path breadcrumbs when moving markdown.
+
+---
+
+## [2026-04-26] Session: Twin-System Recovery & Integration Hardening
+
+### Context
+Full-session work across Perpetua-Tools (Layer 2) and orama-system (Layer 3). AlphaClaw untouched.
+
+### Key Facts Confirmed
+
+| Fact | Value |
+|------|-------|
+| Win RTX 3080 LAN IP | `192.168.254.103:1234` (was wrong as .101/.107/.109) |
+| Mac M2 Pro LAN IP | `192.168.254.105:1234` (always `localhost:1234` locally) |
+| OpenClaw gateway | `localhost:18789`, loopback-only, bearer token auth |
+| Tier 1 confirmed | Both nodes live after IP fix + `discover.py --force` |
+| Gstack version | v1.12.2.0 at `~/.claude/skills/gstack` |
+| Gbrain identity | `mcp__gbrain__*` tools (used by Gstack commands) |
+
+### Patterns Learned
+
+**IP drift is multi-file.** When LAN IPs change, update simultaneously:
+`~/.openclaw/openclaw.json` → `config/devices.yml` → `.env.local` → run `discover.py --force`.
+Use `grep -r "192.168.254" .` across all three repos as the audit command.
+
+**GPT-5.5 model fallback rule.** Try `gpt-5.5` first. Downgrade to `gpt-5.4` ONLY on:
+`"message":"The 'gpt-5.5' model is not supported when using Codex with a ChatGPT account."`
+Do not preemptively downgrade.
+
+**Gemini API type is critical.** Use `google-generative-ai` type for Gemini providers in OpenClaw — NOT `openai-completions`. The wrong type causes the gateway process to crash silently.
+
+**Self-improve skill trigger = Option C.** Auto-suggest at session end; commit only when user approves. Never auto-commit without the A/B/C gate.
+
+**Empty git dirs after rename.** `git mv` fails with "source directory is empty" when the dir has no tracked files. Use `rm -rf` for untracked artifact dirs — don't try to rename them.
+
+**PR merge timing.** Cherry-pick post-branch commits onto main after PR merge. The last commit on a feature branch can be left behind if pushed after the PR was merged. Always verify with `git log --oneline origin/main..HEAD` after switching to main.
+
+### Skills & Agents Created This Session
+
+| Artifact | Location | Purpose |
+|----------|----------|---------|
+| `alphaclaw-session` v1.1.0 | PT `.claude/skills/alphaclaw-session/SKILL.md` | DO's/DON'Ts, self-healing, IP roster |
+| `self-improve` v1.0.0 | PT + orama `.claude/skills/self-improve/SKILL.md` | Session crystallization (Option C) |
+| `gemini-analyzer` agent | PT `.claude/agents/gemini-analyzer.md` | Gemini Reader role, large-context |
+| `codex-coder` agent | PT `.claude/agents/codex-coder.md` | GPT-5.5 coder, Gbrain bridge, Gstack |
+
+### Open Items (carry forward)
+
+- Model ID case test (gateway was offline this session)
+- Merge orama-system `2026-04-24-001-orama-salvage` → main
+- Live Gbrain ↔ Codex test via Gstack
+- Live Gemini-coder test via `mcp__gemini-cli__ask-gemini`
+

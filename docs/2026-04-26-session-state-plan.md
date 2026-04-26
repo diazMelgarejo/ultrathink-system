@@ -244,5 +244,63 @@ Append dated entry capturing:
 
 ---
 
-*Generated: 2026-04-26 | Branch: 2026-04-24-001-orama-salvage | Author: Claude (session recovery)*
-*Next session: start with § 4 Immediate Next Steps, P0 first.*
+---
+
+## 7. Session Continuation — Answers & Execution Status
+
+*Updated: 2026-04-26 (same session, second context window)*
+
+### Q1 Answer — Gbrain Identity
+
+> **Gbrain = `mcp__gbrain__*` tools**, consumed by Gstack commands.  
+> Gstack v1.12.2.0 is installed at `~/.claude/skills/gstack` (global-git).  
+> Invoke the Gstack skill first (`Skill tool → gstack`), then use `mcp__gbrain__query/put_page/search` etc. for persistent memory.  
+> Bidirectional Codex ↔ Gbrain test: documented in `.claude/agents/codex-coder.md` under "Gbrain Integration".
+
+### Q2 Answer — Self-Improve Trigger
+
+> **Option C selected**: Auto-suggest at session end + commit only when user approves.  
+> Implementation: `.claude/skills/self-improve/SKILL.md` v1.0.0 created in both PT and orama-system.  
+> Trigger: Claude invokes at natural session end. Gate: hard STOP before any write — user must type A/B/C.
+
+### Q3 Answer — Model ID Case Resolution
+
+> **Try mixed-case first (keep current openclaw.json agent refs).**  
+> If `coder` or `win-researcher` agents fail with a model-not-found error when OpenClaw is live, run the lowercase fix script documented in `alphaclaw-session v1.1 → Self-Healing → Model ID mismatch`.  
+> Test was blocked this session: gateway was offline (OpenClaw process not running). Retry next session.  
+> **Document the result in LESSONS.md after testing.** Whichever works becomes the canonical default.
+
+### GPT-5.5 / Codex Model Fallback Rule (added during execution)
+
+> Try `gpt-5.5` first.  
+> Downgrade to `gpt-5.4` **only** when this exact error is received:  
+> `{"type":"invalid_request_error","message":"The 'gpt-5.5' model is not supported when using Codex with a ChatGPT account."}`  
+> Do NOT preemptively downgrade. Documented in `.claude/agents/codex-coder.md`.
+
+---
+
+### Execution Status — All 8 Segments
+
+| Seg | Task | Status | Commit / Note |
+|-----|------|--------|---------------|
+| 1 | Merge PT PR #21 → main | ✅ Done | `bd5b0d5` (merge), `9631c6d` (IP fix CP), `a32aee6` (skills CP) |
+| 2 | Rename `ultrathink-system` skill dir in orama | ✅ Done | Was empty dirs (never tracked) — purged with `rm -rf` |
+| 3 | Test model ID case | ⚠️ Blocked | Gateway offline; keep mixed-case for now; retest next session |
+| 4 | alphaclaw-session v1.1 (DO's/DON'Ts + self-healing) | ✅ Done | `a32aee6` on PT main |
+| 5 | Self-improve skill (Option C) in PT + orama | ✅ Done | `a32aee6` (PT); committed to orama this session |
+| 6 | gemini-analyzer.md + codex-coder.md agent files | ✅ Done | `a32aee6` on PT main; incl. gpt-5.4 fallback rule |
+| 7 | Update this plan doc (Q1-Q3 + status) | ✅ Done | This edit |
+| 8 | LESSONS.md update + orama pushes | 🔄 In progress | See next commit |
+
+### Still Pending (carry to next session)
+
+- **Model ID case test** — run when gateway is live; document in LESSONS.md
+- **orama-system merge** — merge `2026-04-24-001-orama-salvage` → main
+- **Gbrain ↔ Codex live test** — use Gstack skill + `mcp__gbrain__*` + `mcp__ai-cli__run`
+- **Gemini-coder live test** — verify `mcp__gemini-cli__ask-gemini` responds correctly
+- **PT root SKILL.md upgrade** — multi-platform routing table, GPT-5.5/Gemini/Claude Code interop
+
+---
+
+*Generated: 2026-04-26 | Branch: 2026-04-24-001-orama-salvage | Author: Claude (session recovery + continuation)*
+*Next session: check Seg 3 (gateway up?), then merge orama salvage branch, then live tests.*

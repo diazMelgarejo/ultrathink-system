@@ -22,8 +22,8 @@ class NetworkAutoConfig:
     def __init__(self):
         self.system = platform.system()
         self.preferred_ips = {
-            'Darwin': '192.168.254.110',   # macOS — LM Studio host
-            'Windows': '192.168.254.108',  # Windows — LM Studio / Ollama host
+            'Darwin': '192.168.254.105',   # macOS LAN IP (use localhost when probing self)
+            'Windows': '192.168.254.103',  # Windows RTX 3080 — LM Studio primary
         }
         
     def get_preferred_ip(self) -> str:

@@ -21,11 +21,36 @@ except ImportError:
 class NetworkAutoConfig:
     def __init__(self):
         self.system = platform.system()
-        self.preferred_ips = {
-            'Darwin': '192.168.254.110',   # macOS — LM Studio host
-            'Windows': '192.168.254.108',  # Windows — LM Studio / Ollama host
+        # Priority 1: read from openclaw.json (authoritative — kept fresh by discover.py).
+        # Priority 2: fall back to confirmed hardware constants (last-resort only).
+        # OLD stale IPs (archive): Darwin=.110, Windows=.108/.100/.101 — do not restore.
+        self.preferred_ips = self._load_from_openclaw() or {
+            'Darwin': '192.168.254.105',   # macOS LAN IP (last-resort; use localhost for self-probe)
+            'Windows': '192.168.254.103',  # Windows RTX 3080 (last-resort; confirmed 2026-04-26)
         }
-        
+
+    def _load_from_openclaw(self) -> Optional[Dict[str, str]]:
+        """
+        Read IPs from ~/.openclaw/openclaw.json — the single authoritative store
+        that discover.py patches after every successful live probe.
+        Returns None if the file is missing or malformed (caller falls back to constants).
+        """
+        try:
+            import json
+            from pathlib import Path
+            cfg = json.loads(Path.home().joinpath('.openclaw/openclaw.json').read_text())
+            providers = cfg.get('models', {}).get('providers', {})
+            win_url = providers.get('lmstudio-win', {}).get('baseUrl', '')
+            win_ip = win_url.split('//')[-1].split(':')[0] if '//' in win_url else ''
+            if not win_ip:
+                return None
+            return {
+                'Darwin': '192.168.254.105',  # Mac LAN identity (probe via localhost)
+                'Windows': win_ip,
+            }
+        except Exception:
+            return None
+
     def get_preferred_ip(self) -> str:
         """Get OS-preferred IP address"""
         return self.preferred_ips.get(self.system, '127.0.0.1')

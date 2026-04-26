@@ -194,12 +194,24 @@ eval "$(python -m orchestrator.alphaclaw_manager --resolve --env-only)"
 
 ## 9. gstack
 
-gstack v1.3 is ingested as the agent skill framework for web browsing, planning, and review.
+gstack v1.12.2.0 is installed at `~/.claude/skills/gstack` (global-git).
 
-**Rules:**
-
-- ALWAYS use `/browse` for web browsing — NEVER `mcp__Claude_in_Chrome__*` directly
+**Safety rules (always active):**
+- ALWAYS use `/browse` for all web browsing — NEVER use `mcp__claude-in-chrome__*` tools directly
 - Use `/investigate` for root-cause analysis of adapter or orchestration failures
 - Use `/ship` before any `npm publish`
 
-Install: `bash scripts/install-gstack.sh` (requires bun). See AlphaClaw `CLAUDE.md §gstack` for full skill table.
+**Load full routing table, skill list, and GBrain config:**
+```
+/skill bin/orama-system/gstack/SKILL.md
+```
+
+**Create a new skill for this repo or for gstack:**
+```
+/skill bin/orama-system/skillify/SKILL.md
+```
+
+**Install the MCP orchestration stack (gemini-mcp-tool + ai-cli-mcp + OpenClaw registry):**
+```
+/skill bin/orama-system/mcp-install/SKILL.md
+```

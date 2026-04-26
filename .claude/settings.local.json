@@ -11,7 +11,8 @@
       "Bash(echo \"UT exit: $?\")",
       "Bash(bash \"/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perplexity-Tools/scripts/sync-companion-instincts.sh\")",
       "Bash(echo \"PT exit: $?\")",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Skill(autoplan)"
     ]
   }
 }

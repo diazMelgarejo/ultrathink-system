@@ -111,17 +111,17 @@ try:
     cfg = NetworkAutoConfig()
     with contextlib.redirect_stdout(io.StringIO()):
         mac_ip = cfg.get_working_local_ip()
-    win_ip = cfg.preferred_ips.get('Windows', '192.168.254.100')
+    win_ip = cfg.preferred_ips.get('Windows', '192.168.254.103')
     print('MAC_IP=' + mac_ip)
     print('WIN_IP=' + win_ip)
 except Exception:
     print('MAC_IP=192.168.254.105')
-    print('WIN_IP=192.168.254.100')
+    print('WIN_IP=192.168.254.103')
 " 2>/dev/null)"
 
 eval "$_IP_VARS"
 MAC_IP="${MAC_IP:-192.168.254.105}"
-WIN_IP="${WIN_IP:-192.168.254.100}"
+WIN_IP="${WIN_IP:-192.168.254.103}"
 
 echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
 

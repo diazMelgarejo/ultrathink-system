@@ -102,28 +102,80 @@ if [ -f "$SCRIPT_DIR/setup_macos.py" ]; then
   "$US_PYTHON" "$SCRIPT_DIR/setup_macos.py" --quiet 2>&1 | sed 's/^/  /' || true
 fi
 
-# ── IP auto-detection ─────────────────────────────────────────────────────────
-_IP_VARS="$(cd "$SCRIPT_DIR" && "$US_PYTHON" -c "
-import sys, io, contextlib
-sys.path.insert(0, '.')
+# ── IP auto-detection (priority-based, never stale first) ────────────────────
+#
+# Priority chain — first success wins:
+#   1. ~/.openclaw/openclaw.json   (discover.py keeps this in sync after every live probe)
+#   2. discover.py --status        (reads cached state from last successful scan)
+#   3. network_autoconfig netifaces (dynamic interface detection — no prior state)
+#   4. Hardcoded last-resort       (labeled constants, never promoted above live data)
+#
+# Old IPs are preserved only as comments below — NEVER used as primary source.
+# To force refresh: python3 ~/.openclaw/scripts/discover.py --force
+
+_IP_VARS="$("$US_PYTHON" -c "
+import json, re, subprocess, sys
+from pathlib import Path
+
+MAC_IP = 'localhost'   # Mac always probes itself via localhost
+WIN_IP = ''
+source  = 'unknown'
+
+# ── Priority 1: ~/.openclaw/openclaw.json ─────────────────────────────────────
+# discover.py patches this file on every successful scan — authoritative.
 try:
-    from network_autoconfig import NetworkAutoConfig
-    cfg = NetworkAutoConfig()
-    with contextlib.redirect_stdout(io.StringIO()):
-        mac_ip = cfg.get_working_local_ip()
-    win_ip = cfg.preferred_ips.get('Windows', '192.168.254.103')
-    print('MAC_IP=' + mac_ip)
-    print('WIN_IP=' + win_ip)
+    cfg = json.loads(Path.home().joinpath('.openclaw/openclaw.json').read_text())
+    url = cfg['models']['providers']['lmstudio-win']['baseUrl']
+    WIN_IP = url.split('//')[-1].split(':')[0]
+    source = 'openclaw.json'
 except Exception:
-    print('MAC_IP=192.168.254.105')
-    print('WIN_IP=192.168.254.103')
+    pass
+
+# ── Priority 2: discover.py --status ─────────────────────────────────────────
+# Reads cached discovery state (~/.openclaw/state/discovery.json). Fast, no probe.
+if not WIN_IP:
+    try:
+        out = subprocess.check_output(
+            [sys.executable, str(Path.home() / '.openclaw/scripts/discover.py'), '--status'],
+            stderr=subprocess.DEVNULL, timeout=8
+        ).decode()
+        m = re.search(r'win:.*?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})', out)
+        if m:
+            WIN_IP = m.group(1)
+            source = 'discover.py'
+    except Exception:
+        pass
+
+# ── Priority 3: network_autoconfig dynamic netifaces scan ────────────────────
+# Uses OS network interface list — reflects current topology without prior state.
+if not WIN_IP:
+    try:
+        sys.path.insert(0, '$SCRIPT_DIR')
+        from network_autoconfig import NetworkAutoConfig
+        cfg2 = NetworkAutoConfig()
+        WIN_IP = cfg2.preferred_ips.get('Windows', '')
+        source = 'network_autoconfig'
+    except Exception:
+        pass
+
+# ── Priority 4: last-resort hardcoded constants ───────────────────────────────
+# Updated to confirmed values but NEVER promoted above live detection.
+# Previous stale IPs (archive): Darwin=.110 Windows=.108 → .100 → .101
+if not WIN_IP:
+    WIN_IP = '192.168.254.103'   # confirmed Win RTX 3080 as of 2026-04-26
+    source = 'last-resort-constant'
+
+print(f'MAC_IP={MAC_IP}')
+print(f'WIN_IP={WIN_IP}')
+print(f'IP_SOURCE={source}')
 " 2>/dev/null)"
 
 eval "$_IP_VARS"
-MAC_IP="${MAC_IP:-192.168.254.105}"
+MAC_IP="${MAC_IP:-localhost}"
 WIN_IP="${WIN_IP:-192.168.254.103}"
+IP_SOURCE="${IP_SOURCE:-last-resort-constant}"
 
-echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}"
+echo "  IPs   Mac=${MAC_IP}  Win=${WIN_IP}  (source: ${IP_SOURCE})"
 
 # ── PT resolve — backend probe + AlphaClaw bootstrap ─────────────────────────
 # Delegates ALL gateway decisions to Perpetua-Tools (Layer 2).

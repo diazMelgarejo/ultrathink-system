@@ -143,6 +143,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .policy-bad{{border-color:#dc2626}}
   .select-row{{display:flex;gap:.5rem;margin-top:.5rem;align-items:center}}
   select{{background:#1e293b;border:1px solid #475569;color:#f8fafc;border-radius:3px;padding:.3rem;font-family:monospace;font-size:.75rem;min-width:12rem}}
+  /* agent dispatch panel */
+  .dispatch-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem;margin-bottom:.75rem}}
+  .agent-btn{{background:#1e293b;border:1px solid #475569;border-radius:4px;color:#94a3b8;cursor:pointer;font-family:monospace;font-size:.7rem;padding:.5rem .6rem;text-align:center;transition:border-color .15s,color .15s}}
+  .agent-btn:hover{{border-color:#38bdf8;color:#f8fafc}}
+  .agent-btn.active{{border-color:#38bdf8;color:#38bdf8;background:#0c2034}}
+  .agent-btn.avail::before{{content:"● ";color:#4ade80}}
+  .agent-btn.unavail{{opacity:.45;cursor:not-allowed}}
+  .agent-btn.unavail::before{{content:"● ";color:#f87171}}
+  .dispatch-row{{display:flex;gap:.5rem}}
+  .dispatch-field{{flex:1;background:#1e293b;border:1px solid #475569;border-radius:3px;color:#f8fafc;font-family:monospace;font-size:.85rem;padding:.45rem .75rem;outline:none}}
+  .dispatch-field:focus{{border-color:#38bdf8}}
+  .dispatch-send{{background:#7c3aed;border:none;border-radius:3px;color:#f5f3ff;cursor:pointer;font-family:monospace;font-size:.8rem;padding:.45rem 1rem;white-space:nowrap}}
+  .dispatch-send:hover{{background:#6d28d9}}
+  .dispatch-status{{font-size:.7rem;color:#64748b;margin-top:.4rem;min-height:1rem}}
+  .dispatch-output{{background:#1e293b;border:1px solid #475569;border-radius:3px;color:#a5f3fc;font-family:monospace;font-size:.7rem;margin-top:.5rem;max-height:14rem;overflow-y:auto;padding:.5rem .75rem;white-space:pre-wrap;display:none}}
 </style>
 </head>
 <body>
@@ -152,6 +167,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </div>
 {routing_section}
 {hardware_policy_section}
+{agent_dispatch_section}
 {agent_state_section}
 {activity_section}
 {input_section}
@@ -184,7 +200,49 @@ document.addEventListener('DOMContentLoaded', function() {{
   document.getElementById('task-input').addEventListener('keydown', function(e) {{
     if (e.key === 'Enter') sendTask();
   }});
+  // Agent dispatch
+  let _selectedAgent = 'codex';
+  document.querySelectorAll('.agent-btn:not(.unavail)').forEach(btn => {{
+    btn.addEventListener('click', function() {{
+      document.querySelectorAll('.agent-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      _selectedAgent = this.dataset.agent;
+    }});
+  }});
+  const firstAvail = document.querySelector('.agent-btn.avail');
+  if (firstAvail) {{ firstAvail.classList.add('active'); _selectedAgent = firstAvail.dataset.agent; }}
+  document.getElementById('dispatch-field').addEventListener('keydown', function(e) {{
+    if (e.key === 'Enter') spawnAgent();
+  }});
 }});
+async function spawnAgent() {{
+  const field = document.getElementById('dispatch-field');
+  const status = document.getElementById('dispatch-status');
+  const output = document.getElementById('dispatch-output');
+  const task = field.value.trim();
+  if (!task) {{ status.textContent = 'Enter a task first.'; return; }}
+  status.textContent = 'Dispatching to ' + _selectedAgent + '…';
+  output.style.display = 'none';
+  try {{
+    const r = await fetch('/api/spawn-agent', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{agent: _selectedAgent, task: task}})
+    }});
+    const d = await r.json();
+    if (d.ok) {{
+      status.textContent = '✓ Done (' + (d.elapsed||'').toFixed(1) + 's)';
+      field.value = '';
+    }} else {{
+      status.textContent = '✗ Agent error';
+    }}
+    const text = d.output || JSON.stringify(d.results || d, null, 2);
+    output.textContent = text;
+    output.style.display = 'block';
+  }} catch(e) {{
+    status.textContent = 'Request failed: ' + e;
+  }}
+}}
 </script>
 </body>
 </html>"""
@@ -213,6 +271,43 @@ def _render_card(title: str, ok: bool, url: str, role: str = "", models: List[st
         f'{models_html}'
         f'{extra}'
         f'</div>'
+    )
+
+
+def _render_agent_dispatch_section(agent_availability: Dict[str, bool]) -> str:
+    """Render the Agent Dispatch panel with live availability badges."""
+    AGENTS = [
+        ("codex",         "Codex",              "CLI · local"),
+        ("gemini",        "Gemini CLI",          "CLI · local"),
+        ("lmstudio-mac",  "LM Studio Mac",       "HTTP · .110"),
+        ("lmstudio-win",  "LM Studio Win",       "HTTP · .101 GPU"),
+        ("all",           "All (parallel)",      "Codex + Gemini + Mac; Win serial"),
+    ]
+    btns = []
+    for key, label, hint in AGENTS:
+        if key == "all":
+            css = "avail"  # always show "all" as available
+        else:
+            css = "avail" if agent_availability.get(key) else "unavail"
+        btns.append(
+            f'<button class="agent-btn {css}" data-agent="{key}" title="{hint}">'
+            f'{label}<br><span style="font-size:.6rem;color:#64748b">{hint}</span>'
+            f'</button>'
+        )
+    return (
+        '<div class="section">'
+        '<div class="section-title">Agent Dispatch</div>'
+        '<div class="input-box">'
+        '<span class="input-label">Select agent, enter task, press Enter or Send</span>'
+        '<div class="dispatch-grid">' + "".join(btns) + '</div>'
+        '<div class="dispatch-row">'
+        '<input class="dispatch-field" id="dispatch-field" type="text" placeholder="Task for selected agent…" />'
+        '<button class="dispatch-send" onclick="spawnAgent()">Send</button>'
+        '</div>'
+        '<div class="dispatch-status" id="dispatch-status"></div>'
+        '<pre class="dispatch-output" id="dispatch-output"></pre>'
+        '</div>'
+        '</div>'
     )
 
 
@@ -451,11 +546,23 @@ def _render_html(status: Dict[str, Any]) -> str:
     agents = status.get("agents", [])
     queue_depth = status.get("queue_depth", 0)
     hardware_policy = status.get("hardware_policy")
+    # Agent dispatch availability — derived from service probes already in status
+    svc = status.get("services", {})
+    agent_availability = {
+        "lmstudio-mac": svc.get("lmstudio_mac", {}).get("ok", False),
+        "lmstudio-win": (
+            svc.get("lmstudio_win", {}).get("ok", False)
+            or any(v.get("ok") for k, v in svc.items() if k.startswith("lmstudio_win_"))
+        ),
+        "codex": status.get("codex_available", False),
+        "gemini": status.get("gemini_available", False),
+    }
     return HTML_TEMPLATE.format(
         version=VERSION,
         cards="\n".join(cards),
         routing_section=_render_routing_section(routing),
         hardware_policy_section=_render_hardware_policy_section(hardware_policy),
+        agent_dispatch_section=_render_agent_dispatch_section(agent_availability),
         agent_state_section=_render_agent_state_section(agents),
         activity_section=_render_activity_section(activity_events),
         input_section=_render_input_section(queue_depth),
@@ -619,6 +726,26 @@ async def api_user_input(req: UserInputRequest):
             return {"status": "error", "message": str(exc)}
 
 
+def _probe_cli_available(bin_name: str) -> bool:
+    """Quick synchronous check: is a CLI binary present and functional?"""
+    import shutil, subprocess
+    p = shutil.which(bin_name)
+    if not p:
+        # Also try well-known paths
+        known = {
+            "codex": "/opt/homebrew/bin/codex",
+            "gemini": "/opt/homebrew/bin/gemini",
+        }
+        p = known.get(bin_name, "")
+    if not p or not os.path.exists(p):
+        return False
+    try:
+        r = subprocess.run([p, "--version"], capture_output=True, timeout=4)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
 @app.get("/api/status")
 async def api_status():
     async with httpx.AsyncClient() as client:
@@ -663,6 +790,13 @@ async def api_status():
 
     hardware_policy = _hardware_policy_status(services)
 
+    # CLI agent availability (cheap sync checks, run in default thread pool)
+    loop = asyncio.get_event_loop()
+    codex_avail, gemini_avail = await asyncio.gather(
+        loop.run_in_executor(None, _probe_cli_available, "codex"),
+        loop.run_in_executor(None, _probe_cli_available, "gemini"),
+    )
+
     return {
         "portal_version": VERSION,
         "services": services,
@@ -671,6 +805,8 @@ async def api_status():
         "routing": routing,
         "hardware_policy": hardware_policy,
         "queue_depth": queue_depth,
+        "codex_available": codex_avail,
+        "gemini_available": gemini_avail,
     }
 
 
@@ -678,6 +814,29 @@ async def api_status():
 async def api_hardware_policy():
     status = await api_status()
     return status.get("hardware_policy", {})
+
+
+class SpawnAgentRequest(BaseModel):
+    agent: str
+    task: str
+    model: str = ""
+
+
+@app.post("/api/spawn-agent")
+async def api_spawn_agent(req: SpawnAgentRequest):
+    """Dispatch a task to a named agent (codex, gemini, lmstudio-mac, lmstudio-win, all).
+    Runs synchronously in a threadpool so FastAPI stays responsive.
+    Windows GPU requests are serialized by the _WIN_GPU_LOCK in spawn_agents.py.
+    """
+    import importlib.util, sys as _sys
+    _scripts_dir = REPO_ROOT / "scripts"
+    _spec = importlib.util.spec_from_file_location("spawn_agents", _scripts_dir / "spawn_agents.py")
+    if _spec is None or _spec.loader is None:
+        return {"ok": False, "output": "spawn_agents.py not found in scripts/", "elapsed": 0}
+    _mod = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    result = await _mod.dispatch(req.agent, req.task, model=req.model or None)
+    return result
 
 
 @app.get("/", response_class=None)

@@ -1,21 +1,11 @@
-# orama-system/config/hardware_policy_cache.yml
-# ─────────────────────────────────────────────────────────────────────────────
-# DISASTER RECOVERY FALLBACK — read-only cache of PT's model_hardware_policy.yml
+# hardware_policy_cache.yml — orama-system offline DR fallback
+# Source:  /Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perpetua-Tools/config/model_hardware_policy.yml
+# Refreshed: 2026-04-26T23:56:38Z  sha256:09c342045519
 #
-# Authoritative source: Perpetua-Tools/config/model_hardware_policy.yml
-# This file is used ONLY when PERPETUA_TOOLS_ROOT is not reachable at startup.
-# DO NOT edit this independently — refresh by running:
-#   python scripts/refresh_policy_cache.py
-# or by syncing from PT:
-#   cp ../perplexity-api/Perpetua-Tools/config/model_hardware_policy.yml config/hardware_policy_cache.yml
-#
-# Disaster recovery chain (api_server.py HardwarePolicyResolver):
-#   L1: sys.path import from PERPETUA_TOOLS_ROOT  → PT-authoritative (preferred)
-#   L2: this cached YAML file                     → offline fallback (warn)
-#   L3: hard fail with HTTP 503                   → cache missing (never skip enforcement)
-#
-# Last synced: 2026-04-27
-# ─────────────────────────────────────────────────────────────────────────────
+# This file is the Layer-2 disaster recovery fallback.
+# api_server.py uses it ONLY when PT is unreachable at startup.
+# Refresh: python scripts/refresh_policy_cache.py
+# DO NOT edit manually — it will be overwritten on next refresh.
 
 windows_only:
   - gemma-4-26b-a4b-it
@@ -29,5 +19,3 @@ mac_only:
   - qwen3.5-9b-mlx-4bit
   - Qwen3.5-9B-MLX-4bit
 
-# shared: intentionally empty — populate once both machines verified online.
-# See: docs/tripartite-plan/2026-04-26-hardware-model-routing-004-PART2-PLAN.md § Phase 5

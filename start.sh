@@ -164,6 +164,20 @@ if [ -f "$SCRIPT_DIR/setup_macos.py" ]; then
   "$US_PYTHON" "$SCRIPT_DIR/setup_macos.py" --quiet 2>&1 | sed 's/^/  /' || true
 fi
 
+# ── Codex PATH fix (idempotent) ───────────────────────────────────────────────
+# Ensures ~/.local/bin/codex → /opt/homebrew/bin/codex so Codex is always
+# callable regardless of which nvm version is active in this shell session.
+if [ -f "$SCRIPT_DIR/scripts/setup_codex.sh" ]; then
+  bash "$SCRIPT_DIR/scripts/setup_codex.sh" 2>&1 | sed 's/^/  [codex] /' || true
+fi
+
+# ── Hardware policy cache refresh (L2 disaster recovery) ─────────────────────
+# Refreshes config/hardware_policy_cache.yml from PT's authoritative source.
+# Non-fatal — if PT is absent the existing cache (L2) remains valid.
+if [ -f "$SCRIPT_DIR/scripts/refresh_policy_cache.py" ]; then
+  "$US_PYTHON" "$SCRIPT_DIR/scripts/refresh_policy_cache.py" 2>&1 | sed 's/^/  [policy] /' || true
+fi
+
 # ── IP auto-detection (priority-based, never stale first) ────────────────────
 #
 # Priority chain — first success wins:

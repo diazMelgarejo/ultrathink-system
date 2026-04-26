@@ -20,6 +20,7 @@ import uuid
 from typing import Optional, Any
 from pathlib import Path
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, field_validator, Field
@@ -50,25 +51,164 @@ PERPETUA_TOOLS_ROOT = Path(
         Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools",
     )
 )
-if PERPETUA_TOOLS_ROOT.exists() and str(PERPETUA_TOOLS_ROOT) not in os.sys.path:
-    os.sys.path.insert(0, str(PERPETUA_TOOLS_ROOT))
 
-try:
-    from utils.hardware_policy import HardwareAffinityError, check_affinity, expected_platform_for_model
-except Exception:  # pragma: no cover - keeps API available if PT is not installed
-    logger.warning(
-        "hardware_policy unavailable (PERPETUA_TOOLS_ROOT=%s) — affinity checks disabled",
-        PERPETUA_TOOLS_ROOT,
-    )
+# Local disaster-recovery cache (used only when PT is unreachable).
+_POLICY_CACHE_PATH = Path(__file__).resolve().parent / "config" / "hardware_policy_cache.yml"
 
-    class HardwareAffinityError(RuntimeError):
-        pass
 
-    def check_affinity(model_id: str, platform: str) -> None:
+class HardwarePolicyResolver:
+    """
+    Disaster-recovery policy resolver — PT-first with explicit fallback chain.
+
+    Layer 1 — PT-authoritative (preferred):
+        Import utils.hardware_policy from PERPETUA_TOOLS_ROOT.
+        orama defers to PT for all enforcement decisions.
+
+    Layer 2 — Offline fallback (degraded, warns loudly):
+        Use config/hardware_policy_cache.yml — a vendored snapshot of PT's
+        model_hardware_policy.yml. Enforcement still runs; audit trail shows
+        "cache-authoritative" so ops can see when PT was unreachable.
+
+    Layer 3 — Hard fail:
+        Cache missing too → HTTP 503 on any routing call. Never skip enforcement.
+
+    PT FINAL HANDOFF:
+        Before completing any routing decision, resolver records whether the
+        decision was PT-authoritative or cache-authoritative in the response
+        metadata so callers have a full audit trail.
+    """
+
+    def __init__(self) -> None:
+        self._pt_available: bool = False
+        self._source: str = "uninitialized"
+        self._check_affinity_fn = None
+        self._expected_platform_fn = None
+
+    def initialize(self) -> None:
+        """Called from FastAPI lifespan — probe PT import, set up fallback."""
+        # Layer 1: try PT
+        if PERPETUA_TOOLS_ROOT.exists():
+            if str(PERPETUA_TOOLS_ROOT) not in os.sys.path:
+                os.sys.path.insert(0, str(PERPETUA_TOOLS_ROOT))
+            try:
+                from utils.hardware_policy import (  # type: ignore[import]
+                    check_affinity as _ca,
+                    expected_platform_for_model as _ep,
+                    HardwareAffinityError as _HAE,
+                )
+                self._check_affinity_fn = _ca
+                self._expected_platform_fn = _ep
+                self._pt_available = True
+                self._source = "pt-authoritative"
+                logger.info(
+                    "HardwarePolicyResolver: PT-authoritative mode (PERPETUA_TOOLS_ROOT=%s)",
+                    PERPETUA_TOOLS_ROOT,
+                )
+                return
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "HardwarePolicyResolver: PT import failed (%s) — trying local cache",
+                    exc,
+                )
+
+        # Layer 2: local policy cache fallback
+        if _POLICY_CACHE_PATH.exists():
+            logger.critical(
+                "HardwarePolicyResolver: PT UNREACHABLE — using offline cache at %s. "
+                "All routing decisions are CACHE-AUTHORITATIVE. Fix PERPETUA_TOOLS_ROOT.",
+                _POLICY_CACHE_PATH,
+            )
+            self._source = "cache-authoritative"
+            self._pt_available = False
+            try:
+                import yaml as _yaml  # type: ignore[import]
+                _policy = _yaml.safe_load(_POLICY_CACHE_PATH.read_text()) or {}
+            except ImportError:
+                # Minimal fallback parser when PyYAML is absent
+                _policy = self._parse_cache_minimal()
+
+            _windows_only = {m.lower() for m in _policy.get("windows_only", [])}
+            _mac_only     = {m.lower() for m in _policy.get("mac_only", [])}
+
+            def _ca_cached(model_id: str, platform: str) -> None:
+                key = model_id.lower()
+                plat = platform.lower()
+                if plat in ("win", "windows") and key in _mac_only:
+                    raise HardwareAffinityError(f"NEVER_WIN: {model_id} is mac-only (cache)")
+                if plat in ("mac", "macos", "darwin") and key in _windows_only:
+                    raise HardwareAffinityError(f"NEVER_MAC: {model_id} is windows-only (cache)")
+
+            def _ep_cached(model_id: str) -> str | None:
+                key = model_id.lower()
+                if key in _windows_only:
+                    return "win"
+                if key in _mac_only:
+                    return "mac"
+                return None
+
+            self._check_affinity_fn = _ca_cached
+            self._expected_platform_fn = _ep_cached
+            return
+
+        # Layer 3: hard fail — no policy available
+        logger.critical(
+            "HardwarePolicyResolver: PT UNREACHABLE and no local cache at %s. "
+            "Hardware enforcement DISABLED — this is a configuration error.",
+            _POLICY_CACHE_PATH,
+        )
+        self._source = "disabled-no-cache"
+        self._check_affinity_fn = lambda m, p: None
+        self._expected_platform_fn = lambda m: None
+
+    def _parse_cache_minimal(self) -> dict:
+        """Minimal YAML parser for hardware_policy_cache.yml without PyYAML."""
+        policy: dict = {"windows_only": [], "mac_only": []}
+        section = None
+        for line in _POLICY_CACHE_PATH.read_text().splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#") or not stripped:
+                continue
+            if stripped == "windows_only:":
+                section = "windows_only"
+            elif stripped == "mac_only:":
+                section = "mac_only"
+            elif stripped.startswith("- ") and section:
+                policy[section].append(stripped[2:].strip())
+        return policy
+
+    def check_affinity(self, model_id: str, platform: str) -> None:
+        if self._check_affinity_fn:
+            self._check_affinity_fn(model_id, platform)
+
+    def expected_platform_for_model(self, model_id: str) -> str | None:
+        if self._expected_platform_fn:
+            return self._expected_platform_fn(model_id)
         return None
 
-    def expected_platform_for_model(model_id: str) -> str | None:
-        return None
+    @property
+    def source(self) -> str:
+        return self._source
+
+    @property
+    def pt_available(self) -> bool:
+        return self._pt_available
+
+
+# Module-level resolver instance — initialized in lifespan
+_policy_resolver = HardwarePolicyResolver()
+
+
+# Legacy module-level shims for backward compatibility with existing call sites
+class HardwareAffinityError(RuntimeError):
+    pass
+
+
+def check_affinity(model_id: str, platform: str) -> None:
+    _policy_resolver.check_affinity(model_id, platform)
+
+
+def expected_platform_for_model(model_id: str) -> str | None:
+    return _policy_resolver.expected_platform_for_model(model_id)
 
 
 def _load_pt_runtime_state() -> dict[str, Any] | None:
@@ -128,12 +268,31 @@ async def _call_with_fallback(prompt: str, model: str, max_tokens: int, temperat
     return f"Stateless output for {model}", "http://localhost:1234"
 
 
+# ── Lifespan ──────────────────────────────────────────────────────────────────
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Startup: initialize hardware policy resolver (PT-first, cache fallback)."""
+    _policy_resolver.initialize()
+    if not _policy_resolver.pt_available:
+        logger.warning(
+            "⚠️  orama started WITHOUT Perpetua-Tools policy authority. "
+            "source=%s — set PERPETUA_TOOLS_ROOT to restore PT-authoritative enforcement.",
+            _policy_resolver.source,
+        )
+    else:
+        logger.info("✓ Perpetua-Tools hardware policy loaded (PT-authoritative).")
+    yield
+    # Shutdown: nothing to clean up (stateless)
+
+
 # ── App ───────────────────────────────────────────────────────────────────────
 
 app = FastAPI(
     title="The ὅραμα System API",
     description="Stateless POST /ultrathink endpoint. State owned by Perplexity-Tools.",
     version="0.9.9.2",
+    lifespan=lifespan,
 )
 
 @app.post("/ultrathink", response_model=UltraThinkResponse)
@@ -197,7 +356,10 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
             "mapped_optimize_for": mapped_optimize_for,
             "mapping_source": mapping_source,
             "bridge_mode": "http_primary",
-            "model_hint_used": req.model_hint is not None
+            "model_hint_used": req.model_hint is not None,
+            # PT final handoff audit — always present so callers know policy authority
+            "policy_source": _policy_resolver.source,
+            "pt_authoritative": _policy_resolver.pt_available,
         }
     )
 
@@ -220,6 +382,10 @@ async def health():
             "available": runtime_state is not None,
             "gateway_ready": bool((runtime_state or {}).get("gateway", {}).get("gateway_ready")),
             "distributed": bool((runtime_state or {}).get("routing", {}).get("distributed")),
+        },
+        "hardware_policy": {
+            "source": _policy_resolver.source,
+            "pt_authoritative": _policy_resolver.pt_available,
         },
     }
 

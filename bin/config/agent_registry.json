@@ -84,7 +84,7 @@
     "autoresearch-coder": {
       "id": "autoresearch-coder",
       "type": "worker",
-      "device_affinity": "win-rtx3080",
+      "affinity": "win-rtx3080",
       "model_role": "autoresearch-coder",
       "responsibilities": [
         "Call CIDF decide() before editing train.py (rank 2: direct_typing on local file)",
@@ -98,7 +98,7 @@
     "autoresearch-evaluator": {
       "id": "autoresearch-evaluator",
       "type": "validator",
-      "device_affinity": "mac",
+      "affinity": "mac",
       "model_role": "autoresearch-critic",
       "responsibilities": [
         "Read log.txt via autoresearch_bridge.fetch_run_log()",
@@ -111,7 +111,7 @@
     "autoresearch-orchestrator": {
       "id": "autoresearch-orchestrator",
       "type": "coordinator",
-      "device_affinity": "mac",
+      "affinity": "mac",
       "model_role": "strategy",
       "responsibilities": [
         "Read swarm_state.md + git log to understand current experiment state",

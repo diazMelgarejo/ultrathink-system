@@ -143,6 +143,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .policy-bad{{border-color:#dc2626}}
   .select-row{{display:flex;gap:.5rem;margin-top:.5rem;align-items:center}}
   select{{background:#1e293b;border:1px solid #475569;color:#f8fafc;border-radius:3px;padding:.3rem;font-family:monospace;font-size:.75rem;min-width:12rem}}
+  /* tools & apis panel */
+  .tools-grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.75rem;margin-top:.5rem}}
+  .tool-card{{background:#334155;border:1px solid #475569;border-radius:4px;padding:.75rem}}
+  .tool-name{{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:#94a3b8;margin-bottom:.3rem}}
+  .tool-hint{{font-size:.65rem;color:#64748b;margin-top:.3rem;line-height:1.4}}
+  .tool-hint a{{color:#38bdf8;text-decoration:none}}
+  .tool-hint code{{background:#1e293b;border-radius:2px;padding:.05rem .25rem;font-size:.62rem}}
+  .tool-cfg{{margin-top:.4rem;display:none}}
+  .tool-cfg.open{{display:block}}
+  .tool-cfg-row{{display:flex;gap:.4rem;margin-top:.3rem}}
+  .tool-cfg-input{{flex:1;background:#1e293b;border:1px solid #475569;border-radius:3px;color:#f8fafc;font-family:monospace;font-size:.75rem;padding:.3rem .5rem;outline:none}}
+  .tool-cfg-input:focus{{border-color:#38bdf8}}
+  .tool-cfg-save{{background:#0369a1;border:none;border-radius:3px;color:#f0f9ff;cursor:pointer;font-family:monospace;font-size:.7rem;padding:.3rem .6rem;white-space:nowrap}}
+  .tool-cfg-save:hover{{background:#0284c7}}
+  .tool-cfg-status{{font-size:.65rem;color:#64748b;margin-top:.25rem;min-height:.9rem}}
+  .tool-cfg-btn{{background:none;border:1px solid #475569;border-radius:3px;color:#94a3b8;cursor:pointer;font-family:monospace;font-size:.65rem;margin-top:.4rem;padding:.2rem .5rem}}
+  .tool-cfg-btn:hover{{border-color:#38bdf8;color:#f8fafc}}
   /* agent dispatch panel */
   .dispatch-grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.5rem;margin-bottom:.75rem}}
   .agent-btn{{background:#1e293b;border:1px solid #475569;border-radius:4px;color:#94a3b8;cursor:pointer;font-family:monospace;font-size:.7rem;padding:.5rem .6rem;text-align:center;transition:border-color .15s,color .15s}}
@@ -167,6 +184,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </div>
 {routing_section}
 {hardware_policy_section}
+{tools_section}
 {agent_dispatch_section}
 {agent_state_section}
 {activity_section}
@@ -215,6 +233,34 @@ document.addEventListener('DOMContentLoaded', function() {{
     if (e.key === 'Enter') spawnAgent();
   }});
 }});
+function toggleCfg(key) {{
+  const el = document.getElementById('cfg-' + key);
+  if (el) el.classList.toggle('open');
+}}
+async function saveCfg(tool, envVar) {{
+  const input = document.getElementById('cfg-val-' + tool);
+  const status = document.getElementById('cfg-status-' + tool);
+  const val = input.value.trim();
+  if (!val) {{ status.textContent = 'Enter a key first.'; return; }}
+  status.textContent = 'Saving…';
+  try {{
+    const r = await fetch('/api/configure-tool', {{
+      method: 'POST',
+      headers: {{'Content-Type': 'application/json'}},
+      body: JSON.stringify({{tool: tool, env_var: envVar, value: val}})
+    }});
+    const d = await r.json();
+    if (d.ok) {{
+      status.textContent = '✓ ' + d.message + ' (page refreshes in 3s)';
+      input.value = '';
+      setTimeout(() => location.reload(), 3000);
+    }} else {{
+      status.textContent = '✗ ' + d.message;
+    }}
+  }} catch(e) {{
+    status.textContent = 'Error: ' + e;
+  }}
+}}
 async function spawnAgent() {{
   const field = document.getElementById('dispatch-field');
   const status = document.getElementById('dispatch-status');
@@ -271,6 +317,117 @@ def _render_card(title: str, ok: bool, url: str, role: str = "", models: List[st
         f'{models_html}'
         f'{extra}'
         f'</div>'
+    )
+
+
+def _render_tools_section(tools: Dict[str, Any]) -> str:
+    """Render a full Tools & APIs panel — all AlphaClaw + PT keys, grouped, with inline config."""
+
+    GROUP_ORDER = ["ai", "tools", "channels", "github", "cli", "gateway"]
+    GROUP_LABELS = {
+        "ai": "AI Providers",
+        "tools": "Search & Tools",
+        "channels": "Messaging Channels",
+        "github": "GitHub",
+        "cli": "CLI Tools",
+        "gateway": "Gateways",
+    }
+
+    def _tool_card(key: str, name: str, ok: bool, detail: str,
+                   env_var: str = "", hint_link: str = "",
+                   key_present: bool = False) -> str:
+        """
+        ok          = True  → READY (green, no configure button)
+        ok          = False, key_present = False → NOT CONFIGURED (amber, configure button)
+        ok          = False, key_present = True  → KEY SET BUT FAILING (red, replace button)
+        """
+        if ok:
+            badge = '<span class="ok">&#9679; READY</span>'
+            cfg_html = ""
+        elif key_present:
+            badge = '<span class="err">&#9679; KEY SET BUT FAILING</span>'
+            # Allow re-entering the key
+            cfg_html = ""
+            if env_var:
+                link_html = f' <a href="{hint_link}" target="_blank">Get key &#8599;</a>' if hint_link else ""
+                cfg_html = (
+                    f'<button class="tool-cfg-btn" onclick="toggleCfg(\'{key}\')">'
+                    f'&#x21ba; Replace key{link_html}</button>'
+                    f'<div class="tool-cfg" id="cfg-{key}">'
+                    f'<div class="tool-cfg-row">'
+                    f'<input class="tool-cfg-input" id="cfg-val-{key}" type="password" '
+                    f'placeholder="new {env_var}..." autocomplete="off" />'
+                    f'<button class="tool-cfg-save" onclick="saveCfg(\'{key}\',\'{env_var}\')">Save</button>'
+                    f'</div>'
+                    f'<div class="tool-cfg-status" id="cfg-status-{key}"></div>'
+                    f'</div>'
+                )
+        else:
+            badge = '<span class="warn">&#9679; NOT CONFIGURED</span>'
+            cfg_html = ""
+            if env_var:
+                link_html = f' <a href="{hint_link}" target="_blank">Get key &#8599;</a>' if hint_link else ""
+                cfg_html = (
+                    f'<button class="tool-cfg-btn" onclick="toggleCfg(\'{key}\')">'
+                    f'&#x2699; Configure{link_html}</button>'
+                    f'<div class="tool-cfg" id="cfg-{key}">'
+                    f'<div class="tool-cfg-row">'
+                    f'<input class="tool-cfg-input" id="cfg-val-{key}" type="password" '
+                    f'placeholder="{env_var}=..." autocomplete="off" />'
+                    f'<button class="tool-cfg-save" onclick="saveCfg(\'{key}\',\'{env_var}\')">Save</button>'
+                    f'</div>'
+                    f'<div class="tool-cfg-status" id="cfg-status-{key}"></div>'
+                    f'</div>'
+                )
+        return (
+            f'<div class="tool-card">'
+            f'<div class="tool-name">{name}</div>'
+            f'{badge}'
+            f'<div class="tool-hint" style="margin-top:.25rem">{detail}</div>'
+            f'{cfg_html}'
+            f'</div>'
+        )
+
+    # Build hint_link lookup from _ALL_KNOWN_KEYS
+    _hint_map = {env_var: link for env_var, _, _, link in _ALL_KNOWN_KEYS}
+
+    # Group tools by their "group" field
+    grouped: Dict[str, List] = {g: [] for g in GROUP_ORDER}
+    for slug, entry in tools.items():
+        g = entry.get("group", "tools")
+        if g not in grouped:
+            grouped[g] = []
+        grouped[g].append((slug, entry))
+
+    sections_html = []
+    for group in GROUP_ORDER:
+        entries = grouped.get(group, [])
+        if not entries:
+            continue
+        cards = []
+        for slug, entry in entries:
+            env_var = entry.get("env_var", "")
+            hint_link = _hint_map.get(env_var, "")
+            cards.append(_tool_card(
+                slug,
+                entry.get("label", slug),
+                entry.get("ok", False),
+                detail=entry.get("detail", ""),
+                env_var=env_var,
+                hint_link=hint_link,
+                key_present=entry.get("key_present", False),
+            ))
+        glabel = GROUP_LABELS.get(group, group.title())
+        sections_html.append(
+            f'<div class="section-title" style="font-size:.7rem;margin-top:.75rem">{glabel}</div>'
+            f'<div class="tools-grid">{"".join(cards)}</div>'
+        )
+
+    return (
+        '<div class="section">'
+        '<div class="section-title">Tools &amp; APIs</div>'
+        + "".join(sections_html)
+        + '</div>'
     )
 
 
@@ -546,7 +703,8 @@ def _render_html(status: Dict[str, Any]) -> str:
     agents = status.get("agents", [])
     queue_depth = status.get("queue_depth", 0)
     hardware_policy = status.get("hardware_policy")
-    # Agent dispatch availability — derived from service probes already in status
+    tools = status.get("tools", {})
+    # Agent dispatch availability — derived from service probes + tool probes
     svc = status.get("services", {})
     agent_availability = {
         "lmstudio-mac": svc.get("lmstudio_mac", {}).get("ok", False),
@@ -554,14 +712,15 @@ def _render_html(status: Dict[str, Any]) -> str:
             svc.get("lmstudio_win", {}).get("ok", False)
             or any(v.get("ok") for k, v in svc.items() if k.startswith("lmstudio_win_"))
         ),
-        "codex": status.get("codex_available", False),
-        "gemini": status.get("gemini_available", False),
+        "codex": tools.get("codex-cli", {}).get("ok", False),
+        "gemini": tools.get("gemini-cli", {}).get("ok", False),
     }
     return HTML_TEMPLATE.format(
         version=VERSION,
         cards="\n".join(cards),
         routing_section=_render_routing_section(routing),
         hardware_policy_section=_render_hardware_policy_section(hardware_policy),
+        tools_section=_render_tools_section(tools),
         agent_dispatch_section=_render_agent_dispatch_section(agent_availability),
         agent_state_section=_render_agent_state_section(agents),
         activity_section=_render_activity_section(activity_events),
@@ -726,6 +885,96 @@ async def api_user_input(req: UserInputRequest):
             return {"status": "error", "message": str(exc)}
 
 
+def _probe_tools_sync() -> Dict[str, Any]:
+    """Probe all tools/APIs synchronously (called from thread pool). Returns availability dict."""
+    import shutil, subprocess, socket as _sock
+
+    tools: Dict[str, Any] = {}
+
+    # ── env-var reader (searches os.environ + all .env files) ─────────────────
+    _env_search_paths = [
+        REPO_ROOT / ".env.local",
+        REPO_ROOT / ".env",
+        PERPETUA_TOOLS_ROOT / ".env.local",
+        PERPETUA_TOOLS_ROOT / ".env",
+    ]
+
+    def _key_state(env_var: str) -> tuple[bool, bool]:
+        """Return (key_present, key_valid)."""
+        val = os.getenv(env_var, "")
+        if not val:
+            for fpath in _env_search_paths:
+                if fpath.exists():
+                    for line in fpath.read_text().splitlines():
+                        stripped = line.strip()
+                        if stripped.startswith(f"{env_var}="):
+                            val = stripped.split("=", 1)[1].strip().strip('"').strip("'")
+                            break
+                if val:
+                    break
+        present = bool(val)
+        valid = bool(val and not val.startswith("your_") and not val.startswith("sk-your") and len(val) > 8)
+        return present, valid
+
+    # ── Table-driven key probing ───────────────────────────────────────────────
+    for env_var, label, group, _ in _ALL_KNOWN_KEYS:
+        present, valid = _key_state(env_var)
+        slug = env_var.lower().replace("_", "-")
+        tools[slug] = {
+            "ok": valid,
+            "key_present": present,
+            "label": label,
+            "group": group,
+            "env_var": env_var,
+            "detail": f"{env_var} configured" if valid else (
+                f"{env_var} set but invalid/placeholder" if present else f"{env_var} not configured"
+            ),
+        }
+
+    # ── Codex CLI ──────────────────────────────────────────────────────────────
+    codex_bin = shutil.which("codex") or "/opt/homebrew/bin/codex"
+    codex_ok, codex_ver = False, ""
+    if os.path.exists(codex_bin):
+        try:
+            r = subprocess.run([codex_bin, "--version"], capture_output=True, timeout=4)
+            codex_ok = r.returncode == 0
+            codex_ver = (r.stdout + r.stderr).decode("utf-8", errors="replace").strip().split("\n")[0]
+        except Exception:
+            pass
+    tools["codex-cli"] = {"ok": codex_ok, "group": "cli", "detail": codex_ver if codex_ok else "not found — run scripts/setup_codex.sh"}
+
+    # ── Gemini CLI ─────────────────────────────────────────────────────────────
+    gemini_bin = shutil.which("gemini") or shutil.which("gemini-cli")
+    gemini_ok, gemini_ver = False, ""
+    if gemini_bin:
+        try:
+            r = subprocess.run([gemini_bin, "--version"], capture_output=True, timeout=4)
+            raw = (r.stdout + r.stderr).decode("utf-8", errors="replace").strip()
+            first_line = raw.split("\n")[0]
+            has_error = any(x in raw for x in ("SyntaxError", "UnhandledPromise", "Error:", "TypeError"))
+            gemini_ok = r.returncode == 0 and not has_error
+            gemini_ver = first_line if gemini_ok else f"found but broken — {first_line[:60]}"
+        except Exception:
+            pass
+    tools["gemini-cli"] = {"ok": gemini_ok, "group": "cli", "detail": gemini_ver if gemini_ver else "not found — npm i -g @google/gemini-cli"}
+
+    # ── AlphaClaw Gateway ──────────────────────────────────────────────────────
+    ac_port = int(os.getenv("ALPHACLAW_PORT", "18789"))
+    ac_ok = False
+    try:
+        with _sock.create_connection(("127.0.0.1", ac_port), timeout=1.5):
+            ac_ok = True
+    except Exception:
+        pass
+    tools["alphaclaw-gateway"] = {
+        "ok": ac_ok,
+        "group": "gateway",
+        "detail": f"127.0.0.1:{ac_port}" + (" ONLINE" if ac_ok else " OFFLINE — start AlphaClaw: ./start.sh"),
+    }
+
+    return tools
+
+
 def _probe_cli_available(bin_name: str) -> bool:
     """Quick synchronous check: is a CLI binary present and functional?"""
     import shutil, subprocess
@@ -790,12 +1039,9 @@ async def api_status():
 
     hardware_policy = _hardware_policy_status(services)
 
-    # CLI agent availability (cheap sync checks, run in default thread pool)
+    # Tools + CLI availability (sync checks in thread pool — no extra HTTP calls)
     loop = asyncio.get_event_loop()
-    codex_avail, gemini_avail = await asyncio.gather(
-        loop.run_in_executor(None, _probe_cli_available, "codex"),
-        loop.run_in_executor(None, _probe_cli_available, "gemini"),
-    )
+    tools = await loop.run_in_executor(None, _probe_tools_sync)
 
     return {
         "portal_version": VERSION,
@@ -805,8 +1051,9 @@ async def api_status():
         "routing": routing,
         "hardware_policy": hardware_policy,
         "queue_depth": queue_depth,
-        "codex_available": codex_avail,
-        "gemini_available": gemini_avail,
+        "tools": tools,
+        "codex_available": tools.get("codex-cli", {}).get("ok", False),
+        "gemini_available": tools.get("gemini-cli", {}).get("ok", False),
     }
 
 
@@ -814,6 +1061,93 @@ async def api_status():
 async def api_hardware_policy():
     status = await api_status()
     return status.get("hardware_policy", {})
+
+
+@app.get("/api/tools")
+async def api_tools():
+    """Return availability of all configured tools and APIs."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, _probe_tools_sync)
+
+
+class ConfigureToolRequest(BaseModel):
+    tool: str        # e.g. "brave", "perplexity", "claude_api"
+    env_var: str     # e.g. "BRAVE_API_KEY"
+    value: str       # the API key value
+
+
+# ── All known API keys (mirrors AlphaClaw kKnownVars + PT-specific) ───────────
+# Each entry: (env_var, label, group, hint_link)
+_ALL_KNOWN_KEYS = [
+    # AI providers
+    ("ANTHROPIC_API_KEY",  "Claude (Anthropic)",   "ai",       "https://console.anthropic.com/"),
+    ("OPENAI_API_KEY",     "OpenAI",               "ai",       "https://platform.openai.com/api-keys"),
+    ("GEMINI_API_KEY",     "Gemini (Google)",      "ai",       "https://aistudio.google.com/app/apikey"),
+    ("MISTRAL_API_KEY",    "Mistral",              "ai",       "https://console.mistral.ai/"),
+    ("GROQ_API_KEY",       "Groq",                 "ai",       "https://console.groq.com/keys"),
+    ("VOYAGE_API_KEY",     "Voyage AI",            "ai",       "https://dash.voyageai.com/"),
+    # Tools & search
+    ("BRAVE_API_KEY",      "Brave Search",         "tools",    "https://brave.com/search/api/"),
+    ("PERPLEXITY_API_KEY", "Perplexity",           "tools",    "https://www.perplexity.ai/settings/api"),
+    ("DEEPGRAM_API_KEY",   "Deepgram (speech)",    "tools",    "https://console.deepgram.com/"),
+    ("ELEVENLABS_API_KEY", "ElevenLabs (TTS)",     "tools",    "https://elevenlabs.io/"),
+    # Channels
+    ("TELEGRAM_BOT_TOKEN", "Telegram Bot",         "channels", "https://t.me/BotFather"),
+    ("DISCORD_BOT_TOKEN",  "Discord Bot",          "channels", "https://discord.com/developers/applications"),
+    ("SLACK_BOT_TOKEN",    "Slack Bot",            "channels", "https://api.slack.com/apps"),
+    ("SLACK_APP_TOKEN",    "Slack App (xapp-...)", "channels", "https://api.slack.com/apps"),
+    # GitHub
+    ("GITHUB_TOKEN",       "GitHub Token",         "github",   "https://github.com/settings/tokens"),
+]
+
+# Env vars that are safe to write via the portal
+_ALLOWED_ENV_VARS = {entry[0] for entry in _ALL_KNOWN_KEYS}
+
+# Env files to write to (in priority order — first writable one wins)
+_ENV_WRITE_TARGETS = [
+    REPO_ROOT / ".env.local",   # most specific — write here first
+    REPO_ROOT / ".env",
+    PERPETUA_TOOLS_ROOT / ".env.local",
+    PERPETUA_TOOLS_ROOT / ".env",
+]
+
+
+def _write_env_var(env_var: str, value: str) -> tuple[bool, str]:
+    """Write/update an env var in the nearest writable .env file."""
+    if env_var not in _ALLOWED_ENV_VARS:
+        return False, f"Env var {env_var!r} not in allowlist"
+    if not value or len(value) < 4:
+        return False, "Value too short"
+    # Sanitize: no newlines or shell-injection chars
+    safe_value = value.replace("\n", "").replace("\r", "").replace('"', "")
+
+    # Find or create .env.local in repo root
+    target = REPO_ROOT / ".env.local"
+
+    # Read existing content if file exists
+    lines = target.read_text().splitlines() if target.exists() else []
+    updated = False
+    for i, line in enumerate(lines):
+        if line.startswith(f"{env_var}=") or line.startswith(f"# {env_var}="):
+            lines[i] = f'{env_var}="{safe_value}"'
+            updated = True
+            break
+    if not updated:
+        lines.append(f'{env_var}="{safe_value}"')
+
+    target.write_text("\n".join(lines) + "\n")
+    return True, f"Saved to {target.name}"
+
+
+@app.post("/api/configure-tool")
+async def api_configure_tool(req: ConfigureToolRequest):
+    """Write an API key to .env.local — allows portal-based configuration with no terminal."""
+    loop = asyncio.get_event_loop()
+    ok, msg = await loop.run_in_executor(None, _write_env_var, req.env_var, req.value)
+    if ok:
+        # Reload env in current process so probes pick it up immediately
+        os.environ[req.env_var] = req.value.replace("\n", "").replace('"', "")
+    return {"ok": ok, "message": msg}
 
 
 class SpawnAgentRequest(BaseModel):

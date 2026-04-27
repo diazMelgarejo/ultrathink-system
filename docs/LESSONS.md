@@ -626,3 +626,94 @@ Setting `load.paths: []` prevents the startup code from adding the dev-repo path
 - G1 (shared models): blocked — needs both machines online simultaneously
 - G4 (live openclaw.json repair): blocked — needs both machines online
 - Codex: `@openai/codex-darwin-arm64` native binary missing; use Gemini as second voice until fixed
+
+---
+
+## Session 2026-04-27b — Agent Automation, Portal Dashboard, Multi-Agent Dispatch
+
+### What Was Built
+
+**1. Codex PTY Automation (THE KEY PATTERN)**
+Codex `--full-auto` requires a TTY. When spawned from any Python subprocess (Claude Code, portal API, CI), there is no TTY → "stdin is not a terminal" error.
+
+**Fix: `pty.openpty()` pseudo-terminal wrapper**
+```python
+import pty, select, os
+
+master_fd, slave_fd = pty.openpty()
+proc = subprocess.Popen(
+    ["codex", "--full-auto", task],
+    stdin=slave_fd, stdout=slave_fd, stderr=slave_fd,
+    close_fds=True,
+)
+os.close(slave_fd)  # parent doesn't need slave end
+# read from master_fd with select() to collect all output
+```
+This makes Codex fully automatable — no human terminal ever required.
+
+**Live in:** `orama-system/scripts/spawn_agents.py → _dispatch_codex()`
+
+**2. Gemini CLI Node Version Fix**
+Gemini CLI (installed under nvm v24) uses `??=` (ES2021). But `#!/usr/bin/env node` resolves to nvm v14 in Claude Code's shell. Fix: create `~/.local/bin/gemini` wrapper:
+```bash
+#!/usr/bin/env bash
+exec /Users/lawrencecyremelgarejo/.nvm/versions/node/v24.14.1/bin/node \
+     /Users/lawrencecyremelgarejo/.nvm/versions/node/v24.14.1/bin/gemini "$@"
+```
+`~/.local/bin/` comes before nvm in PATH → wrapper always wins.
+**Live in:** `scripts/setup_codex.sh` (auto-creates wrapper on every `start.sh`)
+
+**3. spawn_agents.py — Parallel Agent Dispatch**
+File: `orama-system/scripts/spawn_agents.py` and `PT/scripts/spawn_agents.py` (shim)
+
+Supports: `codex`, `gemini`, `lmstudio-mac`, `lmstudio-win`, `all`
+- Codex + Gemini + LM Studio Mac run in parallel
+- LM Studio Win serialized via `asyncio.Lock()` (one GPU model at a time)
+- CLI: `python scripts/spawn_agents.py --task "..." --agent codex`
+- API: `POST /api/spawn-agent` from the portal
+
+**4. Portal Tools & APIs Panel**
+All 18 tools/APIs from AlphaClaw + PT visible in `portal_server.py`:
+- Groups: AI Providers, Search & Tools, Messaging Channels, GitHub, CLI, Gateways
+- 3 states: READY (green) / NOT CONFIGURED (amber, inline configure) / KEY SET BUT FAILING (red, replace button)
+- `POST /api/configure-tool` writes to `.env.local` safely (atomic + file lock + rate limit)
+- No terminal needed to configure any API key
+
+**5. Policy Cache Refresh Automation**
+`scripts/refresh_policy_cache.py` syncs `config/hardware_policy_cache.yml` from PT on every `start.sh`. This keeps the L2 disaster recovery fallback always fresh.
+
+### How to Dispatch Agents (from any context)
+
+```bash
+# From terminal
+cd orama-system
+python scripts/spawn_agents.py --status           # check availability
+python scripts/spawn_agents.py --task "..." --agent codex
+python scripts/spawn_agents.py --task "..." --agent gemini
+python scripts/spawn_agents.py --task "..." --agent all   # parallel
+
+# From portal (browser)
+# Tools & APIs panel → Agent Dispatch panel → type task → click Send
+
+# From Claude session (spawn sub-agent)
+# Use Agent() tool with spawn_agents.py as the worker
+```
+
+### Gemini Review Pattern (tested and works)
+```bash
+~/.local/bin/gemini -p "Review X for Y. Be concise."
+```
+Returns structured bullet-point feedback in ~3s.
+
+### Key Architecture Invariants (updated)
+- `spawn_agents.py` is the canonical multi-agent dispatcher for both orama and PT
+- The portal `/api/spawn-agent` always loads spawn_agents.py via importlib + `sys.modules` registration
+- Windows GPU: always `asyncio.Lock()` before LM Studio Win calls
+- `setup_codex.sh` runs on every `start.sh` — codex + gemini are always fixed
+
+### Open Items
+- G1 (shared models): still blocked — needs both machines online
+- G4 (live openclaw.json sync): still blocked
+- Gemini CLI broken binary: wrapper fixes runtime but underlying package may need updating: `nvm use 24 && npm update -g @google/gemini-cli`
+- Win LM Studio offline during this session — need both machines for full parallel dispatch
+

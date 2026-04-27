@@ -200,7 +200,7 @@ if [ -f "$_DISCOVER_SCRIPT" ]; then
     if [ "$_exit" -eq 124 ]; then
       _warn "ip" "discover.py timed out (>30s, macOS ICMP limit?) — falling back to cached/static IPs"
     else
-      _warn "ip" "discover.py --force exited $_ exit — falling back to cached/static IPs"
+      _warn "ip" "discover.py --force exited ${_exit} — falling back to cached/static IPs"
     fi
   fi
 else
@@ -426,16 +426,16 @@ open_browser() {
 _print_banner() {
   local mode="${PT_MODE:-offline}"
   local mac_ip="${MAC_IP:-localhost}"
-  local win_ip="${WIN_IP:-?"}"
+  local win_ip="${WIN_IP:-?}"
   local tier="?"
   local tier_label=""
-  local tier_color=""
+  # tier_color: reserved for future ANSI colour output
 
   # Determine tier from PT_MODE and reachability
   local mac_up=0 win_up=0 oc_up=0
-  nc -z localhost 1234    &>/dev/null 2>&1 && mac_up=1
-  nc -z "$win_ip" 1234    &>/dev/null 2>&1 && win_up=1
-  nc -z localhost 18789   &>/dev/null 2>&1 && oc_up=1
+  nc -z localhost 1234   >/dev/null 2>&1 && mac_up=1
+  nc -z "$win_ip" 1234   >/dev/null 2>&1 && win_up=1
+  nc -z localhost 18789  >/dev/null 2>&1 && oc_up=1
 
   if   [ "$mac_up" -eq 1 ] && [ "$win_up" -eq 1 ]; then tier=1; tier_label="FULL  · Mac + Win"
   elif [ "$mac_up" -eq 1 ];                          then tier=2; tier_label="MAC   · Mac only"

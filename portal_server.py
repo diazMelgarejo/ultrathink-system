@@ -49,13 +49,13 @@ US_URL = os.getenv("ULTRATHINK_ENDPOINT", "http://localhost:8001")
 
 LMS_WIN_ENDPOINTS: List[str] = [
     ep.strip()
-    for ep in os.getenv("LM_STUDIO_WIN_ENDPOINTS", "http://192.168.254.108:1234").split(",")
+    for ep in os.getenv("LM_STUDIO_WIN_ENDPOINTS", "http://192.168.254.101:1234").split(",")
     if ep.strip()
 ]
 LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://192.168.254.110:1234")
 LMS_API_TOKEN = os.getenv("LM_STUDIO_API_TOKEN", "")
 
-OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT", "http://192.168.254.108:11434")
+OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT", "http://192.168.254.101:11434")
 OLLAMA_MAC = os.getenv("OLLAMA_MAC_ENDPOINT", "http://127.0.0.1:11434")
 
 PROBE_TIMEOUT = 3.0

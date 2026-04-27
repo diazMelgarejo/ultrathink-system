@@ -142,32 +142,85 @@ def discover_agents() -> Dict[str, AgentInfo]:
 # ── Dispatch functions ────────────────────────────────────────────────────────
 
 async def _dispatch_codex(task: str, context_file: Optional[Path] = None) -> Dict[str, Any]:
-    """Run Codex on a task, streaming output. Returns {ok, output, elapsed}."""
+    """Run Codex on a task using a PTY to satisfy its terminal requirement.
+
+    Codex requires stdin to be a TTY (interactive terminal). When spawned from
+    Python subprocesses (Claude Code, portal, CI) there is no TTY.
+
+    Fix: use Python's `pty.openpty()` to allocate a pseudo-terminal pair.
+    The master fd receives all output; the slave fd is passed as stdin/stdout/stderr
+    to the Codex process, satisfying its TTY check.
+
+    This makes Codex fully automatable — no human terminal required.
+    """
+    import pty, select, fcntl, termios
+
     codex_bin = shutil.which("codex") or "/opt/homebrew/bin/codex"
     if not os.path.exists(codex_bin):
         return {"ok": False, "output": "Codex not found. Run scripts/setup_codex.sh", "elapsed": 0}
 
-    cmd = [codex_bin, "--full-auto", task]
+    task_with_ctx = task
     if context_file and context_file.exists():
-        # Pass context as a file reference in the task
-        context = context_file.read_text()
+        context = context_file.read_text()[:8000]  # limit context size
         task_with_ctx = f"Context:\n{context}\n\nTask:\n{task}"
-        cmd = [codex_bin, "--full-auto", task_with_ctx]
 
+    cmd = [codex_bin, "--full-auto", task_with_ctx]
     t0 = time.time()
-    try:
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.STDOUT,
+
+    def _run_with_pty() -> tuple[int, str]:
+        """Run codex in a PTY, collect all output, return (returncode, output)."""
+        master_fd, slave_fd = pty.openpty()
+        # Make master non-blocking for reads
+        flags = fcntl.fcntl(master_fd, fcntl.F_GETFL)
+        fcntl.fcntl(master_fd, fcntl.F_SETFL, flags | os.O_NONBLOCK)
+
+        import subprocess as _sp
+        proc = _sp.Popen(
+            cmd,
+            stdin=slave_fd,
+            stdout=slave_fd,
+            stderr=slave_fd,
+            close_fds=True,
             cwd=str(REPO_ROOT),
         )
-        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=300)
+        os.close(slave_fd)  # parent doesn't need the slave end
+
+        output_chunks = []
+        deadline = time.time() + 300  # 5 min timeout
+        while True:
+            if time.time() > deadline:
+                proc.kill()
+                output_chunks.append("\n[spawn_agents] TIMEOUT (5min)\n")
+                break
+            # Check if process finished
+            ret = proc.poll()
+            # Read any available output
+            try:
+                ready, _, _ = select.select([master_fd], [], [], 0.1)
+                if ready:
+                    chunk = os.read(master_fd, 4096)
+                    output_chunks.append(chunk.decode("utf-8", errors="replace"))
+            except OSError:
+                break  # master closed (child exited)
+            if ret is not None:
+                # Drain remaining output
+                try:
+                    while True:
+                        chunk = os.read(master_fd, 4096)
+                        output_chunks.append(chunk.decode("utf-8", errors="replace"))
+                except OSError:
+                    pass
+                break
+
+        os.close(master_fd)
+        rc = proc.wait() if proc.poll() is None else proc.returncode
+        return rc, "".join(output_chunks)
+
+    try:
+        loop = asyncio.get_event_loop()
+        rc, output = await loop.run_in_executor(None, _run_with_pty)
         elapsed = time.time() - t0
-        output = stdout.decode("utf-8", errors="replace")
-        return {"ok": proc.returncode == 0, "output": output, "elapsed": elapsed}
-    except asyncio.TimeoutError:
-        return {"ok": False, "output": "Codex timed out (5min)", "elapsed": time.time() - t0}
+        return {"ok": rc == 0, "output": output, "elapsed": elapsed}
     except Exception as exc:
         return {"ok": False, "output": str(exc), "elapsed": time.time() - t0}
 

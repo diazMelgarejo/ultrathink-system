@@ -1244,6 +1244,9 @@ async def api_spawn_agent(req: SpawnAgentRequest):
     if _spec is None or _spec.loader is None:
         return {"ok": False, "output": "spawn_agents.py not found in scripts/", "elapsed": 0}
     _mod = importlib.util.module_from_spec(_spec)
+    # Register in sys.modules BEFORE exec_module so dataclass annotations resolve correctly
+    import sys as _sys
+    _sys.modules["spawn_agents"] = _mod
     _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
     result = await _mod.dispatch(req.agent, req.task, model=req.model or None)
     return result

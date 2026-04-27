@@ -717,3 +717,74 @@ Returns structured bullet-point feedback in ~3s.
 - Gemini CLI broken binary: wrapper fixes runtime but underlying package may need updating: `nvm use 24 && npm update -g @google/gemini-cli`
 - Win LM Studio offline during this session — need both machines for full parallel dispatch
 
+
+---
+
+# 2026-04-27 — Dynamic LAN IP Detection & Self-Healing Architecture
+
+**Context:**
+Windows GPU machine (RTX 3080) had IP `.103` but system had stale `.101`/`.108` hardcoded in
+`portal_server.py`, `spawn_agents.py`, `ip_detection_solution.py`, and PT's `lan_discovery.py`.
+Auto-detection existed in `start.sh` (4-priority chain) but `portal_server.py`/`spawn_agents.py`
+didn't use it when started standalone. The portal showed wrong IPs and couldn't reach Win LMS.
+
+**Root causes (5):**
+
+| # | File | Problem |
+|---|------|---------|
+| RC-1 | `portal_server.py:50-58` | Hardcoded `.101` fallback — ignored `openclaw.json` entirely |
+| RC-2 | `scripts/spawn_agents.py:45` | Same — hardcoded `.101` |
+| RC-3 | `~/.openclaw/state/discovery.json` | Win IP was empty (Win was offline during last scan), so start.sh Priority 2 always missed |
+| RC-4 | `ip_detection_solution.py:27` | Stale `.101` hardcoded for Windows |
+| RC-5 | PT `lan_discovery.py:318` | Bug: computed `{subnet}.100` but comment said `.103` (typo) |
+
+**Fix — shared `utils/ip_resolver.py`:**
+
+Created `orama-system/utils/ip_resolver.py` — single authoritative source for Win IP:
+```
+P1: AlphaClaw gateway (:18789) — live, if running means openclaw.json is current
+P2: ~/.openclaw/openclaw.json  — patched by discover.py after every successful scan
+P3: ~/.openclaw/state/discovery.json — last probe state (may lag if Win was offline)
+P4: PT detect_active_tilting_ip() — derives {mac-subnet}.103, subnet-portable
+P5: LM_STUDIO_WIN_ENDPOINTS env var — operator / start.sh override
+P6: {outbound-interface-subnet}.103 — absolute last resort, subnet-portable
+```
+
+**Key patterns to remember:**
+
+1. **Never hardcode LAN IPs in module-level constants.** Use `ip_resolver.get_win_lms_url()` which
+   re-reads `openclaw.json` on every call. One file read per 10s portal poll is cheap.
+
+2. **`discover.py --force` must run at every startup**, not just when state is stale.
+   LAN is always dynamic. A 4-5s subnet scan at startup is acceptable — much better than stale IPs.
+   Hook: `start.sh` now runs `timeout 15 python3 ~/.openclaw/scripts/discover.py --force` before
+   the IP detection block.
+
+3. **Gossip write-back:** when portal's live probe hits Win LMS successfully, it calls
+   `write_win_ip_to_openclaw_json(probed_ip)` to update `openclaw.json`. This means any
+   process that reads `openclaw.json` next will have the correct IP, even if `discover.py`
+   didn't run yet.
+
+4. **Subnet-portable `.103` rule:** Windows GPU is always `.103` on whatever subnet the Mac is on.
+   This works on legacy `192.168.1.x` AND current `192.168.254.x` without any config change.
+   PT's `detect_active_tilting_ip()` had a bug (`.100` instead of `.103`) — fixed.
+
+5. **`ip_resolver.py` test:** `python3 utils/ip_resolver.py` — should print Win IP, LMS URL,
+   Ollama URL. If it prints `.103` you're reading from `openclaw.json` (P2).
+
+6. **Files that still have static Win IP references (archive, not code paths):**
+   - `AGENT_RESUME.md` — informational only
+   - Comments in various files marking old IPs (`.108`, `.101`) as archive
+
+**Files changed:**
+- `utils/ip_resolver.py` — NEW shared resolver (P1-P6 chain)
+- `utils/__init__.py` — NEW package init
+- `portal_server.py` — uses ip_resolver; dynamic re-resolve in `api_status()`; gossip write-back
+- `scripts/spawn_agents.py` — uses ip_resolver fallback
+- `ip_detection_solution.py` — stale `.101` → `.103`
+- `start.sh` — `discover.py --force` at startup; subnet.103 as last-resort
+- `scripts/sync-companion-instincts.sh` — Perplexity-Tools → Perpetua-Tools (all refs)
+- PT `orchestrator/lan_discovery.py` — bug fix `.100` → `.103`
+
+**Sync reminder:**
+Both repos (orama-system and Perpetua-Tools) must be pushed after these changes.

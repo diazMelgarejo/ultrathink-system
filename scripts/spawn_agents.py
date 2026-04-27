@@ -41,8 +41,18 @@ from typing import Any, Dict, List, Optional
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://192.168.254.110:1234")
-LMS_WIN_ENDPOINT = os.getenv("LM_STUDIO_WIN_ENDPOINTS", "http://192.168.254.101:1234").split(",")[0].strip()
+# Resolve Win IP via shared resolver (openclaw.json → discovery state → PT tilting → env → subnet.103)
+# This avoids stale hardcoded IPs and works correctly whether called from start.sh or standalone.
+try:
+    import sys as _sys
+    _sys.path.insert(0, str(REPO_ROOT))
+    from utils.ip_resolver import get_win_lms_url as _get_win_lms_url
+    _WIN_LMS_DEFAULT = _get_win_lms_url()
+except Exception:
+    _WIN_LMS_DEFAULT = "http://192.168.254.103:1234"  # true last-resort
+
+LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://localhost:1234")
+LMS_WIN_ENDPOINT = os.getenv("LM_STUDIO_WIN_ENDPOINTS", _WIN_LMS_DEFAULT).split(",")[0].strip()
 LMS_API_KEY = os.getenv("LM_STUDIO_API_TOKEN", "lm-studio")
 
 # Windows GPU lock — one model at a time (CLAUDE.md §4 invariant)

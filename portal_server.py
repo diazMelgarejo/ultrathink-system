@@ -39,6 +39,23 @@ logging.basicConfig(level=logging.INFO)
 
 VERSION = "0.9.9.7"
 
+# ── IP Resolution (authoritative — reads openclaw.json, never stale hardcodes) ─
+# Import shared resolver so portal works correctly whether started via start.sh
+# or directly.  Priority chain: AlphaClaw live → openclaw.json → discovery.json
+# → PT tilting → env var → subnet.103 constant.  See utils/ip_resolver.py.
+try:
+    import sys as _sys
+    _sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from utils.ip_resolver import get_win_lms_url as _get_win_lms_url, get_win_ollama_url as _get_win_ollama_url, get_win_ip as _get_win_ip
+    _WIN_LMS_DEFAULT  = _get_win_lms_url()
+    _WIN_OLL_DEFAULT  = _get_win_ollama_url()
+    _WIN_IP_LABEL     = _get_win_ip()
+except Exception as _ip_exc:
+    log.warning("ip_resolver import failed (%s) — using env/hardcoded fallback", _ip_exc)
+    _WIN_LMS_DEFAULT  = "http://192.168.254.103:1234"
+    _WIN_OLL_DEFAULT  = "http://192.168.254.103:11434"
+    _WIN_IP_LABEL     = "192.168.254.103"
+
 # ── Config ─────────────────────────────────────────────────────────────────────
 
 PORTAL_HOST = os.getenv("PORTAL_HOST", "0.0.0.0")
@@ -49,13 +66,13 @@ US_URL = os.getenv("ULTRATHINK_ENDPOINT", "http://localhost:8001")
 
 LMS_WIN_ENDPOINTS: List[str] = [
     ep.strip()
-    for ep in os.getenv("LM_STUDIO_WIN_ENDPOINTS", "http://192.168.254.101:1234").split(",")
+    for ep in os.getenv("LM_STUDIO_WIN_ENDPOINTS", _WIN_LMS_DEFAULT).split(",")
     if ep.strip()
 ]
-LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://192.168.254.110:1234")
+LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://localhost:1234")
 LMS_API_TOKEN = os.getenv("LM_STUDIO_API_TOKEN", "")
 
-OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT", "http://192.168.254.101:11434")
+OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT", _WIN_OLL_DEFAULT)
 OLLAMA_MAC = os.getenv("OLLAMA_MAC_ENDPOINT", "http://127.0.0.1:11434")
 
 PROBE_TIMEOUT = 3.0
@@ -436,8 +453,8 @@ def _render_agent_dispatch_section(agent_availability: Dict[str, bool]) -> str:
     AGENTS = [
         ("codex",         "Codex",              "CLI · local"),
         ("gemini",        "Gemini CLI",          "CLI · local"),
-        ("lmstudio-mac",  "LM Studio Mac",       "HTTP · .110"),
-        ("lmstudio-win",  "LM Studio Win",       "HTTP · .101 GPU"),
+        ("lmstudio-mac",  "LM Studio Mac",       "HTTP · localhost"),
+        ("lmstudio-win",  "LM Studio Win",       f"HTTP · .{_get_win_ip().split('.')[-1]} GPU"),
         ("all",           "All (parallel)",      "Codex + Gemini + Mac; Win serial"),
     ]
     btns = []
@@ -1022,6 +1039,17 @@ def _probe_cli_available(bin_name: str) -> bool:
 
 @app.get("/api/status")
 async def api_status():
+    # ── Dynamic IP resolution — always re-read from openclaw.json on every call ──
+    # LAN is treated as always-changing: the Win machine can get a new DHCP lease,
+    # reboot, or move subnets at any time.  We re-resolve on every status poll
+    # (every 10s) so the portal stays accurate without a restart.
+    try:
+        _dyn_win_lms  = [_get_win_lms_url()]      # re-reads openclaw.json each time
+        _dyn_ollama_win = _get_win_ollama_url()
+    except Exception:
+        _dyn_win_lms  = LMS_WIN_ENDPOINTS
+        _dyn_ollama_win = OLLAMA_WIN
+
     async with httpx.AsyncClient() as client:
         (
             (pt_ok, pt_ver),
@@ -1038,29 +1066,42 @@ async def api_status():
             _probe_http(client, f"{PT_URL}/health"),
             _probe_http(client, f"{US_URL}/health"),
             _probe_lms_models(client, LMS_MAC_ENDPOINT, LMS_API_TOKEN),
-            _probe_ollama_models(client, OLLAMA_WIN),
+            _probe_ollama_models(client, _dyn_ollama_win),
             _probe_ollama_models(client, OLLAMA_MAC),
             _probe_activity(client),
             _probe_agents(client),
             _probe_routing(client),
             _probe_queue_depth(client),
-            *[_probe_lms_models(client, ep, LMS_API_TOKEN) for ep in LMS_WIN_ENDPOINTS],
+            *[_probe_lms_models(client, ep, LMS_API_TOKEN) for ep in _dyn_win_lms],
         )
+
+    # ── Gossip: if Win LMS responded at a new IP, write it back to openclaw.json ─
+    # This makes discovery self-healing: once the portal hits the Win machine it
+    # gossips the live IP back so every other process picks it up on the next read.
+    if lm_win_results:
+        _win_ok, _ = lm_win_results[0]
+        if _win_ok and _dyn_win_lms:
+            _probed_ip = _dyn_win_lms[0].split("://")[-1].split(":")[0]
+            try:
+                from utils.ip_resolver import write_win_ip_to_openclaw_json
+                write_win_ip_to_openclaw_json(_probed_ip)
+            except Exception as _gossip_exc:
+                log.warning("ip gossip write failed: %s", _gossip_exc)
 
     services: Dict[str, Any] = {
         "perplexity_tools": {"ok": pt_ok, "version": pt_ver, "url": PT_URL},
         "ultrathink": {"ok": us_ok, "version": us_ver, "url": US_URL},
         "lmstudio_mac": {"ok": lm_mac_ok, "models": lm_mac_models, "url": LMS_MAC_ENDPOINT},
-        "ollama_win": {"ok": ol_win_result[0], "models": ol_win_result[1], "url": OLLAMA_WIN},
+        "ollama_win": {"ok": ol_win_result[0], "models": ol_win_result[1], "url": _dyn_ollama_win},
         "ollama_mac": {"ok": ol_mac_result[0], "models": ol_mac_result[1], "url": OLLAMA_MAC},
     }
 
-    if len(LMS_WIN_ENDPOINTS) == 1:
+    if len(_dyn_win_lms) == 1:
         ok, models = lm_win_results[0]
-        services["lmstudio_win"] = {"ok": ok, "models": models, "url": LMS_WIN_ENDPOINTS[0]}
+        services["lmstudio_win"] = {"ok": ok, "models": models, "url": _dyn_win_lms[0]}
     else:
         for i, (ok, models) in enumerate(lm_win_results):
-            services[f"lmstudio_win_{i}"] = {"ok": ok, "models": models, "url": LMS_WIN_ENDPOINTS[i]}
+            services[f"lmstudio_win_{i}"] = {"ok": ok, "models": models, "url": _dyn_win_lms[i]}
 
     hardware_policy = _hardware_policy_status(services)
 

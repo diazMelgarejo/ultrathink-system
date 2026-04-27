@@ -178,16 +178,45 @@ if [ -f "$SCRIPT_DIR/scripts/refresh_policy_cache.py" ]; then
   "$US_PYTHON" "$SCRIPT_DIR/scripts/refresh_policy_cache.py" 2>&1 | sed 's/^/  [policy] /' || true
 fi
 
-# ── IP auto-detection (priority-based, never stale first) ────────────────────
+# ── LAN live probe — always run on startup (LAN is dynamic) ──────────────────
+# LAN topology changes: DHCP leases expire, machines reboot, IPs shift.
+# We ALWAYS run discover.py --force before reading any IP so the IP detection
+# block below always reads fresh data, not a cache that might be days old.
+#
+# discover.py --force:
+#   • Probes localhost:1234 for Mac LM Studio (fast, always local)
+#   • Async-scans entire subnet (0.2s timeout per host, all 254 in parallel)
+#   • Writes updated IPs to ~/.openclaw/openclaw.json and state/discovery.json
+#   • Patches Perpetua-Tools config/ YAML files
+#   • Total time: ~0.5s if Win offline, ~4-5s if Win online (model fetch)
+_DISCOVER_SCRIPT="$HOME/.openclaw/scripts/discover.py"
+if [ -f "$_DISCOVER_SCRIPT" ]; then
+  _info "ip" "probing LAN topology (discover.py --force)..."
+  if timeout 30 "$US_PYTHON" "$_DISCOVER_SCRIPT" --force \
+       2>&1 | tee -a "$LOG_DIR/startup-$(date +%Y%m%d).log" | sed 's/^/  [discover] /'; then
+    _info "ip" "LAN probe complete — openclaw.json is up to date"
+  else
+    _exit=$?
+    if [ "$_exit" -eq 124 ]; then
+      _warn "ip" "discover.py timed out (>30s, macOS ICMP limit?) — falling back to cached/static IPs"
+    else
+      _warn "ip" "discover.py --force exited $_ exit — falling back to cached/static IPs"
+    fi
+  fi
+else
+  _warn "ip" "discover.py not found at $_DISCOVER_SCRIPT — skipping live LAN probe"
+fi
+
+# ── IP auto-detection (priority-based, reads fresh discover.py output above) ──
 #
 # Priority chain — first success wins:
-#   1. ~/.openclaw/openclaw.json   (discover.py keeps this in sync after every live probe)
-#   2. discover.py --status        (reads cached state from last successful scan)
+#   1. ~/.openclaw/openclaw.json   (discover.py just patched it above)
+#   2. discover.py --status        (reads state written by the --force run above)
 #   3. network_autoconfig netifaces (dynamic interface detection — no prior state)
-#   4. Hardcoded last-resort       (labeled constants, never promoted above live data)
+#   4. Subnet .103 constant        (subnet-portable: works on any /24, never a fixed IP)
 #
-# Old IPs are preserved only as comments below — NEVER used as primary source.
-# To force refresh: python3 ~/.openclaw/scripts/discover.py --force
+# Old stale IPs are archived here only — NEVER used as source:
+#   Windows was: .108 → .100 → .101 — all stale, replaced by dynamic detection
 
 _IP_VARS="$("$US_PYTHON" -c "
 import json, re, subprocess, sys
@@ -234,12 +263,21 @@ if not WIN_IP:
     except Exception:
         pass
 
-# ── Priority 4: last-resort hardcoded constants ───────────────────────────────
-# Updated to confirmed values but NEVER promoted above live detection.
-# Previous stale IPs (archive): Darwin=.110 Windows=.108 → .100 → .101
+# ── Priority 4: subnet.103 constant (subnet-portable, not a fixed IP) ────────
+# Derives Win IP from Mac's own outbound interface subnet.
+# If Mac is on 192.168.1.x → Win = 192.168.1.103 (works on any /24 without change).
+# This is ONLY reached if discover.py failed AND openclaw.json is unreadable.
 if not WIN_IP:
-    WIN_IP = '192.168.254.103'   # confirmed Win RTX 3080 as of 2026-04-26
-    source = 'last-resort-constant'
+    try:
+        import socket as _s
+        with _s.socket(_s.AF_INET, _s.SOCK_DGRAM) as _sk:
+            _sk.connect(('8.8.8.8', 80))
+            _local = _sk.getsockname()[0]
+        WIN_IP = '.'.join(_local.split('.')[:3]) + '.103'
+        source = 'subnet.103'
+    except Exception:
+        WIN_IP = '192.168.254.103'   # absolute last resort — static /24 constant
+        source = 'hardcoded-constant'
 
 print(f'MAC_IP={MAC_IP}')
 print(f'WIN_IP={WIN_IP}')

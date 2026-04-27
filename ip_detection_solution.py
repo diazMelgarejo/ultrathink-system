@@ -23,7 +23,7 @@ def get_os_specific_ip() -> str:
     if system == 'Darwin':  # macOS
         return '192.168.254.105'
     elif system == 'Windows':
-        return '192.168.254.101'
+        return '192.168.254.103'   # confirmed Win RTX 3080 — was stale .101
     else:
         return '127.0.0.1'
 

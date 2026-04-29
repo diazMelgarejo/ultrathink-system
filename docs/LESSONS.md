@@ -789,3 +789,39 @@ P6: {outbound-interface-subnet}.103 — absolute last resort, subnet-portable
 
 **Sync reminder:**
 Both repos (orama-system and Perpetua-Tools) must be pushed after these changes.
+
+---
+
+## 2026-04-29 — Win IP Migrated to .105; Docs Cleanup
+
+**Context:** Session resumed after credits ran out 2 days earlier. Win GPU IP changed again
+from `.103` → `.105` (committed in PT `0bac6ea chore(config): update win-rtx3080 lan_ip`).
+
+**Key finding:** The `ip_resolver.py` 6-priority chain handled this automatically — no code
+change needed. `openclaw.json` (P2) already shows `http://192.168.254.105:1234/v1`. The
+resolver read this at P2 and returned `.105` correctly without manual intervention.
+This confirms the self-healing architecture works as designed.
+
+**What the `.103` fallback constant means:** The hardcoded `.103` fallback in `ip_resolver.py`
+is priority 6 (last resort) and is a best-guess constant. It only fires if ALL of:
+- AlphaClaw is down (P1 fails)
+- `openclaw.json` is missing or malformed (P2 fails)
+- `discovery.json` has no reachable entry (P3 fails)
+- PT `detect_active_tilting_ip()` is unavailable (P4 fails)
+- No env vars set (P5 fails)
+- Subnet derivation via socket fails (also P6)
+In practice the real IP (`openclaw.json` P2) always wins. The `.103` constant is a
+subnet-portable guess (Windows is always 3rd host on the /24), not the actual IP.
+
+**Docs fixed this session:**
+- `PT/docs/MIGRATION.md` Gate 2: removed hardcoded `192.168.254.101:1234`, replaced with
+  dynamic note: "Win GPU LAN IP — dynamic, read from `~/.openclaw/openclaw.json`, currently `.105:1234`"
+- `PT/docs/adr/ADR-001-*`: formatting cleanup
+- `PT/docs/system-design-three-repo-architecture.md`: formatting pass
+
+**Pending (blocked on both machines online):**
+- G1 shared models list — needs Win + Mac simultaneously
+- G4 live openclaw.json sync across repos
+- Unified `/agent/dispatch` L2 API in PT
+
+**Repos synced:** PT pushed `c6b8cdf`, orama-system clean (all changes from previous session already committed).

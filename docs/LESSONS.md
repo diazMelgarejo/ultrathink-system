@@ -947,3 +947,22 @@ win: ✅ 192.168.254.105:1234 — 5 models
 
 **Pre-commit guard**: `.claude/hooks/pre-commit` in Perpetua-Tools blocks commits with stale:
 `orchestrator.ultrathink_bridge`, `orchestrator.ultrathink_mcp_client`, `ULTRATHINK_ENDPOINT`, `ultrathink_available`, `Perplexity-Tools` in ecc-tools.json.
+
+### Version bump atomicity: update ALL surfaces at once (2026-04-29)
+
+- SKILL.md says "When bumping version, update ALL of these atomically" — 5 surfaces
+- `pyproject.toml`, `bin/orama-system/SKILL.md`, `bin/config/agent_registry.json`, `docs/PERPLEXITY_BRIDGE.md`, `docs/SYNC_ANALYSIS.md`
+- Missing any one causes `test_version_docs.py` failures
+- Template: `grep -rn "0.9.9.X" . --include="*.toml" --include="*.md" --include="*.json" | grep -v ".git"` before each bump
+
+### Always use .venv/bin/python3 -m pytest for orama tests (2026-04-29)
+
+- System Python 3.13 lacks httpx → `test_api_server.py` fails with RuntimeError on import
+- orama `.venv` uses Python 3.12 with all required packages (fastapi, httpx, starlette)
+- Command: `cd orama-system && .venv/bin/python3 -m pytest tests/ -q`
+
+### .DS_Store in .git/refs causes repo hygiene check failure (2026-04-29)
+
+- macOS Finder creates `.DS_Store` inside `.git/refs/` — `repo_hygiene.py` hard-fails on this
+- Fix: `rm -f .git/refs/.DS_Store` — idempotent, safe
+- Add to `.gitignore_global` or monthly cleanup script

@@ -892,7 +892,7 @@ win: ✅ 192.168.254.105:1234 — 5 models
 
 ## 2026-04-29 — Claude — Cross-repo sync gist (from PT docs/LESSONS.md)
 
-*(These are PT-owned lessons relevant to orama. Full text in PT/docs/LESSONS.md.)*
+*(PT-owned lessons relevant to orama. Full text in [Perpetua-Tools `main` → `docs/LESSONS.md`](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/LESSONS.md).)*
 
 ### Hardware × Agent Matrix Test — All 6 OpenClaw Agents (confirmed 2026-04-27)
 

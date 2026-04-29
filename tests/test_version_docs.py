@@ -6,14 +6,14 @@ from pathlib import Path
 ROOT = Path(__file__).parent.parent
 
 
-def test_active_version_surfaces_are_09994():
+def test_active_version_surfaces_are_09998():
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
     claude = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
     skill = (ROOT / "bin" / "orama-system" / "SKILL.md").read_text(encoding="utf-8")
 
-    assert 'version = "0.9.9.7"' in pyproject
-    assert "v0.9.9.7" in claude
-    assert "version: 0.9.9.7" in skill
+    assert 'version = "0.9.9.8"' in pyproject
+    assert "0.9.9.8" in claude
+    assert "version: 0.9.9.8" in skill
 
 
 def test_readme_mentions_active_lan_helpers():
@@ -27,5 +27,5 @@ def test_bridge_docs_reference_09994_and_bin_skills():
     bridge = (ROOT / "docs" / "PERPLEXITY_BRIDGE.md").read_text(encoding="utf-8")
     sync = (ROOT / "docs" / "SYNC_ANALYSIS.md").read_text(encoding="utf-8")
 
-    assert "Version 0.9.9.7" in bridge
-    assert "v0.9.9.7" in sync
+    assert "Version 0.9.9.8" in bridge
+    assert "v0.9.9.8" in sync

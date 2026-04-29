@@ -71,7 +71,7 @@
     "autoresearch-coder": {
       "id": "autoresearch-coder",
       "type": "worker",
-      "device_affinity": "win-rtx3080",
+      "affinity": "win-rtx3080",
       "model_role": "autoresearch-coder",
       "responsibilities": [
         "Call CIDF decide() before editing train.py (rank 2: direct_typing on local file)",

@@ -2,7 +2,7 @@
 **File:** `2026-04-26-hardware-model-routing-004-PART2-PLAN.md`
 **Continues:** `2026-04-26-MERGED-hardware-model-routing-003-PLAN.md`
 **Branch:** `main` (commit to `2026-04-24-001-orama-salvage` if re-opened as a branch)
-**Status:** Pending — Phase 1–4 of the original plan shipped; this plan covers remaining gaps
+**Status:** G2+G3 closed 2026-04-29 · G1 deferred · G4 blocked (both machines)
 
 ---
 
@@ -22,12 +22,18 @@
 
 ## Open Gap Inventory (4 items)
 
-| # | Gap | File(s) | Impact |
+| # | Gap | File(s) | Status |
 |---|-----|---------|--------|
-| G1 | `shared:` section in policy YAML is empty | `PT/config/model_hardware_policy.yml` | Cross-platform models unidentifiable |
-| G2 | `PERPETUA_TOOLS_ROOT` not documented in `.env.example` | `orama-system/.env.example` | New devs silently get stub (no enforcement) |
-| G3 | `autoresearch_agents` uses `device_affinity` key; `agents` uses `affinity` | `bin/config/agent_registry.json` | Schema inconsistency; routing code must normalize |
-| G4 | Live `openclaw.json` has not been repaired on either machine | Runtime file | Wrong models still reachable until repaired |
+| G1 | `shared:` section in policy YAML is empty | `PT/config/model_hardware_policy.yml` | **DEFERRED** — not needed yet; populate when both machines tested |
+| G2 | `PERPETUA_TOOLS_ROOT` not documented in `.env.example` | `orama-system/.env.example`, `PT/.env.example` | ✅ **CLOSED** — already present in both files (line 59 / line 122) |
+| G3 | `autoresearch_agents` uses `device_affinity` key; `agents` uses `affinity` | `bin/orama-system/config/agent_registry.json`, `.claude/skills/orama-system/config/agent_registry.json` | ✅ **CLOSED 2026-04-29** — renamed `device_affinity` → `affinity`; values kept as specific GPU IDs (`win-rtx3080`); 7/7 schema tests pass |
+| G4 | Live `openclaw.json` has not been repaired on either machine | Runtime file | **BLOCKED** — needs both machines online simultaneously |
+
+### v1.2+ GPU Naming Note
+`affinity: "win-rtx3080"` uses the specific GPU identifier, not a generic `"win"` string.
+When the RTX 5080 arrives (v1.2+), add a new affinity value `"win-rtx5080"` alongside `"win-rtx3080"`.
+Routing code must match on prefix (`win-rtx*`) or exact ID to dispatch to the correct GPU host.
+No change needed to existing agents unless they explicitly target the new GPU.
 
 ---
 
@@ -96,80 +102,71 @@ The `agents` array uses `affinity` (string, e.g. `"win"`, `"mac"`).
 Recommendation: adopt `affinity` everywhere. `device_affinity` was the original key before
 the hardware policy work unified naming.
 
-### Step 7.2 — Migrate `autoresearch_agents` entries
+### Step 7.2 — ✅ DONE (2026-04-29) — Migrated `autoresearch_agents` entries
 
-In `bin/config/agent_registry.json`, rename `device_affinity` → `affinity` and normalize values:
+Renamed `device_affinity` → `affinity` in both:
+- `bin/orama-system/config/agent_registry.json`
+- `.claude/skills/orama-system/config/agent_registry.json`
 
-| Old value | New value |
+**Decision: specific GPU IDs kept** (NOT normalized to `"win"`):
+
+| Key change | Value decision |
 |-----------|-----------|
-| `"win-rtx3080"` | `"win"` |
-| `"mac"` | `"mac"` (unchanged) |
+| `device_affinity` → `affinity` | `"win-rtx3080"` — kept specific (RTX 5080 adds `"win-rtx5080"` in v1.2+) |
+| `device_affinity` → `affinity` | `"mac"` — unchanged |
 
-### Step 7.3 — Update routing code that reads the key
+Routing code reading `affinity` must match on exact GPU ID or `win-rtx*` prefix.
 
-Search for any code that reads `device_affinity` and update to use `affinity`:
+### Step 7.3 — ✅ DONE — routing code verified clean
 
-```bash
-grep -r "device_affinity" . --include="*.py" --include="*.js"
+`grep -r "device_affinity"` → zero results in all `.py`/`.json` files.
+
+### Step 7.4 — ✅ DONE — 7/7 schema tests pass
+
 ```
-
-### Step 7.4 — Verify with existing tests
-
-```bash
-cd orama-system && python -m pytest scripts/tests/ -q
+python3 -m pytest scripts/tests/test_agent_registry_schema.py -v  → 7 passed
 ```
 
 Closes **G3**.
 
 ---
 
-## Phase 8 — `.env.example` Documentation
+## Phase 8 — ✅ CLOSED (G2 already done)
 
-Add `PERPETUA_TOOLS_ROOT` to `orama-system/.env.example` so new devs know to set it:
+`PERPETUA_TOOLS_ROOT` was already present in both `.env.example` files before this session:
+- `orama-system/.env.example` line 59
+- `PT/.env.example` line 122
 
-```bash
-# Path to Perpetua-Tools repo root (sibling directory by default).
-# Set this if PT is not at ../perplexity-api/Perpetua-Tools
-# PERPETUA_TOOLS_ROOT=/absolute/path/to/Perpetua-Tools
-```
-
-Also add to `PT/.env.example`:
-
-```bash
-# Set by orama-system to locate this repo for cross-repo imports.
-# Not needed inside PT itself — used by orama api_server.py and discover.py
-# PERPETUA_TOOLS_ROOT=/absolute/path/to/Perpetua-Tools
-```
-
-Closes **G2**.
+No action needed. Closes **G2**.
 
 ---
 
-## Verification Checklist (run before closing Part 2)
+## Verification Checklist
 
-- [ ] `python -m pytest scripts/tests/ -q` → 16/16 pass in orama-system
-- [ ] `python -m pytest tests/ -q` → 11/11 pass in Perpetua-Tools
-- [ ] `python scripts/hardware_policy_cli.py validate` → no policy violations
-- [ ] `grep -r "device_affinity" . --include="*.py"` → zero results (G3 resolved)
-- [ ] `cat .env.example | grep PERPETUA_TOOLS_ROOT` → entry present (G2 resolved)
-- [ ] `cat config/model_hardware_policy.yml | grep -A5 "shared:"` → at least 1 entry or explicit comment (G1 resolved)
-- [ ] `openclaw.json` on both machines: Windows has no mac-only models, Mac has no windows-only models (G4 resolved)
-
----
-
-## Commit Sequence for Part 2
-
-```
-feat(routing): Phase 7 — normalize device_affinity → affinity in agent_registry
-feat(routing): Phase 8 — document PERPETUA_TOOLS_ROOT in .env.example
-feat(routing): Phase 5 — live config repair (both machines verified)
-docs(routing): populate shared models section in model_hardware_policy.yml
-```
+- [x] `grep -r "device_affinity" . --include="*.py" --include="*.json"` → zero results (G3 closed 2026-04-29)
+- [x] `python3 -m pytest scripts/tests/test_agent_registry_schema.py -v` → 7/7 passed (G3 closed)
+- [x] `cat .env.example | grep PERPETUA_TOOLS_ROOT` → entry present (G2 already closed)
+- [ ] `python -m pytest scripts/tests/ -q` → full suite pass in orama-system (pending)
+- [ ] `python -m pytest tests/ -q` → full suite pass in Perpetua-Tools (pending)
+- [ ] `cat config/model_hardware_policy.yml | grep -A5 "shared:"` → at least 1 entry (G1 — DEFERRED)
+- [ ] `openclaw.json` on both machines repaired (G4 — BLOCKED: both machines required)
 
 ---
 
-## Lessons to Record After Part 2
+## Remaining Work (Part 3 scope)
 
-- Which models were confirmed cross-platform (for `shared:` section)
-- Whether `device_affinity` normalization required changes to routing dispatch code
-- Whether the `PERPETUA_TOOLS_ROOT` stub warning appeared during any agent run (validates the warning was useful)
+| Item | When |
+|------|------|
+| G4 — live openclaw.json repair | Both machines online |
+| G1 — populate `shared:` models section | Both machines online + G4 done |
+| v1.2+ — add `win-rtx5080` affinity + routing | When RTX 5080 machine is provisioned |
+| Full test suite pass (orama + PT) | Next available session |
+
+---
+
+## Lessons Recorded (2026-04-29)
+
+- Specific GPU ID in `affinity` (`win-rtx3080`) is correct — do NOT normalize to generic `"win"`
+- RTX 5080 will add `affinity: "win-rtx5080"` as a new value; routing code must handle both IDs
+- `device_affinity` key is now fully retired in all JSON files; `affinity` is canonical
+- G2 was already done before this session — always check before implementing "pending" tasks

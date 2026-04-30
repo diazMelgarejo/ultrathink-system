@@ -27,7 +27,7 @@ Local-first + airgapped capable. Dependency-minimal. MIT-licensed (matches LangC
 | **D5** | Plugin API | Internal in v2.0, public versioned API in v2.1 |
 | **D6** | Spec layout | Master + per-module sub-specs under `orama-system/docs/v2/` |
 | **D7** | Schema lib | Pydantic v2 in kernel (already in stack); Pydantic AI logged as v2.1+ research item, *as a framework comparison*, not schema swap |
-| **D8** | Kernel tier | **Tier 3 — Rich graph (~220 lines)** with 8 borrowed features (see `01-kernel-spec.md`) |
+| **D8** | Kernel tier | **Revised 2026-04-30: 70-line kernel + `graph/plugins/`** — engine.py stays ~70 lines; checkpointer/interrupts/subgraphs/tool/streaming/structured_output ship as on-demand plugins (see `01-kernel-spec.md`) |
 | **D9** | Build approach | GPT Phase 1–4 order (primitives → graph → HTTP → parity tests); lift proven pieces from v1 |
 | **D10** | License | MIT (matches LangChain + LangGraph) |
 
@@ -67,7 +67,7 @@ Calendar-free. Each phase gates on completion criteria, not dates.
                  │   • PerpetuaState                   │
                  │   • LLMClient (OpenAI-compat)       │
                  │   • HardwarePolicyResolver          │
-                 │   • MiniGraph engine (Tier 3)       │
+                 │   • MiniGraph engine (70-line)      │
                  │   • GossipBus (SQLite event log)    │
                  └─────────────────────────────────────┘
                               ▲           ▲

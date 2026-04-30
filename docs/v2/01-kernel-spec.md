@@ -1,7 +1,10 @@
 # 01 — Kernel Spec (perpetua-core, v2.0 blocking)
 
 > The only **blocking** spec for v2.0. Everything else (modules) ships at its own pace.
-> Tier 3: ~220 lines target. Pydantic v2 schemas. Tier-3 features per D8.
+> **Revised D8 (2026-04-30)**: MiniGraph kernel = ~70 lines (essential services only).
+> Tier-3 features (checkpointer, interrupts, subgraphs, tool, streaming, structured output)
+> ship as **graph plugins** under `perpetua_core/graph/plugins/`, loaded on demand.
+> Cold kernel has zero optional dependencies.
 
 ---
 
@@ -34,14 +37,16 @@ perpetua-core/
 └── tests/
     ├── test_state.py
     ├── test_policy.py
-    ├── test_minigraph.py
-    ├── test_checkpointer.py
-    ├── test_interrupts.py
-    ├── test_tool_decorator.py
-    └── test_structured_output.py
+    ├── test_minigraph.py           # kernel in isolation — no plugins
+    ├── test_plugins_checkpointer.py
+    ├── test_plugins_interrupts.py
+    ├── test_plugins_tool.py
+    └── test_plugins_structured_output.py
 ```
 
-**Total kernel target: ~220 lines** across `state.py`, `llm.py`, `policy.py`, `gossip.py`, and `graph/*`.
+**Kernel target: ~70 lines** (`graph/engine.py` only — START/END, node registry, edge routing, `ainvoke`).
+**Plugin target: ~30–50 lines each** — loaded via `MiniGraph.use(plugin)`, never in engine imports.
+Cold `MiniGraph()` with no plugins: pure Python, zero optional deps.
 
 ---
 
@@ -168,9 +173,9 @@ Carries forward the `HardwareAffinityError` re-export pattern canonicalized in `
 
 ---
 
-## 4. `MiniGraph` engine — Tier 3
+## 4. `MiniGraph` engine — 70-line kernel + plugin system
 
-State machine: nodes (callables that return state deltas), edges (router fns), start/end. API-compatible with the LangGraph mental model so a future migration to real LangGraph remains cheap.
+State machine: nodes (callables that return state deltas), edges (router fns), start/end. API-compatible with the LangGraph mental model so a future migration to real LangGraph remains cheap. **Tier-3 features ship as plugins**, never embedded in `engine.py`.
 
 ### 4a. Core engine (`graph/engine.py`)
 

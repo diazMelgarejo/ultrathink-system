@@ -6,7 +6,7 @@ The ὅραμα System — REST API Entry Point
 POST /ultrathink on port 8001
 
 This is a stateless execution endpoint. No Redis dependency.
-Durable state is owned by the Perplexity-Tools orchestrator (Repo #1).
+Durable state is owned by the Perpetua-Tools orchestrator (Repo #1).
 
 Version: 0.9.9.2 | License: Apache 2.0
 """
@@ -22,6 +22,7 @@ from pathlib import Path
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, field_validator, Field
 import httpx
@@ -94,7 +95,7 @@ class BackendRouter:
 
       Mac + non-code:  mac_main → win_main  → cloud → win_coding
       Mac + code:      mac_main → win_coding → win_main → cloud
-      Windows + any:   win_main → cloud     → mac_main → win_coding
+      Windows + any:   win_main → cloud     → win_coding  (Mac is never a Windows fallback)
 
     Override via:
       - BackendRouter(override="cloud")         — explicit per-request
@@ -147,8 +148,8 @@ class BackendRouter:
             if is_code:
                 return [_EP["mac_main"], _EP["win_coding"], _EP["win_main"], _EP["cloud"]]
             return [_EP["mac_main"], _EP["win_main"], _EP["cloud"], _EP["win_coding"]]
-        else:  # windows: win_main always first, cloud second
-            return [_EP["win_main"], _EP["cloud"], _EP["mac_main"], _EP["win_coding"]]
+        else:  # windows: win_main first, cloud second; Mac is never a Windows fallback
+            return [_EP["win_main"], _EP["cloud"], _EP["win_coding"]]
 
 
 # ── Constants ─────────────────────────────────────────────────────────────────
@@ -434,9 +435,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="The ὅραμα System API",
-    description="Stateless POST /ultrathink endpoint. State owned by Perplexity-Tools.",
+    description="Stateless POST /ultrathink endpoint. State owned by Perpetua-Tools.",
     version="0.9.9.2",
     lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 @app.post("/ultrathink", response_model=UltraThinkResponse)

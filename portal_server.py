@@ -82,7 +82,7 @@ PERPETUA_TOOLS_ROOT = Path(
     os.getenv("PERPETUA_TOOLS_ROOT", REPO_ROOT.parent / "perplexity-api" / "Perpetua-Tools")
 )
 
-app = FastAPI(title="UltraThink LAN Portal", version=VERSION)
+app = FastAPI(title="orama portal", version=VERSION)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -96,13 +96,41 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta http-equiv="refresh" content="10">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>UltraThink LAN Portal</title>
+<title>orama portal</title>
 <style>
   *{{box-sizing:border-box;margin:0;padding:0}}
-  body{{background:#475569;color:#f8fafc;font-family:monospace;font-size:14px;padding:1.5rem}}
+  body{{background:#475569;color:#f8fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;padding:1.5rem}}
   h1{{font-size:1.25rem;letter-spacing:.05em;margin-bottom:1rem;color:#38bdf8}}
+  /* navbar */
+  .navbar{{display:flex;justify-content:space-between;align-items:center;background:#1e293b;border-radius:4px;padding:.6rem 1rem;margin-bottom:1rem}}
+  .nav-brand{{font-size:.95rem;font-weight:700;color:#38bdf8;letter-spacing:.04em}}
+  .nav-links{{display:flex;gap:.75rem;align-items:center}}
+  .nav-link{{color:#94a3b8;font-size:.8rem;text-decoration:none}}
+  .nav-link:hover{{color:#f8fafc}}
+  .theme-btn{{background:none;border:1px solid #475569;border-radius:3px;color:#94a3b8;cursor:pointer;font-size:.75rem;padding:.25rem .6rem}}
+  .theme-btn:hover{{border-color:#38bdf8;color:#f8fafc}}
+  /* night theme */
+  body[data-theme="night"]{{background:#0f1117;color:#e2e8f0}}
+  body[data-theme="night"] .navbar{{background:#111827}}
+  body[data-theme="night"] .nav-brand{{color:#06b6d4}}
+  body[data-theme="night"] h1{{color:#06b6d4}}
+  body[data-theme="night"] .card{{background:#1a1d27;border-color:#2d3748}}
+  body[data-theme="night"] .section-title{{color:#06b6d4;border-color:#06b6d440}}
+  body[data-theme="night"] .url{{color:#06b6d4}}
+  body[data-theme="night"] .card-title{{color:#6b7280}}
+  body[data-theme="night"] .feed{{background:#1a1d27;border-color:#2d3748}}
+  body[data-theme="night"] .ev{{border-color:#2d374840}}
+  body[data-theme="night"] .footer{{color:#4b5563}}
+  body[data-theme="night"] .input-box{{background:#1a1d27;border-color:#2d3748}}
+  body[data-theme="night"] .input-field{{background:#0f1117;border-color:#374151}}
+  body[data-theme="night"] .dispatch-field{{background:#0f1117;border-color:#374151}}
+  body[data-theme="night"] select{{background:#0f1117;border-color:#374151}}
+  body[data-theme="night"] .tool-card{{background:#1a1d27;border-color:#2d3748}}
+  body[data-theme="night"] .state-pill{{background:#0f1117;border-color:#374151}}
+  body[data-theme="night"] .agent-btn{{background:#0f1117;border-color:#374151}}
+  body[data-theme="night"] .theme-btn{{border-color:#374151}}
+  body[data-theme="night"] .dispatch-output{{background:#0f1117;border-color:#374151}}
   .grid{{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem}}
   .card{{background:#334155;border:1px solid #64748b;border-radius:4px;padding:1rem}}
   .card-title{{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:#94a3b8;margin-bottom:.5rem}}
@@ -110,10 +138,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .ok{{color:#4ade80}}
   .err{{color:#f87171}}
   .warn{{color:#fbbf24}}
-  .url{{color:#38bdf8;font-size:.75rem}}
+  .url{{color:#38bdf8;font-size:.75rem;font-family:monospace}}
   .role{{color:#94a3b8;font-size:.75rem}}
   .models{{margin-top:.5rem}}
-  .model{{color:#cbd5e1;font-size:.75rem;padding:.1rem 0}}
+  .model{{color:#cbd5e1;font-size:.75rem;padding:.1rem 0;font-family:monospace}}
   .footer{{margin-top:1.5rem;font-size:.7rem;color:#64748b}}
   .version{{color:#64748b;font-size:.7rem}}
   .section{{margin-top:1.5rem}}
@@ -121,8 +149,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .feed{{background:#334155;border:1px solid #64748b;border-radius:4px;overflow:hidden}}
   .ev{{display:flex;gap:.5rem;padding:.4rem .75rem;border-bottom:1px solid #3f536640;align-items:baseline}}
   .ev:last-child{{border-bottom:none}}
-  .ev-ts{{color:#64748b;font-size:.65rem;white-space:nowrap;min-width:5rem}}
-  .ev-who{{color:#38bdf8;font-size:.7rem;white-space:nowrap;min-width:9rem}}
+  .ev-ts{{color:#64748b;font-size:.65rem;white-space:nowrap;min-width:5rem;font-family:monospace}}
+  .ev-who{{color:#38bdf8;font-size:.7rem;white-space:nowrap;min-width:9rem;font-family:monospace}}
   .ev-tag{{font-size:.65rem;border-radius:2px;padding:.05rem .3rem;white-space:nowrap}}
   .tag-reply{{background:#4ade8020;color:#4ade80}}
   .tag-query{{background:#38bdf820;color:#7dd3fc}}
@@ -195,18 +223,25 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>UltraThink LAN Portal <span class="version">v{version}</span></h1>
-<div class="grid">
+<nav class="navbar">
+  <span class="nav-brand">orama portal</span>
+  <div class="nav-links">
+    <a class="nav-link" href="/dashboard">Routing Dashboard ↗</a>
+    <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙 Night</button>
+  </div>
+</nav>
+<h1>orama portal <span class="version">v{version}</span></h1>
+<div id="cards-grid" class="grid">
 {cards}
 </div>
-{routing_section}
+<div id="routing-section">{routing_section}</div>
 {hardware_policy_section}
 {tools_section}
 {agent_dispatch_section}
 {agent_state_section}
-{activity_section}
+<div id="activity-section">{activity_section}</div>
 {input_section}
-<div class="footer">Auto-refresh every 10s &bull; {timestamp}</div>
+<div class="footer">Auto-refresh every 10s &bull; <span id="last-refresh">{timestamp}</span></div>
 <script>
 async function sendTask() {{
   const field = document.getElementById('task-input');
@@ -306,6 +341,47 @@ async function spawnAgent() {{
     status.textContent = 'Request failed: ' + e;
   }}
 }}
+// ── Async data refresh (no page reload) ──────────────────────────────────
+async function refreshData() {{
+  try {{
+    const r = await fetch('/api/status-html');
+    if (!r.ok) return;
+    const d = await r.json();
+    const grid = document.getElementById('cards-grid');
+    if (grid && d.cards) grid.innerHTML = d.cards;
+    const routing = document.getElementById('routing-section');
+    if (routing && d.routing_section) routing.innerHTML = d.routing_section;
+    const activity = document.getElementById('activity-section');
+    if (activity && d.activity_section) activity.innerHTML = d.activity_section;
+    const ts = document.getElementById('last-refresh');
+    if (ts && d.timestamp) ts.textContent = d.timestamp;
+  }} catch(e) {{
+    console.warn('orama portal refresh failed:', e);
+  }}
+}}
+setInterval(refreshData, 10000);
+// ── Theme toggle ─────────────────────────────────────────────────────────
+function toggleTheme() {{
+  const body = document.body;
+  const btn = document.getElementById('theme-btn');
+  if (body.dataset.theme === 'night') {{
+    body.dataset.theme = 'day';
+    if (btn) btn.textContent = '🌙 Night';
+    localStorage.setItem('orama-theme', 'day');
+  }} else {{
+    body.dataset.theme = 'night';
+    if (btn) btn.textContent = '☀️ Day';
+    localStorage.setItem('orama-theme', 'night');
+  }}
+}}
+(function() {{
+  const saved = localStorage.getItem('orama-theme');
+  if (saved === 'night') {{
+    document.body.dataset.theme = 'night';
+    const btn = document.getElementById('theme-btn');
+    if (btn) btn.textContent = '☀️ Day';
+  }}
+}})();
 </script>
 </body>
 </html>"""
@@ -668,7 +744,7 @@ def _render_html(status: Dict[str, Any]) -> str:
     # PT
     pt = svc.get("perplexity_tools", {})
     cards.append(_render_card(
-        "Perplexity-Tools", pt.get("ok", False), pt.get("url", ""),
+        "Perpetua-Tools", pt.get("ok", False), pt.get("url", ""),
         role="orchestrator / cloud router",
         extra=f'<div class="version">{pt.get("version","")}</div>',
     ))
@@ -676,7 +752,7 @@ def _render_html(status: Dict[str, Any]) -> str:
     # US
     us = svc.get("ultrathink", {})
     cards.append(_render_card(
-        "UltraThink API", us.get("ok", False), us.get("url", ""),
+        "orama API", us.get("ok", False), us.get("url", ""),
         role="5-stage reasoning bridge",
         extra=f'<div class="version">{us.get("version","")}</div>',
     ))
@@ -1291,6 +1367,73 @@ async def api_spawn_agent(req: SpawnAgentRequest):
     _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
     result = await _mod.dispatch(req.agent, req.task, model=req.model or None)
     return result
+
+
+@app.get("/dashboard", response_class=None)
+async def dashboard():
+    """Serve the routing-dashboard.html SPA."""
+    from fastapi.responses import FileResponse, HTMLResponse
+    dashboard_path = REPO_ROOT / "docs" / "dashboard" / "routing-dashboard.html"
+    if dashboard_path.exists():
+        return FileResponse(str(dashboard_path), media_type="text/html")
+    return HTMLResponse(
+        f"<h2>Dashboard not found</h2><p>Expected: {dashboard_path}</p>",
+        status_code=404,
+    )
+
+
+@app.get("/api/status-html")
+async def api_status_html():
+    """Return pre-rendered HTML fragments for async JS polling (no page reload)."""
+    import datetime
+    status = await api_status()
+    svc = status.get("services", {})
+
+    cards = []
+    pt = svc.get("perplexity_tools", {})
+    cards.append(_render_card(
+        "Perpetua-Tools", pt.get("ok", False), pt.get("url", ""),
+        role="orchestrator / cloud router",
+        extra=f'<div class="version">{pt.get("version","")}</div>',
+    ))
+    us = svc.get("ultrathink", {})
+    cards.append(_render_card(
+        "orama API", us.get("ok", False), us.get("url", ""),
+        role="5-stage reasoning bridge",
+        extra=f'<div class="version">{us.get("version","")}</div>',
+    ))
+    lm_mac = svc.get("lmstudio_mac", {})
+    cards.append(_render_card(
+        "LM Studio — Mac", lm_mac.get("ok", False), lm_mac.get("url", ""),
+        role="orchestrator + validator + presenter",
+        models=lm_mac.get("models", []),
+    ))
+    for key, entry in svc.items():
+        if key.startswith("lmstudio_win"):
+            label = "LM Studio — Win" if key == "lmstudio_win" else f"LM Studio — {key}"
+            cards.append(_render_card(
+                label, entry.get("ok", False), entry.get("url", ""),
+                role="coder/checker/refiner/executor/verifier",
+                models=entry.get("models", []),
+            ))
+    ol_win = svc.get("ollama_win", {})
+    cards.append(_render_card(
+        "Ollama — Win (fallback)", ol_win.get("ok", False), ol_win.get("url", ""),
+        models=ol_win.get("models", []),
+    ))
+    ol_mac = svc.get("ollama_mac", {})
+    cards.append(_render_card(
+        "Ollama — Mac (manager)", ol_mac.get("ok", False), ol_mac.get("url", ""),
+        role="manager: qwen3.5-local",
+        models=ol_mac.get("models", []),
+    ))
+
+    return {
+        "cards": "\n".join(cards),
+        "routing_section": _render_routing_section(status.get("routing")),
+        "activity_section": _render_activity_section(status.get("activity", [])),
+        "timestamp": datetime.datetime.now().strftime("%H:%M:%S"),
+    }
 
 
 @app.get("/", response_class=None)

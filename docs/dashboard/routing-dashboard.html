@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenClaw — Agent Routing Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" integrity="sha384-jb8JQMbMoBUzgWatfe6COACi2ljcDdZQ2OxczGA3bGNeWe+6DChMTBJemed7ZnvJ" crossorigin="anonymous"></script>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #1a1d27;
+      --card2: #22263a;
+      --border: #2e3348;
+      --text: #e2e8f0;
+      --muted: #8892a4;
+      --accent: #6c8efb;
+      --green: #34d399;
+      --yellow: #fbbf24;
+      --red: #f87171;
+      --purple: #a78bfa;
+      --orange: #fb923c;
+      --gap: 16px;
+      --r: 10px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:var(--bg); color:var(--text); line-height:1.5; }
+
+    /* ── Layout ── */
+    .wrap { max-width:1400px; margin:0 auto; padding:24px var(--gap); }
+
+    header {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:18px 24px; border-radius:var(--r);
+      background:linear-gradient(135deg,#1a1d27 0%,#22263a 100%);
+      border:1px solid var(--border); margin-bottom:var(--gap);
+    }
+    header h1 { font-size:18px; font-weight:700; letter-spacing:.3px; }
+    header h1 span { color:var(--accent); }
+    .header-meta { display:flex; gap:12px; align-items:center; font-size:13px; color:var(--muted); }
+    .live-dot { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+    /* ── Controls bar ── */
+    .controls {
+      display:flex; gap:12px; flex-wrap:wrap; align-items:center;
+      padding:14px 20px; border-radius:var(--r);
+      background:var(--card); border:1px solid var(--border);
+      margin-bottom:var(--gap);
+    }
+    .ctrl-group { display:flex; align-items:center; gap:8px; }
+    .ctrl-group label { font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; }
+    select, button {
+      padding:6px 12px; border-radius:6px; border:1px solid var(--border);
+      background:var(--card2); color:var(--text); font-size:13px; cursor:pointer;
+    }
+    select:focus, button:focus { outline:2px solid var(--accent); }
+    button.primary { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:600; }
+    button.primary:hover { opacity:.9; }
+    .sep { width:1px; height:28px; background:var(--border); }
+
+    /* ── KPI row ── */
+    .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:var(--gap); margin-bottom:var(--gap); }
+    .kpi {
+      padding:18px 20px; border-radius:var(--r);
+      background:var(--card); border:1px solid var(--border);
+    }
+    .kpi-label { font-size:11px; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:6px; }
+    .kpi-val { font-size:26px; font-weight:700; }
+    .kpi-sub { font-size:12px; color:var(--muted); margin-top:4px; }
+    .green { color:var(--green); } .yellow { color:var(--yellow); } .red { color:var(--red); }
+    .accent { color:var(--accent); } .purple { color:var(--purple); } .orange { color:var(--orange); }
+
+    /* ── Main grid ── */
+    .main-grid { display:grid; grid-template-columns:1fr 1fr; gap:var(--gap); margin-bottom:var(--gap); }
+    @media(max-width:900px){ .main-grid{ grid-template-columns:1fr; } }
+
+    .card {
+      padding:20px 22px; border-radius:var(--r);
+      background:var(--card); border:1px solid var(--border);
+    }
+    .card h3 { font-size:13px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.5px; margin-bottom:16px; }
+    canvas { max-height:240px; }
+
+    /* ── Priority chain ── */
+    .priority-chain { display:flex; flex-direction:column; gap:10px; }
+    .chain-item {
+      display:flex; align-items:center; gap:14px;
+      padding:12px 16px; border-radius:8px; border:1px solid var(--border);
+      background:var(--card2); position:relative;
+    }
+    .chain-item.active { border-color:var(--green); }
+    .chain-item.standby { border-color:var(--border); }
+    .chain-item.offline { border-color:var(--red); opacity:.6; }
+    .chain-rank {
+      width:26px; height:26px; border-radius:50%;
+      display:flex; align-items:center; justify-content:center;
+      font-size:12px; font-weight:700; flex-shrink:0;
+    }
+    .rank-1 { background:#34d39922; color:var(--green); }
+    .rank-2 { background:#6c8efb22; color:var(--accent); }
+    .rank-3 { background:#fbbf2422; color:var(--yellow); }
+    .rank-4 { background:#8892a422; color:var(--muted); }
+    .chain-info { flex:1; }
+    .chain-name { font-size:14px; font-weight:600; }
+    .chain-url  { font-size:11px; color:var(--muted); font-family:monospace; }
+    .chain-badge {
+      padding:2px 8px; border-radius:4px; font-size:11px; font-weight:600;
+    }
+    .badge-up   { background:#34d39922; color:var(--green); }
+    .badge-down { background:#f8717122; color:var(--red); }
+    .badge-idle { background:#fbbf2422; color:var(--yellow); }
+    .chain-arrow { color:var(--muted); font-size:18px; text-align:center; }
+
+    /* ── Model table ── */
+    .model-table-wrap { overflow-x:auto; }
+    table { width:100%; border-collapse:collapse; font-size:13px; }
+    th { text-align:left; padding:8px 12px; border-bottom:1px solid var(--border); color:var(--muted); font-size:11px; text-transform:uppercase; letter-spacing:.5px; }
+    td { padding:10px 12px; border-bottom:1px solid var(--border); }
+    tr:last-child td { border-bottom:none; }
+    tr:hover td { background:#ffffff08; }
+    .tier-mac     { color:var(--green); }
+    .tier-windows { color:var(--accent); }
+    .tier-cloud   { color:var(--purple); }
+    .tier-shared  { color:var(--muted); }
+    .dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
+    .dot-up { background:var(--green); } .dot-down { background:var(--red); } .dot-idle { background:var(--yellow); }
+
+    /* ── Task routing sim ── */
+    .sim-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+    @media(max-width:700px){ .sim-grid{ grid-template-columns:1fr; } }
+    .sim-card {
+      padding:14px 16px; border-radius:8px; border:1px solid var(--border);
+      background:var(--card2); font-size:12px;
+    }
+    .sim-card h4 { font-size:12px; font-weight:600; margin-bottom:8px; color:var(--accent); }
+    .sim-route { display:flex; flex-direction:column; gap:4px; }
+    .sim-step { display:flex; align-items:center; gap:6px; }
+    .sim-step-num { width:18px; height:18px; border-radius:50%; background:var(--card); font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+    .sim-step-lbl { color:var(--text); }
+
+    /* ── Log stream ── */
+    .log-wrap { font-family:monospace; font-size:12px; background:var(--card2); border:1px solid var(--border); border-radius:8px; padding:14px; max-height:220px; overflow-y:auto; }
+    .log-line { padding:2px 0; border-bottom:1px solid #ffffff08; }
+    .log-ts { color:var(--muted); margin-right:8px; }
+    .log-ok { color:var(--green); } .log-warn { color:var(--yellow); } .log-err { color:var(--red); }
+    .log-info { color:var(--accent); }
+
+    footer { text-align:center; color:var(--muted); font-size:12px; padding:20px 0 8px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <h1>OpenClaw · <span>Agent Routing</span> Dashboard</h1>
+    <div class="header-meta">
+      <span class="live-dot"></span>
+      <span id="ts">Loading…</span>
+      <span>orama-system v0.9.9.8</span>
+    </div>
+  </header>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="ctrl-group">
+      <label>Platform</label>
+      <select id="sel-platform" onchange="applyFilters()">
+        <option value="mac">Mac (Darwin)</option>
+        <option value="windows">Windows</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Task Type</label>
+      <select id="sel-task" onchange="applyFilters()">
+        <option value="analysis">Analysis</option>
+        <option value="code">Code</option>
+        <option value="research">Research</option>
+        <option value="planning">Planning</option>
+      </select>
+    </div>
+    <div class="ctrl-group">
+      <label>Override</label>
+      <select id="sel-override" onchange="applyFilters()">
+        <option value="">None (platform default)</option>
+        <option value="local">Force Local</option>
+        <option value="cloud">Force Cloud</option>
+        <option value="windows">Force Windows</option>
+      </select>
+    </div>
+    <div class="sep"></div>
+    <div class="ctrl-group">
+      <label>orama Port</label>
+      <select id="sel-port" onchange="applyFilters()">
+        <option value="8001">8001 (default)</option>
+        <option value="8002">8002</option>
+      </select>
+    </div>
+    <button class="primary" onclick="probeHealth()">⟳ Probe /health</button>
+  </div>
+
+  <!-- KPI row -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="kpi-label">Active Backend</div>
+      <div class="kpi-val accent" id="kpi-backend">mac_main</div>
+      <div class="kpi-sub" id="kpi-backend-url">localhost:1234</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">LM Studio (Mac)</div>
+      <div class="kpi-val" id="kpi-mac-status"><span class="green">●</span> UP</div>
+      <div class="kpi-sub">qwen3.5-9b-mlx · gemma-4-e4b-it</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">LM Studio (Win)</div>
+      <div class="kpi-val" id="kpi-win-status"><span class="yellow">●</span> Unknown</div>
+      <div class="kpi-sub">192.168.254.108:1234</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Cloud (Anthropic)</div>
+      <div class="kpi-val"><span class="green">●</span> Available</div>
+      <div class="kpi-sub">claude-sonnet-4-6 · claude-opus-4-7</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">orama /health</div>
+      <div class="kpi-val" id="kpi-orama">—</div>
+      <div class="kpi-sub" id="kpi-orama-sub">Not probed</div>
+    </div>
+  </div>
+
+  <!-- Main grid: priority chain + task routing chart -->
+  <div class="main-grid">
+
+    <!-- Dispatch order -->
+    <div class="card">
+      <h3>Dispatch Order <span id="order-label" style="color:var(--accent)">(Mac · Analysis)</span></h3>
+      <div class="priority-chain" id="chain-container"></div>
+    </div>
+
+    <!-- Routing simulation by task type -->
+    <div class="card">
+      <h3>Routing by Task Type</h3>
+      <div class="sim-grid" id="sim-container"></div>
+    </div>
+  </div>
+
+  <!-- Model table + chart row -->
+  <div class="main-grid">
+    <div class="card">
+      <h3>Model Registry</h3>
+      <div class="model-table-wrap">
+        <table id="model-table">
+          <thead><tr><th>Model</th><th>Tier</th><th>Backend</th><th>Note</th></tr></thead>
+          <tbody id="model-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Tier Distribution</h3>
+      <canvas id="tier-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Log -->
+  <div class="card" style="margin-bottom:var(--gap)">
+    <h3>Routing Log</h3>
+    <div class="log-wrap" id="log-wrap"></div>
+  </div>
+
+  <footer>OpenClaw orama-system v0.9.9.8 · Routing Dashboard · Sample data — connect /health for live data</footer>
+</div>
+
+<script>
+// ── Static data (swap for live /health JSON) ──────────────────────────────────
+const MODELS = [
+  { id: "qwen3.5-9b-mlx",       tier: "mac",     backend: "mac_main",   note: "thinking model, max_tokens≥500" },
+  { id: "gemma-4-e4b-it",       tier: "mac",     backend: "mac_main",   note: "" },
+  { id: "qwen3.5-9b-mlx-4bit",  tier: "mac",     backend: "mac_main",   note: "" },
+  { id: "gemma-4-26b-a4b-it",   tier: "windows", backend: "win_main",   note: "" },
+  { id: "qwen3.5-27b-distilled",tier: "windows", backend: "win_coding", note: "coding distilled" },
+  { id: "Qwen3.5-27B-Claude…",  tier: "windows", backend: "win_main",   note: "reasoning distilled" },
+  { id: "claude-sonnet-4-6",    tier: "cloud",   backend: "cloud",      note: "" },
+  { id: "claude-opus-4-7",      tier: "cloud",   backend: "cloud",      note: "max capability" },
+  { id: "claude-haiku-4-5",     tier: "cloud",   backend: "cloud",      note: "fast" },
+  { id: "text-embedding-nomic", tier: "mac",     backend: "mac_main",   note: "embedding only" },
+];
+
+// Routing matrix
+const ROUTES = {
+  mac: {
+    analysis: ["mac_main","win_main","cloud","win_coding"],
+    code:     ["mac_main","win_coding","win_main","cloud"],
+    research: ["mac_main","win_main","cloud","win_coding"],
+    planning: ["mac_main","win_main","cloud","win_coding"],
+  },
+  windows: {
+    analysis: ["win_main","cloud","mac_main","win_coding"],
+    code:     ["win_main","cloud","mac_main","win_coding"],
+    research: ["win_main","cloud","mac_main","win_coding"],
+    planning: ["win_main","cloud","mac_main","win_coding"],
+  },
+};
+
+const OVERRIDE_ROUTES = {
+  local:   { mac: ["mac_main","win_main","cloud","win_coding"], windows: ["mac_main","win_main","cloud","win_coding"] },
+  cloud:   { mac: ["cloud","mac_main","win_main","win_coding"], windows: ["cloud","mac_main","win_main","win_coding"] },
+  windows: { mac: ["win_coding","win_main","cloud","mac_main"], windows: ["win_main","win_coding","cloud","mac_main"] },
+};
+
+const EP_META = {
+  mac_main:   { label:"Mac LM Studio",     url:"localhost:1234",       status:"up",    tier:"mac" },
+  win_coding: { label:"Win LM Studio (coding)", url:"192.168.254.108:1234", status:"idle",  tier:"windows" },
+  win_main:   { label:"Win LM Studio",     url:"192.168.254.108:1234", status:"idle",  tier:"windows" },
+  cloud:      { label:"Anthropic Cloud",   url:"api.anthropic.com",    status:"up",    tier:"cloud" },
+};
+
+const STATUS_BADGE = {
+  up:   '<span class="chain-badge badge-up">UP</span>',
+  idle: '<span class="chain-badge badge-idle">IDLE</span>',
+  down: '<span class="chain-badge badge-down">DOWN</span>',
+};
+
+const RANK_CLASS = ["rank-1","rank-2","rank-3","rank-4"];
+
+// ── Log helper ────────────────────────────────────────────────────────────────
+const logWrap = document.getElementById("log-wrap");
+function logLine(level, msg) {
+  const ts = new Date().toLocaleTimeString();
+  const cls = { ok:"log-ok", warn:"log-warn", err:"log-err", info:"log-info" }[level] || "log-info";
+  const div = document.createElement("div");
+  div.className = "log-line";
+  div.innerHTML = `<span class="log-ts">${ts}</span><span class="${cls}">[${level.toUpperCase()}]</span> ${msg}`;
+  logWrap.prepend(div);
+  while (logWrap.children.length > 80) logWrap.removeChild(logWrap.lastChild);
+}
+
+// ── Render dispatch chain ─────────────────────────────────────────────────────
+function renderChain(order, platform, task) {
+  const container = document.getElementById("chain-container");
+  document.getElementById("order-label").textContent =
+    `(${platform === "mac" ? "Mac" : "Windows"} · ${task})`;
+
+  let html = "";
+  order.forEach((ep, i) => {
+    const meta = EP_META[ep];
+    const rankCls = RANK_CLASS[i] || "rank-4";
+    const statusCls = meta.status === "up" ? "active" : meta.status === "idle" ? "standby" : "offline";
+    html += `
+      <div class="chain-item ${statusCls}">
+        <div class="chain-rank ${rankCls}">${i+1}</div>
+        <div class="chain-info">
+          <div class="chain-name">${ep} — <span style="font-weight:400;color:var(--muted)">${meta.label}</span></div>
+          <div class="chain-url">${meta.url}</div>
+        </div>
+        ${STATUS_BADGE[meta.status]}
+      </div>
+      ${i < order.length - 1 ? '<div class="chain-arrow">↓</div>' : ""}
+    `;
+  });
+  container.innerHTML = html;
+
+  // Update KPI
+  const firstEP = EP_META[order[0]];
+  document.getElementById("kpi-backend").textContent = order[0];
+  document.getElementById("kpi-backend-url").textContent = firstEP.url;
+}
+
+// ── Render task simulation grid ───────────────────────────────────────────────
+function renderSim(platform) {
+  const tasks = ["analysis","code","research","planning"];
+  const labels = { analysis:"📊 Analysis", code:"💻 Code", research:"🔬 Research", planning:"🗺️ Planning" };
+  const container = document.getElementById("sim-container");
+  let html = "";
+  tasks.forEach(t => {
+    const route = ROUTES[platform][t];
+    html += `<div class="sim-card"><h4>${labels[t]}</h4><div class="sim-route">`;
+    route.slice(0,3).forEach((ep,i) => {
+      html += `<div class="sim-step"><div class="sim-step-num">${i+1}</div><div class="sim-step-lbl">${ep}</div></div>`;
+    });
+    html += `</div></div>`;
+  });
+  container.innerHTML = html;
+}
+
+// ── Model table ───────────────────────────────────────────────────────────────
+function renderModelTable() {
+  const tbody = document.getElementById("model-tbody");
+  tbody.innerHTML = MODELS.map(m => `
+    <tr>
+      <td style="font-family:monospace">${m.id}</td>
+      <td class="tier-${m.tier}">${m.tier}</td>
+      <td>${m.backend}</td>
+      <td style="color:var(--muted)">${m.note}</td>
+    </tr>
+  `).join("");
+}
+
+// ── Tier distribution chart ───────────────────────────────────────────────────
+let tierChart;
+function renderTierChart() {
+  const counts = {};
+  MODELS.forEach(m => { counts[m.tier] = (counts[m.tier] || 0) + 1; });
+  const labels = Object.keys(counts);
+  const data   = labels.map(l => counts[l]);
+  const colors = { mac:"#34d399cc", windows:"#6c8efbcc", cloud:"#a78bfacc", shared:"#8892a4cc" };
+
+  if (tierChart) tierChart.destroy();
+  const ctx = document.getElementById("tier-chart").getContext("2d");
+  tierChart = new Chart(ctx, {
+    type: "doughnut",
+    data: {
+      labels,
+      datasets: [{ data, backgroundColor: labels.map(l => colors[l] || "#6c8efbcc"), borderColor:"#1a1d27", borderWidth:3 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false, cutout:"62%",
+      plugins: {
+        legend:{ labels:{ color:"#8892a4", usePointStyle:true, padding:14 } },
+        tooltip:{ callbacks:{ label: ctx => ` ${ctx.label}: ${ctx.parsed} models` } }
+      }
+    }
+  });
+}
+
+// ── Apply all filter state ────────────────────────────────────────────────────
+function applyFilters() {
+  const platform = document.getElementById("sel-platform").value;
+  const task     = document.getElementById("sel-task").value;
+  const override = document.getElementById("sel-override").value;
+
+  let order;
+  if (override) {
+    order = OVERRIDE_ROUTES[override][platform];
+    logLine("warn", `Override active: backend_priority="${override}" → first=${order[0]}`);
+  } else {
+    order = ROUTES[platform][task];
+    logLine("info", `Routing: platform=${platform} task=${task} → ${order[0]} (fallback: ${order[1]})`);
+  }
+
+  renderChain(order, platform, task);
+  renderSim(platform);
+}
+
+// ── Probe /health ─────────────────────────────────────────────────────────────
+async function probeHealth() {
+  const port = document.getElementById("sel-port").value;
+  const url  = `http://localhost:${port}/health`;
+  logLine("info", `Probing ${url}…`);
+  document.getElementById("kpi-orama").textContent = "…";
+  try {
+    const res  = await fetch(url, { signal: AbortSignal.timeout(4000) });
+    const data = await res.json();
+    document.getElementById("kpi-orama").innerHTML = '<span class="green">● OK</span>';
+    document.getElementById("kpi-orama-sub").textContent = `v${data.version || "?"} · ${data.hardware_policy?.source || "?"}`;
+    // Live backend_priority from API
+    if (data.backend_priority) {
+      document.getElementById("kpi-backend").textContent = data.backend_priority;
+    }
+    logLine("ok", `orama /health OK — policy=${data.hardware_policy?.source} backend_priority=${data.backend_priority}`);
+    if (data.backend_endpoints) {
+      logLine("info", `Live order: ${data.backend_endpoints.map(e=>e.name).join(" → ")}`);
+    }
+  } catch (e) {
+    document.getElementById("kpi-orama").innerHTML = '<span class="red">● Down</span>';
+    document.getElementById("kpi-orama-sub").textContent = "Start: python -m uvicorn api_server:app --port 8001";
+    logLine("err", `orama /health unreachable (is start.sh running? port=${port})`);
+  }
+}
+
+// ── Probe LM Studio ───────────────────────────────────────────────────────────
+async function probeLMStudio() {
+  try {
+    const res  = await fetch("http://localhost:1234/v1/models", { signal: AbortSignal.timeout(3000) });
+    const data = await res.json();
+    const ids  = (data.data || []).map(m => m.id).join(", ");
+    document.getElementById("kpi-mac-status").innerHTML = '<span class="green">●</span> UP';
+    EP_META.mac_main.status = "up";
+    logLine("ok", `LM Studio Mac: ${ids}`);
+  } catch {
+    document.getElementById("kpi-mac-status").innerHTML = '<span class="red">●</span> Down';
+    EP_META.mac_main.status = "down";
+    logLine("warn", "LM Studio Mac unreachable at localhost:1234");
+  }
+}
+
+// ── Timestamp ────────────────────────────────────────────────────────────────
+function tick() {
+  document.getElementById("ts").textContent = new Date().toLocaleTimeString();
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+function init() {
+  renderModelTable();
+  renderTierChart();
+  applyFilters();
+  tick();
+  setInterval(tick, 1000);
+  logLine("info", "Dashboard loaded — OpenClaw orama-system v0.9.9.8");
+  logLine("info", "Default: Mac LM Studio first → Windows LM Studio → Cloud");
+  // Auto-probe on load
+  probeLMStudio();
+}
+
+init();
+</script>
+</body>
+</html>

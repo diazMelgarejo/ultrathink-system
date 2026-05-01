@@ -35,6 +35,122 @@ from bin.shared.bridge_contract import (
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
+# ── Backend routing priority ──────────────────────────────────────────────────
+
+import platform as _platform_mod
+
+
+class BackendPriority:
+    """
+    Backend dispatch priority token (per-request or env var override).
+
+    Priority resolution (highest → lowest):
+      1. per-request UltraThinkRequest.backend_priority
+      2. ORAMA_BACKEND_PRIORITY env var
+      3. platform-default (mac→LOCAL, windows→WINDOWS)
+
+    The actual dispatch *order* is determined by BackendRouter, which also
+    factors in ORAMA_PLATFORM and task_type.
+    """
+    LOCAL   = "local"
+    CLOUD   = "cloud"
+    WINDOWS = "windows"
+    _VALID  = {"local", "cloud", "windows"}
+
+    @classmethod
+    def from_str(cls, value: str) -> str:
+        v = (value or "").strip().lower()
+        return v if v in cls._VALID else cls.LOCAL
+
+
+def _detect_platform() -> str:
+    """Detect current OS: 'mac' on Darwin/macOS, 'windows' on Windows."""
+    env = os.getenv("ORAMA_PLATFORM", "").strip().lower()
+    if env in ("mac", "windows"):
+        return env
+    return "mac" if _platform_mod.system() == "Darwin" else "windows"
+
+
+_LOCAL_LM_STUDIO_URL = os.getenv("LOCAL_LM_STUDIO_URL",  "http://localhost:1234/v1")
+_CLOUD_API_URL       = os.getenv("CLOUD_API_URL",         "https://api.anthropic.com/v1")
+_WIN_LM_STUDIO_HOST  = os.getenv("WIN_LM_STUDIO_HOST",   "192.168.254.108")
+_WIN_LM_STUDIO_PORT  = os.getenv("WIN_LM_STUDIO_PORT",   "1234")
+_WIN_LM_STUDIO_URL   = f"http://{_WIN_LM_STUDIO_HOST}:{_WIN_LM_STUDIO_PORT}/v1"
+
+# Named endpoint descriptors — one per logical backend slot
+_EP = {
+    "mac_main":   {"name": "mac_main",   "url": _LOCAL_LM_STUDIO_URL, "tier": "mac"},
+    "win_coding": {"name": "win_coding", "url": _WIN_LM_STUDIO_URL,   "tier": "windows", "note": "coding-optimised"},
+    "win_main":   {"name": "win_main",   "url": _WIN_LM_STUDIO_URL,   "tier": "windows"},
+    "cloud":      {"name": "cloud",      "url": _CLOUD_API_URL,        "tier": "cloud"},
+}
+
+
+class BackendRouter:
+    """
+    Resolves the ordered backend dispatch list for a single request.
+
+    Priority matrix (no manual override):
+
+      Mac + non-code:  mac_main → win_main  → cloud → win_coding
+      Mac + code:      mac_main → win_coding → win_main → cloud
+      Windows + any:   win_main → cloud     → mac_main → win_coding
+
+    Override via:
+      - BackendRouter(override="cloud")         — explicit per-request
+      - ORAMA_BACKEND_PRIORITY env var          — process-wide default
+      - ORAMA_PLATFORM env var                  — platform identity
+    """
+
+    def __init__(
+        self,
+        override: str | None = None,
+        task_type: str = "analysis",
+    ) -> None:
+        self.platform: str = _detect_platform()
+        self.task_type: str = task_type or "analysis"
+        self._explicit_override: bool = False
+
+        # Priority token: override > env var > platform-default (not stored as override)
+        if override and override.strip().lower() in BackendPriority._VALID:
+            self.priority: str = BackendPriority.from_str(override)
+            self._explicit_override = True
+        else:
+            env_val = os.getenv("ORAMA_BACKEND_PRIORITY", "").strip().lower()
+            if env_val in BackendPriority._VALID:
+                self.priority = env_val
+                self._explicit_override = True
+            else:
+                # Platform-default — NOT an explicit override
+                self.priority = BackendPriority.LOCAL
+
+    def ordered_endpoints(self) -> list[dict]:
+        """Return backend list in dispatch order, most-preferred first."""
+        is_code = self.task_type == "code"
+
+        # Explicit override: priority token dictates first endpoint
+        if self._explicit_override:
+            if self.priority == BackendPriority.CLOUD:
+                return [_EP["cloud"], _EP["mac_main"], _EP["win_main"], _EP["win_coding"]]
+            if self.priority == BackendPriority.WINDOWS:
+                order = [_EP["win_coding"], _EP["win_main"], _EP["cloud"], _EP["mac_main"]] if is_code \
+                    else [_EP["win_main"], _EP["win_coding"], _EP["cloud"], _EP["mac_main"]]
+                return order
+            # LOCAL explicit override → same as mac platform-default
+            if self.platform == "mac" or self.priority == BackendPriority.LOCAL:
+                if is_code:
+                    return [_EP["mac_main"], _EP["win_coding"], _EP["win_main"], _EP["cloud"]]
+                return [_EP["mac_main"], _EP["win_main"], _EP["cloud"], _EP["win_coding"]]
+
+        # Platform-default (no explicit override)
+        if self.platform == "mac":
+            if is_code:
+                return [_EP["mac_main"], _EP["win_coding"], _EP["win_main"], _EP["cloud"]]
+            return [_EP["mac_main"], _EP["win_main"], _EP["cloud"], _EP["win_coding"]]
+        else:  # windows: win_main always first, cloud second
+            return [_EP["win_main"], _EP["cloud"], _EP["mac_main"], _EP["win_coding"]]
+
+
 # ── Constants ─────────────────────────────────────────────────────────────────
 PORT            = int(os.getenv("ULTRATHINK_PORT", "8001"))
 MAX_TASK_LENGTH = int(os.getenv("ULTRATHINK_MAX_TASK_LENGTH", "10000"))
@@ -256,6 +372,12 @@ class UltraThinkRequest(BaseModel):
     request_id:       Optional[str] = Field(default=None)
     session_id:       Optional[str] = Field(default=None,
                                              description="v2 session correlation ID (perpetua-core/oramasys)")
+    backend_priority: str = Field(
+        default="local",
+        pattern="^(local|cloud|windows)$",
+        description="Backend dispatch order: local (default) → cloud → windows. "
+                    "Override env ORAMA_BACKEND_PRIORITY or pass per-request.",
+    )
 
     @field_validator("task_description")
     @classmethod
@@ -359,10 +481,16 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
                 content={"error": "HARDWARE_MISMATCH", "detail": str(exc)},
             )
     
-    logger.info("task_id=%s depth=%s model=%s", req.request_id, reasoning_depth, model)
+    # Resolve backend dispatch order: request field > env var > platform-default
+    backend_router = BackendRouter(override=req.backend_priority, task_type=req.task_type)
+    backend_attempted = backend_router.ordered_endpoints()[0]["name"]
 
-    # Call backend (stubbed/mocked)
-    # The test expects specific keywords in the prompt
+    logger.info(
+        "task_id=%s depth=%s model=%s backend=%s",
+        req.request_id, reasoning_depth, model, backend_attempted,
+    )
+
+    # Call backend (stubbed/mocked; real implementation uses backend_router.ordered_endpoints())
     prompt = f"Applying {reasoning_depth}-depth reasoning for task: {req.task_description}"
     result, _ = await _call_with_fallback(prompt, model, 4000, 0.7)
 
@@ -381,6 +509,8 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
             "mapping_source": mapping_source,
             "bridge_mode": "http_primary",
             "model_hint_used": req.model_hint is not None,
+            "backend_priority": backend_router.priority,
+            "backend_attempted": backend_attempted,
             # PT final handoff audit — always present so callers know policy authority
             "policy_source": _policy_resolver.source,
             "pt_authoritative": _policy_resolver.pt_available,
@@ -411,6 +541,8 @@ async def health():
             "source": _policy_resolver.source,
             "pt_authoritative": _policy_resolver.pt_available,
         },
+        "backend_priority": BackendRouter().priority,
+        "backend_endpoints": BackendRouter().ordered_endpoints(),
     }
 
 

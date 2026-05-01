@@ -9,7 +9,7 @@ Read `/docs` in both and follow Agent Guidelines:
 1. Read [AlphaClaw/docs](https://github.com/diazMelgarejo/AlphaClaw/tree/feature/MacOS-post-install/docs) FIRST, that applies to all OpenClaw and AlphaClaw implementations throughout this process unless updated in later documents below, when in doubt, consult OpenClaw 2026.4.26 documentation,
 2. Read Perpetua-Tools/docs and Agent Guidelines NEXT and learn, that applies to PT repo;
 3. Read orama-system/docs LAST and learn, orama implements and extends both documents above and adopts and extends their Agent Guidelines.
-4. When conflicts arise and big decisions need to be taken, **ALWAYS *AskUserQuesion*** first!
+4. When conflicts arise and big decisions need to be taken, **ALWAYS *AskUserQuestion*** first!
 
 ---
 

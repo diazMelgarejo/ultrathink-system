@@ -23,7 +23,7 @@ from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, ConfigDict, field_validator, Field
 import httpx
 from bin.shared.bridge_contract import (
     OPTIMIZE_FOR_TO_REASONING_DEPTH,
@@ -238,7 +238,10 @@ class UltraThinkRequest(BaseModel):
     """
     POST /ultrathink request body.
     model_hint selects execution mode (ADR-001, v0.9.9.2).
+    v2 shape: session_id added for correlation across the perpetua-core/oramasys stack.
     """
+    model_config = ConfigDict(protected_namespaces=())
+
     task_description: str = Field(..., min_length=1, max_length=MAX_TASK_LENGTH)
     optimize_for:     str = Field(default="reliability",
                                    pattern="^(reliability|creativity|speed)$")
@@ -251,6 +254,8 @@ class UltraThinkRequest(BaseModel):
     platform:         Optional[str] = Field(default=None, pattern="^(mac|win)$")
     context:          Optional[dict] = Field(default_factory=dict)
     request_id:       Optional[str] = Field(default=None)
+    session_id:       Optional[str] = Field(default=None,
+                                             description="v2 session correlation ID (perpetua-core/oramasys)")
 
     @field_validator("task_description")
     @classmethod
@@ -261,12 +266,21 @@ class UltraThinkRequest(BaseModel):
 
 
 class UltraThinkResponse(BaseModel):
+    """
+    POST /ultrathink response.
+    v2 shape: session_id, nodes_visited, retry_count added for perpetua-core compatibility.
+    """
+    model_config = ConfigDict(protected_namespaces=())
+
     status:      str  # "success" | "error"
     result:      str
     model_used:  str
     execution_time_ms: int
     reasoning_depth: str
     metadata:    dict[str, Any]
+    session_id:       Optional[str] = Field(default=None)
+    nodes_visited:    list[str] = Field(default_factory=list)
+    retry_count:      int = Field(default=0)
 
 
 # ── Model Call Stub (Mockable for tests) ──────────────────────────────────────
@@ -360,6 +374,8 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
         model_used=model,
         execution_time_ms=elapsed_ms,
         reasoning_depth=reasoning_depth,
+        session_id=req.session_id,
+        nodes_visited=["ultrathink_node"],
         metadata={
             "mapped_optimize_for": mapped_optimize_for,
             "mapping_source": mapping_source,

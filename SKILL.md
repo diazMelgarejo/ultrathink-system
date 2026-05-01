@@ -192,3 +192,100 @@ Session logs:
 Companion repo:
 - [Perplexity-Tools/SKILL.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/SKILL.md)
 - [Perplexity-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/LESSONS.md)
+
+---
+
+## Skill 10 — External Agent Integration (Gemini · Codex · OpenClaw)
+
+orama-system exposes `POST /ultrathink` at port 8001. Any external agent (Gemini, Codex, OpenClaw,
+LangGraph, etc.) can drive orama as a black-box reasoning endpoint.
+
+### Direct HTTP (any agent)
+
+```bash
+curl http://localhost:8001/ultrathink \
+  -H "Content-Type: application/json" \
+  -d '{
+    "task_description": "Analyse the failing test and propose a fix",
+    "session_id": "gemini-sess-001",
+    "task_type": "code",
+    "optimize_for": "reliability"
+  }'
+# Response includes: status, result, session_id, nodes_visited, retry_count
+```
+
+### Gemini CLI (gemini-mcp-tool)
+
+Install once:
+```bash
+npm i -g @ahoylabs/gemini-mcp-tool   # or: pip install gemini-mcp-tool
+```
+
+Register orama's MCP server:
+```bash
+# In ~/.gemini/settings.json → mcpServers block:
+"orama": {
+  "command": "python",
+  "args": ["-m", "bin.mcp_servers.ultrathink_orchestration_server"],
+  "cwd": "/path/to/orama-system"
+}
+```
+
+Then from any Gemini session: `@orama run_ultrathink task="…"`.
+
+### Codex / OpenCode harness
+
+orama exposes a `.agents/skills/orama-system/` harness (Codex-compatible):
+
+```bash
+# From inside a Codex session, activate the skill:
+skill .agents/skills/orama-system/SKILL.md
+
+# Or call the endpoint directly from a Codex tool-use block:
+curl http://localhost:8001/ultrathink -d '{"task_description":"…","session_id":"codex-001"}'
+```
+
+Codex harness path: `.agents/skills/orama-system/` (mirrored from `bin/orama-system/`).
+Tool mapping: `.agents/skills/orama-system/agents/openai.yaml`.
+
+### OpenClaw plugin
+
+OpenClaw can route tasks to orama via the `orama_bridge` plugin:
+
+```bash
+openclaw run --plugin orama_bridge --task "your task here"
+# or via the bridge:
+python bin/mcp_servers/openclaw_bridge.py
+```
+
+Codex harness docs: https://docs.openclaw.ai/plugins/codex-harness
+
+Register the MCP server with Claude Code:
+```bash
+claude mcp add --transport stdio orama-ultrathink \
+  -- python -m bin.mcp_servers.ultrathink_orchestration_server
+```
+
+### Simultaneous multi-agent pattern
+
+Run Gemini and Codex concurrently against orama:
+
+```bash
+# Terminal 1 — Gemini reviews
+gemini "Review the diff in $(pwd) and call @orama for deep analysis"
+
+# Terminal 2 — Codex implements
+codex "Fix the failing test using the orama API at localhost:8001 for reasoning"
+```
+
+Key rule: **never load more than one model on the Windows GPU simultaneously** — check
+`docs/swarm_state.md` for `GPU: BUSY` before dispatching Windows-tier tasks.
+
+### qwen3.5-9b-mlx — Mac thinking model
+
+`qwen3.5-9b-mlx` is active at `localhost:1234` (LM Studio Mac, `mac_only` tier).
+It is a **thinking model** — use `max_tokens ≥ 500` or content will be truncated.
+Extract `choices[0].message.content`, not `reasoning_content`, in any HTTP client.
+
+→ See `docs/LESSONS.md` entry: *qwen3.5-9b-mlx is a thinking model (2026-05-01)*
+

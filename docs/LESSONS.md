@@ -966,3 +966,12 @@ win: ✅ 192.168.254.105:1234 — 5 models
 - macOS Finder creates `.DS_Store` inside `.git/refs/` — `repo_hygiene.py` hard-fails on this
 - Fix: `rm -f .git/refs/.DS_Store` — idempotent, safe
 - Add to `.gitignore_global` or monthly cleanup script
+
+### qwen3.5-9b-mlx is a thinking model — requires 500+ max_tokens (2026-05-01)
+
+- `qwen3.5-9b-mlx` confirmed running at `localhost:1234` (LM Studio Mac)
+- It is a **thinking model**: response contains `reasoning_content` (chain-of-thought) + `content` (actual answer)
+- `content` is empty (`""`) if `max_tokens < ~200`. Safe floor: 500 tokens
+- When a real LM Studio HTTP client replaces `_call_with_fallback`, extract `choices[0].message.content`, NOT `reasoning_content`
+- Model is already correctly listed as `mac_only` in `config/hardware_policy_cache.yml`
+- Test: `curl http://localhost:1234/v1/chat/completions -d '{"model":"qwen3.5-9b-mlx","messages":[{"role":"user","content":"Reply: OK"}],"max_tokens":500}'` → `content: "\n\nOK"` (209 reasoning tokens + 4 content tokens)

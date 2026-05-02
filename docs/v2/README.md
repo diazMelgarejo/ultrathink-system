@@ -1,4 +1,4 @@
-# OpenClaw v2 — Master Spec Index
+# oramasys v2 — Master Spec Index
 
 **Date opened:** 2026-04-30
 **Status:** Tentative — spec tree under brainstorming review
@@ -12,7 +12,7 @@ A **secure, hardware-aware, local-first multi-agent LLM orchestration system** b
 
 Non-negotiable: **hardware affinity is a hard pre-spawn gate**. No framework that cannot enforce "refuse to dispatch if hardware unavailable" qualifies. This disqualifies LangGraph, CrewAI, AutoGen, and LangChain as direct adoptions — but their best ideas are borrowed into a slimmer custom engine.
 
-Local-first + airgapped capable. Dependency-minimal. MIT-licensed (matches LangChain/LangGraph ecosystem).
+Local-first + airgapped capable. Dependency-minimal. MIT-licensed (matches LangChain/LangGraph existing ecosystem).
 
 ---
 
@@ -56,7 +56,7 @@ Calendar-free. Each phase gates on completion criteria, not dates.
 
 ```
                  ┌─────────────────────────────────────┐
-                 │         oramasys (orchestration)     │
+                 │      oramasys (orchestration)       │
                  │   • graph DSL composition           │
                  │   • FastAPI glass-window surface    │
                  │   • app-level node implementations  │
@@ -77,7 +77,7 @@ Calendar-free. Each phase gates on completion criteria, not dates.
                 │ non-kernel mod │    │ non-kernel mod  │
                 │ (multi-agent)  │    │ (MCP-Optional)  │
                 └────────────────┘    └─────────────────┘
-                              ... ship at own pace ...
+                             ... ship at own pace ...
 ```
 
 **One-way import boundary**: `oramasys` imports `perpetua_core`. Never reverse. CI lints enforce this.

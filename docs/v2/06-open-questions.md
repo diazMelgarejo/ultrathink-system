@@ -37,3 +37,6 @@ Items deliberately deferred. Each has a target checkpoint for resolution.
 | D11 | 3rd new repo | `oramasys/agate` (Hardware Policy Specification) | 2026-05-01 |
 | D12 | GitHub org | Real GitHub org `oramasys` (user to create at github.com/organizations/new) | 2026-05-01 |
 | D13 | TDD policy | Enshrined in `docs/v2/README.md` and `04-build-order.md`. tdd.md is the source of truth. | 2026-05-01 |
+| OQ10 | **Capability-Based Routing** — Should the `model_hardware_policy.yml` move from model-ID mapping to hardware capability rules (e.g. `VRAM >= 12GB`)? | Current static mapping requires manual YAML updates for every new model version. Rule-based routing would be more adaptive. | v2.2 planning |
+| OQ11 | **GossipBus Performance** — Does the SQLite-per-emit overhead necessitate a background writer/queue? | Current implementation connects/commits on every event. High-frequency nodes will be bottlenecked by I/O. | Phase 1 optimization |
+| OQ12 | **Kernel recursion limit** — Should `MiniGraph.ainvoke` enforce a `max_steps` safety guard? | Prevents infinite loops in malformed graphs. Aligns with MAESTRO Layer 2 safety. | Phase 2 implementation |

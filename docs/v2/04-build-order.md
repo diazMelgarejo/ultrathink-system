@@ -12,40 +12,28 @@ v1 is at 0.9.9.8. **Gate cleared.**
 
 ---
 
-## Phase 1 — Primitives (`perpetua-core/perpetua_core/`) ✅ DONE (2026-05-02)
+## Phase 0 — Repository Initialization ✅ DONE (2026-05-02)
 
-Implements: `state.py`, `message.py`, `llm.py`, `policy.py`, `gossip.py`.
+The 3 new repositories (\`agate\`, \`oramasys\`, \`perpetua-core\`) have been initialized at \`/Users/lawrencecyremelgarejo/Documents/oramasys/\`. Initial code for state, LLM client, policy, and the MiniGraph engine has been committed.
 
-Lift from v1:
-- `HardwareAffinityError` exception class — already canonicalized in v1's `2026-04-28` revamp Task 4. **Direct copy** with namespace re-anchored.
-- `model_hardware_policy.yml` schema — lift schema shape; rebuild content per D8 example.
-- LM Studio LAN routing config — port `routing.json` (Mac `.110:1234`, Windows `.108:1234`) into `model_hardware_policy.example.yml`.
+---
 
-Acceptance: `pytest perpetua-core/tests/test_state.py test_policy.py test_llm.py test_gossip.py` all green.
-**Status**: 32/32 tests green. `message.py`, `graph/nodes.py`, `graph/edges.py`, `model_hardware_policy.example.yml` still TODO.
+## Phase 1 — Primitives Hardening (\`perpetua-core\`) ← NEXT
 
-## Phase 2 — Graph engine (`perpetua-core/perpetua_core/graph/`) ✅ DONE (2026-05-02)
+Merge Gemini Hardening improvements into the existing primitives.
+- **Implement**: Async background writer for \`gossip.py\` (High Performance).
+- **Enforce**: OS-agnostic paths in all templates.
 
-Implements: `engine.py`, `nodes.py`, `edges.py`, `checkpointer.py`, `interrupts.py`,
-`subgraphs.py`, `tool.py`, `streaming.py`. Tier 3 features per D8.
+## Phase 2 — Engine & Safety Integration (\`perpetua-core/graph/\`) ← NEXT
 
-No lift from v1 — graph engine is genuinely new (v1 has no MiniGraph equivalent;
-ultrathink's 5-stage flow is hardcoded in `bin/agents/orchestrator/`).
+- **Implement**: \`GraphPlugin\` Protocol in \`engine.py\`.
+- **Implement**: \`max_steps\` safety guard in \`ainvoke\`.
+- **Implement**: Sentinel Node for SWARM misalignment monitoring.
 
-Acceptance: all `tests/test_*.py` for graph submodules green; line count audit
-shows kernel total ≤ 250 lines (Tier 3 budget + 15% slack).
-**Status**: engine.py ~70 lines; 6 plugins at 30–60 lines each; all graph tests green.
+## Phase 3 — Orchestration & API Layer (\`oramasys/\`) ← NEXT
 
-## Phase 3 — HTTP surface (`oramasys/`) ✅ DONE (2026-05-02)
-
-Implements: `oramasys/api/server.py`, `oramasys/api/contracts.py`, `oramasys/graphs/perpetua_graph.py`.
-
-Lift from v1:
-- `api_server.py` skeleton — extract FastAPI app pattern + middleware + error handlers. **Recycle the husk** (Grok). Replace internals to invoke `oramasys` graph instead of v1's hardcoded ultrathink pipeline.
-- Pydantic v2 request/response shapes from `bin/orama-system/references/api_contract.md`.
-
-Acceptance: `uvicorn oramasys.api.server:app` boots; `POST /run` round-trips a 3-node graph and returns valid `RunResponse`. Handlers ≤ 10 lines (lint).
-**Status**: 4/4 tests green. `dispatch_node` is an echo stub — LLMClient wiring is Phase 4 work.
+- **Verify**: API Server properly consumes PT affinity signals.
+- **Wire**: LLMClient to \`dispatch_node\`.
 
 ## Phase 4 — Parity tests ← NEXT
 

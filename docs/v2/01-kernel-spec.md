@@ -415,3 +415,22 @@ Lifted/skeletonized from today's `orama-system/api_server.py` per D9. Internal-o
 8. `pytest tests/test_structured_output.py` — `chat_structured()` retries on parse failure and increments `retry_count`.
 9. **Import boundary lint**: `grep -r "from oramasys" perpetua-core/` returns nothing. (CI gate.)
 10. Live integration: graph node calls Mac LM Studio (`192.168.x.110:1234`) and Windows LM Studio (`192.168.x.108:1234`) per `model_hardware_policy.yml` routing; `agent_log` table in SQLite shows correct dispatch sequence.
+
+---
+
+## 7. Gemini Hardening Updates (2026-05-02)
+
+### 7a. GraphPlugin Protocol
+To ensure architectural integrity, all Tier-3 plugins MUST implement the following Protocol:
+
+```python
+class GraphPlugin(Protocol):
+    def on_node_start(self, state: PerpetuaState, node_name: str) -> None: ...
+    def on_node_end(self, state: PerpetuaState, node_name: str, delta: dict) -> None: ...
+```
+
+### 7b. Infinite Loop Guard
+The `MiniGraph.ainvoke` loop MUST enforce a `max_steps` limit (default: 50) to prevent runaway processes and billing spikes.
+
+### 7c. High-Performance GossipBus
+The `GossipBus.emit()` method MUST be non-blocking. Implementation should use an `asyncio.Queue` with a background worker that performs batched SQLite commits every 500ms.

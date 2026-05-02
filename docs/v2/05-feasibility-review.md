@@ -184,3 +184,27 @@ ONE-WAY BOUNDARY: oramasys → perpetua_core (enforced by CI lint)
 **Taste decisions:** E2 (httpx vs openai SDK — both viable; httpx chosen for lighter deps).
 **User challenges:** None — no suggestions conflict with stated user direction.
 **Key insight (Eureka):** The `agate` repo is not just documentation — it IS the hardware affinity standard that makes perpetua-core interoperable. Its JSON Schema becomes the contract that lets any Python, Rust, or Go agent system participate in the same hardware routing ecosystem. This is a bigger deal than "Scenario B" framing suggested.
+
+---
+
+## Additional Insights — Gemini Analyzer
+
+### 1. Architectural Integrity: Plugin Protocol (D8)
+**Observation:** Moving Tier-3 features to plugins keeps the kernel minimal but risks "leaky abstractions" if plugins directly manipulate `MiniGraph` internals.
+**Recommendation:** Define a formal `GraphPlugin` protocol or Abstract Base Class. Ensure that features like the `SqliteCheckpointer` and `HITL Interrupts` communicate with the engine via documented hooks (e.g., `on_node_start`, `on_node_end`) rather than monkey-patching the `ainvoke` loop.
+
+### 2. Safety: Infinite Loop Protection (4a)
+**Observation:** The 70-line `MiniGraph.ainvoke` lacks cycle detection or step limits.
+**Recommendation:** Implement a `max_steps` guard (default 50) in the kernel. This is a "MAESTRO Layer 2" (Plan Integrity) primitive that prevents runaway costs or system hangs from malformed graphs.
+
+### 3. Performance: GossipBus Scaling (5)
+**Observation:** Opening/closing a SQLite connection on every `emit()` introduces significant latency into the graph execution loop.
+**Recommendation:** Implement a simple background worker pattern for `GossipBus`. Use an `asyncio.Queue` to buffer events and a single persistent writer connection to commit batches to SQLite. This keeps graph execution "hot" while maintaining a durable audit trail.
+
+### 4. Dynamic Hardware Affinity (P8)
+**Observation:** The `HardwarePolicyResolver` relies on static model-ID-to-tier mappings.
+**Recommendation:** Move toward "Capability-Based Routing." The policy YAML should eventually support rules like `windows: "VRAM > 10GB"`. This aligns with the "Ghost Orchestrator" vision by allowing the system to adapt to hardware upgrades (e.g., swapping an RTX 3080 for a 4090) without manual YAML edits for every model.
+
+### 5. Type Safety: Message Schema (01-kernel-spec)
+**Observation:** The use of `list[dict[str, Any]]` for messages is flexible but brittle.
+**Recommendation:** Define a Pydantic `Message` model (supporting `role`, `content`, `tool_calls`, and `metadata`) early in `message.py`. Enforcing this at the kernel level ensures that all plugins and subgraphs speak the same "language" without runtime type-checks.

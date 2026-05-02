@@ -1,21 +1,25 @@
 # hardware_policy_cache.yml — orama-system offline DR fallback
 # Source:  /Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perpetua-Tools/config/model_hardware_policy.yml
-# Refreshed: 2026-04-26T23:56:38Z  sha256:09c342045519
+# Refreshed: 2026-05-01T01:34:04Z  sha256:ca797d86dd4b
 #
 # This file is the Layer-2 disaster recovery fallback.
 # api_server.py uses it ONLY when PT is unreachable at startup.
 # Refresh: python scripts/refresh_policy_cache.py
 # DO NOT edit manually — it will be overwritten on next refresh.
 
-windows_only:
-  - gemma-4-26b-a4b-it
-  - gemma-4-26B-A4B-it-Q4_K_M
-  - qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2
-  - Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2
+mac_only: []
 
-mac_only:
-  - gemma-4-e4b-it
-  - qwen3.5-9b-mlx
-  - qwen3.5-9b-mlx-4bit
+windows_only: []
+
+shared:
+  - qwen3.5-9b-mlx                                        # native: Mac MLX | proxied: Win
+  - qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2    # native: Win GGUF | proxied: Mac
+  - gemma-4-e4b-it                                        # native: both confirmed
+  - gemma-4-26b-a4b-it                                    # native: Win GGUF | proxied: Mac
+  - text-embedding-nomic-embed-text-v1.5                  # native: both confirmed
+
+shared_aliases:
   - Qwen3.5-9B-MLX-4bit
-
+  - qwen3.5-9b-mlx-4bit
+  - Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2
+  - gemma-4-26B-A4B-it-Q4_K_M

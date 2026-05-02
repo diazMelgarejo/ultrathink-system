@@ -1,5 +1,7 @@
 # Troubleshooting
 
+> **openclaw gateway setup and channel issues** → see [openclaw-setup.md](openclaw-setup.md)
+
 ## Skill Not Activating
 
 **Symptom**: "ultrathink this" does nothing different.

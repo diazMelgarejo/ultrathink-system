@@ -12,7 +12,13 @@
       "Bash(bash \"/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perplexity-Tools/scripts/sync-companion-instincts.sh\")",
       "Bash(echo \"PT exit: $?\")",
       "Bash(python3:*)",
-      "Skill(autoplan)"
+      "Skill(autoplan)",
+      "Bash(python -m pytest tests/ -q)",
+      "Bash(xargs ls *)",
+      "Bash(pip install *)",
+      "Bash(python -c \"import perpetua_core; print\\(perpetua_core.__file__\\)\")",
+      "Bash(python -c \"import sys; [print\\(p\\) for p in sys.path if 'perpetua' in p.lower\\(\\)]\")",
+      "Bash(pip show *)"
     ]
   }
 }

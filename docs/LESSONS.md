@@ -975,3 +975,42 @@ win: ✅ 192.168.254.105:1234 — 5 models
 - When a real LM Studio HTTP client replaces `_call_with_fallback`, extract `choices[0].message.content`, NOT `reasoning_content`
 - Model is already correctly listed as `mac_only` in `config/hardware_policy_cache.yml`
 - Test: `curl http://localhost:1234/v1/chat/completions -d '{"model":"qwen3.5-9b-mlx","messages":[{"role":"user","content":"Reply: OK"}],"max_tokens":500}'` → `content: "\n\nOK"` (209 reasoning tokens + 4 content tokens)
+
+## 2026-05-02 — Claude — v2 packages scaffolded + instinct sync
+
+### v2 Phase 1–3 complete: perpetua-core + oramasys + agate (2026-05-02)
+
+Three Python packages built and pushed to GitHub under `oramasys` org. All tests green:
+
+- `perpetua-core` 32/32 tests — `PerpetuaState`, `LLMClient`, `HardwarePolicyResolver`, `MiniGraph` (~70 lines), `GossipBus`, 6 graph plugins (checkpointer, interrupts, streaming, structured_output, subgraphs, tool)
+- `oramasys` 4/4 tests — FastAPI glass-window `/run` + `/health`, hardware-routed 3-node graph
+- `agate` — JSON Schema + examples for `model_hardware_policy.yml`
+
+Local paths: `/Users/lawrencecyremelgarejo/Documents/oramasys/{perpetua-core,oramasys,agate}`
+GitHub: `github.com/oramasys/{perpetua-core,oramasys,agate}`
+
+**Phase 4 (parity tests) is next.** `dispatch_node` is still an echo stub — needs real `LLMClient` wiring.
+
+Missing from spec (still TODO): `message.py`, `graph/nodes.py`, `graph/edges.py`, `config/model_hardware_policy.example.yml`, `GossipBus` integration in graph.
+
+### Python runtime split on this machine (2026-05-02)
+
+Two Python runtimes coexist:
+- **Python 3.13**: `/Library/Frameworks/Python.framework/Versions/3.13/bin/python3` — has oramasys packages installed
+- **Python 3.12**: `/Users/lawrencecyremelgarejo/miniconda3/bin/python` — does NOT have v2 packages
+
+Use `python3` (or full path `pytest`) for v2 tests. Running `python -m pytest` from miniconda shell fails with `ModuleNotFoundError: No module named 'perpetua_core'`.
+
+### instinct-import CLI not installed — copy YAML workaround (2026-05-02)
+
+`continuous-learning-v2` script (`~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py`) does not exist on disk — plugin is listed but not installed. Running `/instinct-import` fails silently.
+
+**Workaround**: copy YAML files directly into `.claude/homunculus/instincts/inherited/` so future installs pick them up. Done for:
+- `Perpetua-Tools-instincts.yaml` → `orama-system/.claude/homunculus/instincts/inherited/`
+- `everything-claude-code-instincts.yaml` → `orama-system/.claude/homunculus/instincts/inherited/`
+
+Key instincts to apply manually until script is available: snake_case filenames, relative imports, `@field_validator` not `@validator`, scoped conventional commits (`feat(x):`), tests in `tests/` directory.
+
+### gitStatus in session context is a snapshot — always re-verify (2026-05-02)
+
+The `gitStatus` block injected at session start is captured once at launch. By the time a new session starts, repos may have been committed and pushed. Always run `git status` before assuming there is work to do. Both orama-system and Perpetua-Tools appeared dirty in the snapshot but were fully clean when re-checked.

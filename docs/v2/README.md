@@ -38,13 +38,14 @@ Full rationale and the Perplexity/GPT/Gemini/Grok evidence behind each decision 
 ## Sequencing
 
 ```
-NOW (Apr 2026)        →   ?              →   ?              →   ?
+NOW (May 2026)        →   next           →   ?              →   ?
 ─────────────────         ──────────         ──────────         ──────────
-v1.0 RC closes            v2.0 kernel        v2.1 public        v2.5 safety
-2026-04-28 revamp         (Tier 3 kernel,    Plugin API         (MAESTRO + SWARM
-(5 correctness fixes)     non-kernel         promotion          overlays + non-kernel
-v1.0 RC ships             modules orbit      (semver,           self-improve
-                          at own pace)       OpenAPI)           evaluator)
+v1.0 RC closed ✅         v2.0 parity        v2.1 public        v2.5 safety
+v2.0 kernel done ✅       tests (Phase 4)    Plugin API         (MAESTRO + SWARM
+(perpetua-core +          wire LLMClient     promotion          overlays + non-kernel
+oramasys + agate,         to dispatch_node,  (semver,           self-improve
+36 tests green)           non-kernel mods    OpenAPI)           evaluator)
+                          orbit at own pace
 ```
 
 Calendar-free. Each phase gates on completion criteria, not dates.
@@ -114,7 +115,7 @@ Explicit list of things deferred to non-kernel modules or later versions. Don't 
 
 | Module | Source | Target version | Blocking? | Status |
 |--------|--------|----------------|-----------|--------|
-| Kernel | this spec | v2.0 | **YES** | spec drafted |
+| Kernel | this spec | v2.0 | **YES** | **DONE** v2.0-alpha.1 (36 tests ✅, 2026-05-02) |
 | Multi-agent network | v1 carry-over | v2.0+ (parallel) | no | stub |
 | MCP-Optional transport | ex-v1.1 roadmap | v2.0+ | no | stub |
 | Redis coordination | ex-v1.1 roadmap | v2.0+ | no | stub |

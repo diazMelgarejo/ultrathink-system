@@ -1021,3 +1021,10 @@ The `gitStatus` block injected at session start is captured once at launch. By t
 - **Rule**: NEVER delete or overwrite historical context. Always archive legacy documentation to /docs/archive/ or wiki entries.
 - **Merge Strategy**: We are additive. All new summaries must be appended to the current state or moved to dedicated files while preserving the parent document's soul.
 - **Reference**: Legacy AGENT_RESUME.md recovered and archived at docs/archive/AGENT_RESUME_v1_legacy.md.
+
+## 2026-05-02 — Roadmap Granularity & Documentation Ergonomics
+- **Symptom**: Premature "DONE" markers in v2 build order led to confusion about active implementation vs. planned hardening.
+- **Cause**: AI tendency to mark design completion as task completion.
+- **Solution**: Split roadmap into explicit **PLANNING** and **Implementation** phases. Architecture is "launched" (a living process), not merely "concluded."
+- **Rule**: Documentation MUST link to both Archived (v1) and Active (v2) repository organizations to maintain cross-generational visibility.
+- **Formatting**: Use `ascii` tags for non-executable code blocks and blockquotes for high-level summaries to improve UX for the next agent.

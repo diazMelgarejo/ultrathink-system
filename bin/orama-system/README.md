@@ -1,5 +1,6 @@
 # ultrathink Single-Agent Skill
-**Quick Start for Claude Code, coworker, and OpenClaw**
+
+> Quick Start for Claude Code, coworker, and OpenClaw
 
 ---
 
@@ -18,7 +19,7 @@ ln -s $(pwd) ~/.claude/skills/orama-system
 
 ## Activation
 
-```
+```ascii
 ultrathink this
 apply the system to: [your task]
 use the methodology for: [problem]

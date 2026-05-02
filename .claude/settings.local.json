@@ -18,7 +18,9 @@
       "Bash(pip install *)",
       "Bash(python -c \"import perpetua_core; print\\(perpetua_core.__file__\\)\")",
       "Bash(python -c \"import sys; [print\\(p\\) for p in sys.path if 'perpetua' in p.lower\\(\\)]\")",
-      "Bash(pip show *)"
+      "Bash(pip show *)",
+      "Bash(cp '/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perpetua-Tools/.claude/homunculus/instincts/inherited/Perpetua-Tools-instincts.yaml' '/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/orama-system/.claude/homunculus/instincts/inherited/')",
+      "Bash(cp '/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perpetua-Tools/.claude/homunculus/instincts/inherited/everything-claude-code-instincts.yaml' '/Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/orama-system/.claude/homunculus/instincts/inherited/')"
     ]
   }
 }

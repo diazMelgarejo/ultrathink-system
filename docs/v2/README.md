@@ -146,7 +146,11 @@ orama-system/docs/v2/
 ├── 03-safety-v2.5.md
 ├── 04-build-order.md
 ├── 05-feasibility-review.md
-└── 06-open-questions.md
+├── 06-open-questions.md
+├── 07-agate-vision.md
+├── 08-technical-architecture-review.md
+├── 09-comparative-analysis-and-merging-plan.md
+└── 10-v1-hacks-automation-orbit.md
 ```
 
 ---

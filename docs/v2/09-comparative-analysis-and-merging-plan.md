@@ -59,8 +59,11 @@ Based on the technical review of Karpathy's "March of Nines":
 ---
 
 ## 4. Next Technical Steps (Plan Only)
-1. **Audit existing tests** in \`/Users/lawrencecyremelgarejo/Documents/oramasys/perpetua-core/tests/\` to ensure they don't depend on "Monkey Patching."
+1. **Audit existing tests** in \`/Users/lawrencecyremelgarejo/Documents/oramasys/perpetua-core/tests/\` to ensure they don't depend on \"Monkey Patching.\"
 2. **Draft the \`GraphPlugin\` base class** and prepare to migrate the existing \`checkpointer.py\` to use the new protocol.
+3. **Analyze \`Pydantic AI Slim\`'s tool extractor** (see \`references/pydantic-ai-extraction-deep-dive.md\`).
+4. **Define Orbit Satellite Schemas**: Draft the GossipBus events for the Port Manager and GC Worker (see [**10-v1-hacks-automation-orbit.md**](./10-v1-hacks-automation-orbit.md)).
+
 ---
 
 ## 5. Legacy Feature Migration: 4-Tier Discovery Recovery

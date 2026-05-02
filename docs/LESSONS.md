@@ -1014,3 +1014,10 @@ Key instincts to apply manually until script is available: snake_case filenames,
 ### gitStatus in session context is a snapshot — always re-verify (2026-05-02)
 
 The `gitStatus` block injected at session start is captured once at launch. By the time a new session starts, repos may have been committed and pushed. Always run `git status` before assuming there is work to do. Both orama-system and Perpetua-Tools appeared dirty in the snapshot but were fully clean when re-checked.
+
+## 2026-05-02 — Document Integrity & Archiving Policy
+- **Symptom**: Critical legacy documentation (AGENT_RESUME.md) was overwritten by an automated summary, losing v1 context.
+- **Cause**: AI tendency to replace files rather than merge or archive (destructive behavior).
+- **Rule**: NEVER delete or overwrite historical context. Always archive legacy documentation to /docs/archive/ or wiki entries.
+- **Merge Strategy**: We are additive. All new summaries must be appended to the current state or moved to dedicated files while preserving the parent document's soul.
+- **Reference**: Legacy AGENT_RESUME.md recovered and archived at docs/archive/AGENT_RESUME_v1_legacy.md.

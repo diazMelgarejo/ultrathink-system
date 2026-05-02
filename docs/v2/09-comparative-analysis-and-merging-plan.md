@@ -61,4 +61,26 @@ Based on the technical review of Karpathy's "March of Nines":
 ## 4. Next Technical Steps (Plan Only)
 1. **Audit existing tests** in \`/Users/lawrencecyremelgarejo/Documents/oramasys/perpetua-core/tests/\` to ensure they don't depend on "Monkey Patching."
 2. **Draft the \`GraphPlugin\` base class** and prepare to migrate the existing \`checkpointer.py\` to use the new protocol.
-3. **Analyze \`Pydantic AI Slim\`'s tool extractor** to simplify our \`graph/tool.py\` decorator logic.
+---
+
+## 5. Legacy Feature Migration: 4-Tier Discovery Recovery
+
+The v1.0 RC implementation of \`discover.py\` provided a "clunky but crucial" disaster recovery mechanism that we must elevate into an elegant v2 primitive.
+
+### The v1 Baseline (Archived in docs/archive/AGENT_RESUME_v1_legacy.md)
+- **Mechanic**: 4-tier fallback: Live Probe → Last Discovery JSON → Backups → Static Profiles.
+- **Impact**: Guaranteed system availability even when LAN endpoints (LM Studio/Ollama) were intermittently offline.
+
+### The v2 "Ghost" Evolution
+1. **Tiered Discovery Provider**: Implement a \`DiscoveryProvider\` class in \`perpetua-core/policy.py\`.
+2. **Gossip Integration**: Discovered endpoints are emitted as \`load\` events to the \`GossipBus\`, making the latest "Live Truth" available to all agents without disk-polling.
+3. **Resilient Routing**: The \`HardwarePolicyResolver\` will query the \`DiscoveryProvider\` to resolve \`PREFER\` tags against actual reachable hardware, defaulting to Tier 2/3/4 state if the live probe fails.
+
+---
+
+## 6. Engineering Mandate: Non-Destructive Operations (2026-05-02)
+
+Following the accidental overwriting of v1 documentation, the following rules are now enforced:
+- **Archive First**: Any legacy file (like \`AGENT_RESUME.md\`) being superseded must be moved to \`/docs/archive/\` before replacement.
+- **Additive Edits**: We prioritize merging and appending over deleting.
+- **Reference Integrity**: All updated documents must link to their archived predecessors to preserve historical logic (e.g., the 4-tier discovery logic).

@@ -165,6 +165,46 @@ CODE_MODEL = os.getenv(
     "Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2",  # verified Windows-only model
 )
 
+
+def _validate_hardware_policy(resolved_model: str) -> None:
+    """Raise HardwareAffinityError if resolved_model is not valid for Windows execution.
+
+    Imports hardware_policy from PERPETUA_TOOLS_ROOT path (added later in module).
+    Falls back gracefully if PT is not yet on sys.path at module-load time.
+    """
+    try:
+        _pt_root = str(
+            Path(
+                os.getenv(
+                    "PERPETUA_TOOLS_ROOT",
+                    Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools",
+                )
+            )
+        )
+        import sys as _sys
+        if _pt_root not in _sys.path:
+            _sys.path.insert(0, _pt_root)
+        from utils.hardware_policy import load_policy, HardwareAffinityError as _HAE
+        policy = load_policy()
+        valid_for_windows = {
+            m.lower()
+            for m in (policy.get("windows_only", []) or []) + (policy.get("shared", []) or [])
+        }
+        if valid_for_windows and resolved_model.lower() not in valid_for_windows:
+            logger.critical(
+                "Hardware Policy Violation: Resolved model '%s' is not validated "
+                "for Windows execution. Halting orchestration.",
+                resolved_model,
+            )
+            raise _HAE(f"Invalid model affinity: {resolved_model}")
+    except Exception as _e:
+        if type(_e).__name__ == "HardwareAffinityError":
+            raise
+        logger.warning("Hardware policy startup validation skipped: %s", _e)
+
+
+_validate_hardware_policy(CODE_MODEL)
+
 PERPETUA_TOOLS_ROOT = Path(
     os.getenv(
         "PERPETUA_TOOLS_ROOT",

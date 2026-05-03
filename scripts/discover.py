@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-~/.openclaw/scripts/discover.py
+scripts/discover.py
 LM Studio Auto-Discovery Hub — Layer A.
 Always probes by default (no TTL skip). Pass --cached to reuse warm gossip.
 Idempotent: writes nothing if state hash is unchanged.
@@ -36,6 +36,19 @@ GOSSIP_TTL_SECONDS = 300
 
 # ── Repo discovery ────────────────────────────────────────────────────────────
 
+def _resolve_perpetua_root_env() -> Path | None:
+    """Resolve canonical Perpetua root env var with legacy fallback.
+
+    Precedence:
+      1) PERPETUA_TOOLS_ROOT (canonical)
+      2) PERPETUA_TOOLS_PATH (legacy compatibility)
+    """
+    root = os.environ.get("PERPETUA_TOOLS_ROOT", "").strip()
+    legacy = os.environ.get("PERPETUA_TOOLS_PATH", "").strip()
+    selected = root or legacy
+    return Path(selected).expanduser() if selected else None
+
+
 def get_repo_paths() -> dict:
     base = Path.home() / "Documents" / "Terminal xCode" / "claude" / "OpenClaw"
     candidates = {
@@ -52,8 +65,10 @@ def get_repo_paths() -> dict:
     result = {}
     for name, paths in candidates.items():
         env_key = name.upper() + "_PATH"
-        if env_val := os.environ.get(env_key):
-            result[name] = Path(env_val)
+        if name == "perpetua_tools":
+            result[name] = _resolve_perpetua_root_env() or next((p for p in paths if p.exists()), None)
+        elif env_val := os.environ.get(env_key):
+            result[name] = Path(env_val).expanduser()
         else:
             result[name] = next((p for p in paths if p.exists()), None)
     return result
@@ -81,8 +96,7 @@ def _simple_policy_parse(text: str) -> dict[str, list[str]]:
 def load_policy(policy_path: Path | None = None) -> dict[str, Any]:
     """Load Perpetua-Tools' canonical hardware policy."""
     if policy_path is None:
-        env_root = os.environ.get("PERPETUA_TOOLS_ROOT", "").strip()
-        pt_root = Path(env_root) if env_root else get_repo_paths().get("perpetua_tools")
+        pt_root = _resolve_perpetua_root_env() or get_repo_paths().get("perpetua_tools")
         if not pt_root:
             return {"windows_only": [], "mac_only": [], "shared": []}
         policy_path = Path(pt_root) / "config" / "model_hardware_policy.yml"

@@ -166,6 +166,14 @@ CODE_MODEL = os.getenv(
 )
 
 
+def _resolve_perpetua_root_env() -> str:
+    """Resolve PT root env with canonical key first, legacy fallback second."""
+    return (
+        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )
+
+
 def _validate_hardware_policy(resolved_model: str) -> None:
     """Raise HardwareAffinityError if resolved_model is not valid for Windows execution.
 
@@ -173,14 +181,16 @@ def _validate_hardware_policy(resolved_model: str) -> None:
     Falls back gracefully if PT is not accessible at module-load time.
     """
     # Resolve PT root with an explicit str default (os.getenv requires str, not Path)
-    _pt_root = os.getenv("PERPETUA_TOOLS_ROOT") or str(
+    _pt_root = _resolve_perpetua_root_env() or str(
         Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools"
     )
     import sys as _sys
     if _pt_root not in _sys.path:
         _sys.path.insert(0, _pt_root)
+    _hae_cls: type[Exception] | None = None
     try:
         from utils.hardware_policy import load_policy, HardwareAffinityError as _HAE  # type: ignore[import]
+        _hae_cls = _HAE
         policy = load_policy()
         valid_for_windows = {
             m.lower()
@@ -193,19 +203,17 @@ def _validate_hardware_policy(resolved_model: str) -> None:
                 resolved_model,
             )
             raise _HAE(f"Invalid model affinity: {resolved_model}")
-    except _HAE:  # type: ignore[misc]  # re-raise policy violations; never swallow them
-        raise
     except Exception as _e:
+        if _hae_cls and isinstance(_e, _hae_cls):
+            raise
         logger.warning("Hardware policy startup validation skipped: %s", _e)
 
 
 _validate_hardware_policy(CODE_MODEL)
 
 PERPETUA_TOOLS_ROOT = Path(
-    os.getenv(
-        "PERPETUA_TOOLS_ROOT",
-        Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools",
-    )
+    _resolve_perpetua_root_env()
+    or str(Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools")
 )
 
 # Local disaster-recovery cache (used only when PT is unreachable).
@@ -506,14 +514,29 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
     model = req.model_hint or (DEFAULT_MODEL if reasoning_depth == "ultra" else FAST_MODEL)
 
     requested_platform = req.platform or (req.context or {}).get("platform") or (req.context or {}).get("affinity")
-    if not requested_platform and "/" in model:
+    explicit_hardware_provider = False
+    if "/" in model:
         provider, raw_model = model.split("/", 1)
         if provider in {"lmstudio-mac", "ollama-mac"}:
-            requested_platform = "mac"
+            requested_platform = requested_platform or "mac"
+            explicit_hardware_provider = True
             model = raw_model
         elif provider in {"lmstudio-win", "ollama-win"}:
-            requested_platform = "win"
+            requested_platform = requested_platform or "win"
+            explicit_hardware_provider = True
             model = raw_model
+    if (
+        explicit_hardware_provider
+        and not _policy_resolver.pt_available
+        and _policy_resolver.source == "disabled-no-cache"
+    ):
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "POLICY_UNAVAILABLE",
+                "detail": "Hardware provider requested, but hardware policy is unavailable.",
+            },
+        )
     if not requested_platform:
         requested_platform = expected_platform_for_model(model)
     if requested_platform:

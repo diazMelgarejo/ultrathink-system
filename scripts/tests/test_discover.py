@@ -243,3 +243,21 @@ def test_no_write_when_hash_unchanged(tmp_path, monkeypatch):
         if f.name in {"discovery.json", "last_discovery.json"}:
             continue
         assert f.stat().st_mtime == mtime, f"{f} should not have been rewritten"
+
+
+def test_perpetua_root_precedence_root_over_legacy(monkeypatch):
+    monkeypatch.setenv("PERPETUA_TOOLS_ROOT", "/tmp/pt-root")
+    monkeypatch.setenv("PERPETUA_TOOLS_PATH", "/tmp/pt-legacy")
+    assert D._resolve_perpetua_root_env() == Path("/tmp/pt-root")
+
+
+def test_perpetua_root_falls_back_to_legacy(monkeypatch):
+    monkeypatch.delenv("PERPETUA_TOOLS_ROOT", raising=False)
+    monkeypatch.setenv("PERPETUA_TOOLS_PATH", "/tmp/pt-legacy")
+    assert D._resolve_perpetua_root_env() == Path("/tmp/pt-legacy")
+
+
+def test_get_repo_paths_uses_resolved_perpetua_root(monkeypatch):
+    monkeypatch.setenv("PERPETUA_TOOLS_ROOT", "/tmp/pt-root")
+    paths = D.get_repo_paths()
+    assert paths["perpetua_tools"] == Path("/tmp/pt-root")

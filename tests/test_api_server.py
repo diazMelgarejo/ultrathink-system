@@ -321,3 +321,35 @@ def test_fail_closed_when_perpetuatoolsroot_missing(monkeypatch):
         assert body["error"] == "POLICY_UNAVAILABLE"
     finally:
         api_server._policy_resolver = original_resolver
+
+
+def test_fail_closed_when_platform_and_provider_hint_both_present(monkeypatch):
+    monkeypatch.delenv("PERPETUA_TOOLS_ROOT", raising=False)
+    monkeypatch.delenv("PERPETUA_TOOLS_PATH", raising=False)
+
+    original_resolver = api_server._policy_resolver
+    mock_resolver = type("MockResolver", (), {
+        "initialize": lambda self: None,
+        "check_affinity": lambda self, m, p: None,
+        "expected_platform_for_model": lambda self, m: None,
+        "source": "disabled-no-cache",
+        "pt_available": False,
+    })()
+    api_server._policy_resolver = mock_resolver
+
+    try:
+        with TestClient(api_server.app, raise_server_exceptions=True) as client:
+            response = client.post(
+                "/ultrathink",
+                json={
+                    "task_description": "Run routed check",
+                    "task_type": "code",
+                    "platform": "mac",
+                    "model_hint": "lmstudio-mac/any-model",
+                },
+            )
+        assert response.status_code == 400
+        body = response.json()
+        assert body["error"] == "POLICY_UNAVAILABLE"
+    finally:
+        api_server._policy_resolver = original_resolver

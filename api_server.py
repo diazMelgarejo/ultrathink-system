@@ -374,6 +374,13 @@ def expected_platform_for_model(model_id: str) -> str | None:
     return _policy_resolver.expected_platform_for_model(model_id)
 
 
+def _has_policy_env() -> bool:
+    return bool(
+        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )
+
+
 def _load_pt_runtime_state() -> dict[str, Any] | None:
     state_path = os.getenv("PT_RUNTIME_STATE", "").strip()
     if not state_path:
@@ -509,14 +516,14 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
 
     requested_platform = req.platform or (req.context or {}).get("platform") or (req.context or {}).get("affinity")
     explicit_hardware_provider = False
-    if not requested_platform and "/" in model:
+    if "/" in model:
         provider, raw_model = model.split("/", 1)
         if provider in {"lmstudio-mac", "ollama-mac"}:
-            requested_platform = "mac"
+            requested_platform = requested_platform or "mac"
             explicit_hardware_provider = True
             model = raw_model
         elif provider in {"lmstudio-win", "ollama-win"}:
-            requested_platform = "win"
+            requested_platform = requested_platform or "win"
             explicit_hardware_provider = True
             model = raw_model
     if explicit_hardware_provider and not _has_policy_env() and not _policy_resolver.pt_available:

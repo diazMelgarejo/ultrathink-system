@@ -353,3 +353,33 @@ def test_fail_closed_when_platform_and_provider_hint_both_present(monkeypatch):
         assert body["error"] == "POLICY_UNAVAILABLE"
     finally:
         api_server._policy_resolver = original_resolver
+
+
+def test_fail_closed_when_only_legacy_path_env_is_set(monkeypatch):
+    monkeypatch.delenv("PERPETUA_TOOLS_ROOT", raising=False)
+    monkeypatch.setenv("PERPETUA_TOOLS_PATH", "/tmp/not-a-real-pt-root")
+
+    original_resolver = api_server._policy_resolver
+    mock_resolver = type("MockResolver", (), {
+        "initialize": lambda self: None,
+        "check_affinity": lambda self, m, p: None,
+        "expected_platform_for_model": lambda self, m: None,
+        "source": "disabled-no-cache",
+        "pt_available": False,
+    })()
+    api_server._policy_resolver = mock_resolver
+
+    try:
+        with TestClient(api_server.app, raise_server_exceptions=True) as client:
+            response = client.post(
+                "/ultrathink",
+                json={
+                    "task_description": "Run routed check",
+                    "task_type": "code",
+                    "model_hint": "lmstudio-win/any-model",
+                },
+            )
+        assert response.status_code == 400
+        assert response.json()["error"] == "POLICY_UNAVAILABLE"
+    finally:
+        api_server._policy_resolver = original_resolver

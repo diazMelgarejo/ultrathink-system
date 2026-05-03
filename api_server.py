@@ -166,6 +166,14 @@ CODE_MODEL = os.getenv(
 )
 
 
+def _resolve_perpetua_root_env() -> str:
+    """Resolve PT root env with canonical key first, legacy fallback second."""
+    return (
+        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )
+
+
 def _validate_hardware_policy(resolved_model: str) -> None:
     """Raise HardwareAffinityError if resolved_model is not valid for Windows execution.
 
@@ -173,7 +181,7 @@ def _validate_hardware_policy(resolved_model: str) -> None:
     Falls back gracefully if PT is not accessible at module-load time.
     """
     # Resolve PT root with an explicit str default (os.getenv requires str, not Path)
-    _pt_root = os.getenv("PERPETUA_TOOLS_ROOT") or str(
+    _pt_root = _resolve_perpetua_root_env() or str(
         Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools"
     )
     import sys as _sys
@@ -204,10 +212,8 @@ def _validate_hardware_policy(resolved_model: str) -> None:
 _validate_hardware_policy(CODE_MODEL)
 
 PERPETUA_TOOLS_ROOT = Path(
-    os.getenv(
-        "PERPETUA_TOOLS_ROOT",
-        Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools",
-    )
+    _resolve_perpetua_root_env()
+    or str(Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools")
 )
 
 # Local disaster-recovery cache (used only when PT is unreachable).
@@ -526,7 +532,11 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
             requested_platform = requested_platform or "win"
             explicit_hardware_provider = True
             model = raw_model
-    if explicit_hardware_provider and not _has_policy_env() and not _policy_resolver.pt_available:
+    if (
+        explicit_hardware_provider
+        and not _policy_resolver.pt_available
+        and _policy_resolver.source == "disabled-no-cache"
+    ):
         return JSONResponse(
             status_code=400,
             content={

@@ -380,6 +380,13 @@ def expected_platform_for_model(model_id: str) -> str | None:
     return _policy_resolver.expected_platform_for_model(model_id)
 
 
+def _has_policy_env() -> bool:
+    return bool(
+        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )
+
+
 def _load_pt_runtime_state() -> dict[str, Any] | None:
     state_path = os.getenv("PT_RUNTIME_STATE", "").strip()
     if not state_path:
@@ -534,7 +541,7 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
             status_code=400,
             content={
                 "error": "POLICY_UNAVAILABLE",
-                "detail": "Hardware provider requested, but hardware policy is unavailable.",
+                "detail": "Hardware provider requested, but PERPETUA_TOOLS_ROOT is unset and PT policy is unavailable.",
             },
         )
     if not requested_platform:
@@ -624,3 +631,8 @@ if __name__ == "__main__":
     import uvicorn
     logger.info("Starting ultrathink API on %s:%d", HOST, PORT)
     uvicorn.run(app, host=HOST, port=PORT, log_level="info")
+def _has_policy_env() -> bool:
+    return bool(
+        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )

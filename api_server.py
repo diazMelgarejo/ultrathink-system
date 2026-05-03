@@ -169,22 +169,18 @@ CODE_MODEL = os.getenv(
 def _validate_hardware_policy(resolved_model: str) -> None:
     """Raise HardwareAffinityError if resolved_model is not valid for Windows execution.
 
-    Imports hardware_policy from PERPETUA_TOOLS_ROOT path (added later in module).
-    Falls back gracefully if PT is not yet on sys.path at module-load time.
+    Imports hardware_policy from PERPETUA_TOOLS_ROOT path (resolved at call time).
+    Falls back gracefully if PT is not accessible at module-load time.
     """
+    # Resolve PT root with an explicit str default (os.getenv requires str, not Path)
+    _pt_root = os.getenv("PERPETUA_TOOLS_ROOT") or str(
+        Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools"
+    )
+    import sys as _sys
+    if _pt_root not in _sys.path:
+        _sys.path.insert(0, _pt_root)
     try:
-        _pt_root = str(
-            Path(
-                os.getenv(
-                    "PERPETUA_TOOLS_ROOT",
-                    Path(__file__).resolve().parent.parent / "perplexity-api" / "Perpetua-Tools",
-                )
-            )
-        )
-        import sys as _sys
-        if _pt_root not in _sys.path:
-            _sys.path.insert(0, _pt_root)
-        from utils.hardware_policy import load_policy, HardwareAffinityError as _HAE
+        from utils.hardware_policy import load_policy, HardwareAffinityError as _HAE  # type: ignore[import]
         policy = load_policy()
         valid_for_windows = {
             m.lower()
@@ -197,9 +193,9 @@ def _validate_hardware_policy(resolved_model: str) -> None:
                 resolved_model,
             )
             raise _HAE(f"Invalid model affinity: {resolved_model}")
+    except _HAE:  # type: ignore[misc]  # re-raise policy violations; never swallow them
+        raise
     except Exception as _e:
-        if type(_e).__name__ == "HardwareAffinityError":
-            raise
         logger.warning("Hardware policy startup validation skipped: %s", _e)
 
 

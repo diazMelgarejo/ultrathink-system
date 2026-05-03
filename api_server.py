@@ -179,8 +179,10 @@ def _validate_hardware_policy(resolved_model: str) -> None:
     import sys as _sys
     if _pt_root not in _sys.path:
         _sys.path.insert(0, _pt_root)
+    _hae_cls: type[Exception] | None = None
     try:
         from utils.hardware_policy import load_policy, HardwareAffinityError as _HAE  # type: ignore[import]
+        _hae_cls = _HAE
         policy = load_policy()
         valid_for_windows = {
             m.lower()
@@ -193,9 +195,9 @@ def _validate_hardware_policy(resolved_model: str) -> None:
                 resolved_model,
             )
             raise _HAE(f"Invalid model affinity: {resolved_model}")
-    except _HAE:  # type: ignore[misc]  # re-raise policy violations; never swallow them
-        raise
     except Exception as _e:
+        if _hae_cls and isinstance(_e, _hae_cls):
+            raise
         logger.warning("Hardware policy startup validation skipped: %s", _e)
 
 
@@ -506,14 +508,25 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
     model = req.model_hint or (DEFAULT_MODEL if reasoning_depth == "ultra" else FAST_MODEL)
 
     requested_platform = req.platform or (req.context or {}).get("platform") or (req.context or {}).get("affinity")
+    explicit_hardware_provider = False
     if not requested_platform and "/" in model:
         provider, raw_model = model.split("/", 1)
         if provider in {"lmstudio-mac", "ollama-mac"}:
             requested_platform = "mac"
+            explicit_hardware_provider = True
             model = raw_model
         elif provider in {"lmstudio-win", "ollama-win"}:
             requested_platform = "win"
+            explicit_hardware_provider = True
             model = raw_model
+    if explicit_hardware_provider and not _has_policy_env() and not _policy_resolver.pt_available:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": "POLICY_UNAVAILABLE",
+                "detail": "Hardware provider requested, but PERPETUA_TOOLS_ROOT is unset and PT policy is unavailable.",
+            },
+        )
     if not requested_platform:
         requested_platform = expected_platform_for_model(model)
     if requested_platform:
@@ -601,3 +614,8 @@ if __name__ == "__main__":
     import uvicorn
     logger.info("Starting ultrathink API on %s:%d", HOST, PORT)
     uvicorn.run(app, host=HOST, port=PORT, log_level="info")
+def _has_policy_env() -> bool:
+    return bool(
+        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )

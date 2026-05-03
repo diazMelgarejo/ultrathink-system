@@ -621,3 +621,8 @@ if __name__ == "__main__":
     import uvicorn
     logger.info("Starting ultrathink API on %s:%d", HOST, PORT)
     uvicorn.run(app, host=HOST, port=PORT, log_level="info")
+def _has_policy_env() -> bool:
+    return bool(
+        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )

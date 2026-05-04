@@ -330,7 +330,7 @@ both repos, and manual-port only reviewed intent.
 ### Decisions Made
 
 - Salvage branch format is `yyyy-mm-dd-001-brief-summary`.
-- Canonical commit identity is `cyre <Lawrence@cyre.me>`.
+- Canonical commit identity is `cyre <Lawrence@cyre.me> or Codex <codex@openai.com>`.
 - `.env`, `.env.local`, and `.paths` are ignored runtime files; examples are the only tracked contract.
 - `.ecc` must not be both a gitlink expectation and a symlink in the working tree.
 - `repo_hygiene.py` and `check_identity.sh` are the pre-commit guardrails for this recovery path.
@@ -1028,3 +1028,23 @@ The `gitStatus` block injected at session start is captured once at launch. By t
 - **Solution**: Split roadmap into explicit **PLANNING** and **Implementation** phases. Architecture is "launched" (a living process), not merely "concluded."
 - **Rule**: Documentation MUST link to both Archived (v1) and Active (v2) repository organizations to maintain cross-generational visibility.
 - **Formatting**: Use `ascii` tags for non-executable code blocks and blockquotes for high-level summaries to improve UX for the next agent.
+
+## 2026-05-04 — Codex — Priority execution (P1–P6), checklist and fail-closed hardening
+
+### What was learned
+
+- Large multi-priority migrations are easy to report as complete while still missing execution-level proof unless a strict post-block checklist is run.
+- Hardware-bound requests (`lmstudio-*`, `ollama-*`) must fail closed when policy authority is unavailable; warnings are not sufficient.
+- Verification command drift (doc command vs repo script reality) causes false confidence and noisy handoffs.
+
+### Decisions made
+
+- Added a consolidated checklist discipline after each priority block with pass/warn/fail reporting.
+- Added in-repo helper `scripts/hardware_policy_cli.py --check-openclaw` to make the documented check executable.
+- Promoted this incident to the wiki for durable cross-session visibility.
+
+### Open follow-ups
+
+- Historical docs still contain many `Perplexity-Tools` references; active-path docs are cleaned first, historical artifacts are tracked as non-blocking warnings.
+
+→ [wiki/09-policy-fail-closed-and-checklist.md](wiki/09-policy-fail-closed-and-checklist.md)

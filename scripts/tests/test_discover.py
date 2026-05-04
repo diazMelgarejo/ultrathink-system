@@ -6,6 +6,11 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import discover as D
 
+@pytest.fixture(autouse=True)
+def _set_pt_root_env(monkeypatch, tmp_path):
+    monkeypatch.setenv("PERPETUA_TOOLS_ROOT", str(tmp_path))
+    yield
+
 
 def test_hash_deterministic():
     ep = {"mac": {"ip": "127.0.0.1", "models": ["m1", "m2"]},
@@ -261,3 +266,32 @@ def test_get_repo_paths_uses_resolved_perpetua_root(monkeypatch):
     monkeypatch.setenv("PERPETUA_TOOLS_ROOT", "/tmp/pt-root")
     paths = D.get_repo_paths()
     assert paths["perpetua_tools"] == Path("/tmp/pt-root")
+
+
+def test_discover_fails_closed_when_perpetuatoolsroot_missing(monkeypatch, tmp_path):
+    monkeypatch.delenv("PERPETUATOOLSROOT", raising=False)
+    monkeypatch.delenv("PERPETUA_TOOLS_ROOT", raising=False)
+    monkeypatch.delenv("PERPETUA_TOOLS_PATH", raising=False)
+    monkeypatch.setattr(D, "OPENCLAW_JSON", tmp_path / "openclaw.json")
+    (tmp_path / "openclaw.json").write_text("{}")
+    with pytest.raises(SystemExit):
+        D.patch_openclaw_json({"mac": None, "win": None})
+
+
+def test_perpetuatoolsroot_takes_precedence_over_legacy_path(monkeypatch, tmp_path):
+    canonical = tmp_path / "canonical_pt"
+    legacy = tmp_path / "legacy_pt"
+    canonical.mkdir()
+    legacy.mkdir()
+    monkeypatch.setenv("PERPETUATOOLSROOT", str(canonical))
+    monkeypatch.setenv("PERPETUA_TOOLS_PATH", str(legacy))
+    assert D._resolve_perpetua_root_env() == canonical
+
+
+def test_legacy_path_works_as_fallback_when_root_absent(monkeypatch, tmp_path):
+    legacy = tmp_path / "legacy_pt"
+    legacy.mkdir()
+    monkeypatch.delenv("PERPETUATOOLSROOT", raising=False)
+    monkeypatch.delenv("PERPETUA_TOOLS_ROOT", raising=False)
+    monkeypatch.setenv("PERPETUA_TOOLS_PATH", str(legacy))
+    assert D._resolve_perpetua_root_env() == legacy

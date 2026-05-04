@@ -8,7 +8,7 @@ POST /ultrathink on port 8001
 This is a stateless execution endpoint. No Redis dependency.
 Durable state is owned by the Perpetua-Tools orchestrator (Repo #1).
 
-Version: 0.9.9.2 | License: Apache 2.0
+Version: 0.9.9.8 | License: Apache 2.0
 """
 from __future__ import annotations
 
@@ -16,9 +16,9 @@ import os
 import json
 import logging
 import time
-import uuid
 from typing import Optional, Any
 from pathlib import Path
+from importlib.metadata import version as pkg_version
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -74,9 +74,15 @@ def _detect_platform() -> str:
 
 _LOCAL_LM_STUDIO_URL = os.getenv("LOCAL_LM_STUDIO_URL",  "http://localhost:1234/v1")
 _CLOUD_API_URL       = os.getenv("CLOUD_API_URL",         "https://api.anthropic.com/v1")
-_WIN_LM_STUDIO_HOST  = os.getenv("WIN_LM_STUDIO_HOST",   "192.168.254.108")
+_WIN_LM_STUDIO_HOST  = os.getenv("WIN_LM_STUDIO_HOST", "").strip()
 _WIN_LM_STUDIO_PORT  = os.getenv("WIN_LM_STUDIO_PORT",   "1234")
-_WIN_LM_STUDIO_URL   = f"http://{_WIN_LM_STUDIO_HOST}:{_WIN_LM_STUDIO_PORT}/v1"
+_WIN_LM_STUDIO_URL   = (
+    f"http://{_WIN_LM_STUDIO_HOST}:{_WIN_LM_STUDIO_PORT}/v1" if _WIN_LM_STUDIO_HOST else ""
+)
+if not _WIN_LM_STUDIO_HOST:
+    logger.warning(
+        "WIN_LM_STUDIO_HOST is not set. Windows LM Studio provider is disabled until configured."
+    )
 
 # Named endpoint descriptors — one per logical backend slot
 _EP = {
@@ -165,6 +171,40 @@ CODE_MODEL = os.getenv(
     "Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2",  # verified Windows-only model
 )
 
+try:
+    __version__ = pkg_version("orama-system")
+except Exception:
+    __version__ = "0.9.9.8"
+
+
+def _resolve_perpetua_root_env() -> str:
+    """Resolve PT root env with canonical key first, legacy fallback second."""
+    return (
+        os.getenv("PERPETUATOOLSROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )
+
+
+class PolicyUnavailableError(RuntimeError):
+    """Raised when policy enforcement is required but policy is unavailable."""
+    pass
+
+
+def _check_policy_available_for_request(model_hint: str, policy_source: str, pt_available: bool) -> None:
+    prefixes = ("lmstudio-mac/", "lmstudio-win/", "ollama-mac/", "ollama-win/")
+    if model_hint and model_hint.startswith(prefixes):
+        if not pt_available and policy_source == "disabled-no-cache":
+            raise PolicyUnavailableError(
+                f"Cannot enforce hardware affinity for '{model_hint}': policy unavailable."
+            )
+
+def _legacy_root_env_aliases() -> str:
+    return (
+        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
+        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
+    )
+
 
 def _resolve_perpetua_root_env() -> str:
     """Resolve PT root env with canonical key first, legacy fallback second."""
@@ -210,6 +250,30 @@ def _validate_hardware_policy(resolved_model: str) -> None:
 
 
 _validate_hardware_policy(CODE_MODEL)
+
+
+def _warn_if_model_unvalidated(model_id: str, var_name: str) -> None:
+    """Log CRITICAL if resolved model ID is not in policy's validated model set."""
+    try:
+        from utils.hardware_policy import load_policy  # type: ignore[import]
+
+        policy = load_policy() or {}
+        all_known = {
+            m
+            for section in ("windows_only", "mac_only", "shared")
+            for m in (policy.get(section, []) or [])
+        }
+        if all_known and model_id not in all_known:
+            logger.critical(
+                "%s='%s' is not in validated hardware policy list. Routing may fail.",
+                var_name,
+                model_id,
+            )
+    except Exception:
+        return
+
+
+_warn_if_model_unvalidated(CODE_MODEL, "CODE_MODEL")
 
 PERPETUA_TOOLS_ROOT = Path(
     _resolve_perpetua_root_env()
@@ -366,10 +430,16 @@ _policy_resolver = HardwarePolicyResolver()
 # Fallback shim only activates when PT is unreachable (Layer-3 degraded mode).
 try:
     from utils.hardware_policy import HardwareAffinityError as HardwareAffinityError  # type: ignore[import]
+    _AFFINITY_ERROR_SOURCE = "perpetua-tools"
 except ImportError:
+    logging.warning(
+        "utils.hardware_policy not importable — using local HardwareAffinityError shim. "
+        "Hardware policy enforcement is degraded. Set PERPETUATOOLSROOT/PERPETUA_TOOLS_ROOT."
+    )
     class HardwareAffinityError(RuntimeError):  # type: ignore[no-redef]
         """Fallback shim — PT import failed. Active only in Layer-3 degraded mode."""
         pass
+    _AFFINITY_ERROR_SOURCE = "local-shim"
 
 
 def check_affinity(model_id: str, platform: str) -> None:
@@ -405,7 +475,7 @@ def _load_pt_runtime_state() -> dict[str, Any] | None:
 class UltraThinkRequest(BaseModel):
     """
     POST /ultrathink request body.
-    model_hint selects execution mode (ADR-001, v0.9.9.2).
+    model_hint selects execution mode (ADR-001, v0.9.9.8).
     v2 shape: session_id added for correlation across the perpetua-core/oramasys stack.
     """
     model_config = ConfigDict(protected_namespaces=())
@@ -487,7 +557,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="The ὅραμα System API",
     description="Stateless POST /ultrathink endpoint. State owned by Perpetua-Tools.",
-    version="0.9.9.2",
+    version=__version__,
     lifespan=lifespan,
 )
 
@@ -520,6 +590,17 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
     # Select model
     model = req.model_hint or (DEFAULT_MODEL if reasoning_depth == "ultra" else FAST_MODEL)
 
+    try:
+        _check_policy_available_for_request(
+            req.model_hint or "",
+            _policy_resolver.source,
+            _policy_resolver.pt_available,
+        )
+    except PolicyUnavailableError as exc:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "POLICY_UNAVAILABLE", "detail": str(exc)},
+        )
     requested_platform = req.platform or (req.context or {}).get("platform") or (req.context or {}).get("affinity")
     explicit_hardware_provider = False
     if "/" in model:
@@ -541,7 +622,7 @@ async def run_ultrathink(req: UltraThinkRequest, http_request: Request) -> Ultra
             status_code=400,
             content={
                 "error": "POLICY_UNAVAILABLE",
-                "detail": "Hardware provider requested, but PERPETUA_TOOLS_ROOT is unset and PT policy is unavailable.",
+                "detail": "Hardware provider requested, but PERPETUA_TOOLS_ROOT is unset and PT hardware policy is unavailable.",
             },
         )
     if not requested_platform:
@@ -596,7 +677,7 @@ async def health():
     runtime_state = _load_pt_runtime_state()
     return {
         "status": "ok",
-        "version": "0.9.9.2",
+        "version": __version__,
         "lmstudio_win_reachable": True,
         "lmstudio_mac_reachable": True,
         "ollama_primary_reachable": True,

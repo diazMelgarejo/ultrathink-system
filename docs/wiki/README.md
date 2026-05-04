@@ -18,6 +18,8 @@ This wiki organizes hard-won lessons by topic. Each page contains root cause, ex
 | 05 | [Bulk Sed Safety](05-bulk-sed-safety.md) | `grep -rn` every pattern before running bulk `sed`; scope import renames to `.py` only |
 | 06 | [Multi-Agent Collaboration](06-multi-agent-collab.md) | Version registry, scope claims, orphan branch recovery, no LAN IPs in source defaults |
 | 07 | [Startup & IP Detection](07-startup-ip-detection.md) | stdin deadlock root cause, `load_dotenv()` placement, concurrent asyncio probing |
+| 08 | [Git Hygiene & Branching](08-git-hygiene-and-branching.md) | Clean-lineage commit identity guardrails and branch safety protocol |
+| 09 | [Policy Fail-Closed + Checklist](09-policy-fail-closed-and-checklist.md) | Enforce hardware policy fail-closed behavior and run consolidated verification after each priority block |
 
 ---
 

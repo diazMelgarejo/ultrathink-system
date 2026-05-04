@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Python 3.8+ (for scripts)
+- Python 3.11+ (for scripts)
 - Bash 4+ (for shell scripts)
 - Claude Code, Cowork, Clawdbot, MoltBot, or OpenClaw installed
 - Git (optional, for cloning)
@@ -90,7 +90,7 @@ Add to `.claude/settings.json`:
 
 Expected output:
 
-```
+```bash
 ✓ LICENSE found
 ✓ bin/orama-system/SKILL.md found
 ✓ All 7 agent files found

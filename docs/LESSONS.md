@@ -3,11 +3,12 @@
 > **Canonical path**: `docs/LESSONS.md`<br/>
 > **Previous path**: `.claude/lessons/LESSONS.md` (now redirects here)<br/>
 > **Purpose**: GitHub-auditable persistent memory across all ECC, AutoResearcher, and Claude sessions.<br/>
-> **Cross-repo companion**: [Perplexity-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/LESSONS.md)
+> **Cross-repo companion**: [Perplexity-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/LESSONS.md)
 >
 > **Rules**:
+>
 > - Read this file at the start of every session
-> - Append new learnings before ending a session
+> - Append new learnings at the bottom before ending a session
 > - Keep entries dated and agent-tagged (`ECC | AutoResearcher | Claude`)
 > - For organized, deep-dive explanations see the **[wiki →](wiki/README.md)**
 > - For agent behavioral rules see **[SKILL.md →](../SKILL.md)**
@@ -41,10 +42,12 @@ This repo uses [continuous-learning-v2](https://github.com/affaan-m/everything-c
 Two cascading CI failures caused by a single refactor of the CI dependency install step:
 
 **Failure 1 — `ModuleNotFoundError: No module named 'fastapi'`**
+
 - Refactored `pip install . pytest hatchling build tomli` → `pip install ".[test]" build`
 - `[test]` extras had not yet been added to `pyproject.toml` → fastapi, uvicorn, slowapi, httpx all missing on CI runner
 
 **Failure 2 — `Backend 'hatchling.build' is not available`**
+
 - Adding `[test]` extras on next commit didn't include `hatchling`
 - `python -m build` needs `hatchling` pre-installed in active env (not just in `build-system.requires`)
 
@@ -61,6 +64,7 @@ Replacing `pip install pkg1 pkg2 pkg3` with `pip install ".[extras]"` without fi
 5. All 8 required modules must be importable at commit time: `fastapi`, `httpx`, `uvicorn`, `pydantic`, `slowapi`, `pytest`, `hatchling`, `build`
 
 ### Commits
+
 - `f078c8a` — introduced the gap (refactored install, dropped hatchling implicitly)
 - `9653cfc` — added ci-deps-guard pre-commit hook
 - `710fc47` — added hatchling+build to [test] extras (final fix)
@@ -87,6 +91,7 @@ Replacing `pip install pkg1 pkg2 pkg3` with `pip install ".[extras]"` without fi
 - `AgentTracker._load()` skips non-dict entries and rewrites file clean
 
 ### Commits
+
 - `3c9a4a8` (UTS) — fix(bootstrap): handle PermissionError + auto chmod +x after npm install
 - `23bd01d` (UTS) — fix(bootstrap): remove capture_output=True
 
@@ -113,6 +118,7 @@ Replacing `pip install pkg1 pkg2 pkg3` with `pip install ".[extras]"` without fi
 6. Show progress bar during recovery
 
 ### Commits
+
 - `8af62f5` (PT) — feat(routing): one-role-per-device guard + GPU crash recovery cooldown
 
 → [wiki/03-device-identity.md](wiki/03-device-identity.md)
@@ -136,6 +142,7 @@ Replacing `pip install pkg1 pkg2 pkg3` with `pip install ".[extras]"` without fi
 5. Probe by interface (`/health`, `/v1/models`), not by process name
 
 ### Commits
+
 - `6bc40d0` (UTS) — feat(bootstrap): probe all candidate ports and commandeer any running gateway
 
 → [wiki/04-gateway-discovery.md](wiki/04-gateway-discovery.md)
@@ -157,6 +164,7 @@ A batch `sed -i` to replace `multi_agent\.` with `bin.` matched filename strings
 5. CI will catch broken references but catching it pre-commit is cheaper
 
 ### Commits
+
 - `0364098` (UTS) — fix(tests): restore test filenames broken by over-eager multi_agent sed
 
 → [wiki/05-bulk-sed-safety.md](wiki/05-bulk-sed-safety.md)
@@ -260,6 +268,7 @@ Other cloners need `git submodule update --init .ecc` to get the contents.
 - New HTML template sections: Routing State, Active Agents, input textbox + JS fetch
 
 ### Commits
+
 - `691787a` (UTS) — fix(portal): dotenv load, correct IPs, routing card, agent state, user input textbox
 
 ---
@@ -288,6 +297,7 @@ All lessons above are expanded with root causes, exact fixes, and verification c
 **orama is a delegate, not a decision-maker.** The key lesson from Gate 1: any line in start.sh that reads routing.json, probes backends, or determines "distributed vs single vs offline" mode is a policy violation. That logic belongs in PT. orama reads the result; it never re-derives it.
 
 **Thinning pattern for shell delegation:**
+
 ```bash
 _PT_ENV_EXPORTS="$(
   "$PT_PYTHON" -m orchestrator.alphaclaw_manager --resolve --env-only \
@@ -295,6 +305,7 @@ _PT_ENV_EXPORTS="$(
     2>&1 | tee /dev/stderr | grep '^export '
 )" && eval "$_PT_ENV_EXPORTS"
 ```
+
 The `tee /dev/stderr` keeps progress messages visible while `grep '^export '` captures only the `eval`-able lines. This is cleaner than temp files.
 
 **New file to know:** `orchestrator/alphaclaw_manager.py` (in PT) is the authoritative Python lifecycle manager. Start there when debugging gateway issues. It wraps `agent_launcher.py` (probe) and `alphaclaw_bootstrap.py` (lifecycle).
@@ -367,6 +378,7 @@ both repos, and manual-port only reviewed intent.
 4. Verify `_skip` and `_log` signatures in setup scripts after any logging refactor.
 
 ### Commits
+
 - `dc45482` — chore(rename): systematic migration to orama-system
 - `f43a9b2` — fix(setup): fix _skip call signature in setup_macos.py
 
@@ -432,6 +444,7 @@ to `openclaw.json`. This could cause `lmstudio-mac` to advertise Windows-only
 Discovery trusted endpoint responses without cross-referencing a hardware policy.
 
 **Defense-in-depth solution:**
+
 - L1: `discover.py` filters through `Perpetua-Tools/config/model_hardware_policy.yml`
   before writing discovery state, `openclaw.json`, or `.env.lmstudio`.
 - L2: Perpetua-Tools `utils/hardware_policy.py`, `alphaclaw_manager.py`, and
@@ -458,6 +471,7 @@ used by the existing CLI, tests, and agents — not a separate product surface.
 ## [2026-04-26] Session: Twin-System Recovery & Integration Hardening
 
 ### Context
+
 Full-session work across Perpetua-Tools (Layer 2) and orama-system (Layer 3). AlphaClaw untouched.
 
 ### Key Facts Confirmed
@@ -504,7 +518,6 @@ Do not preemptively downgrade.
 - Merge orama-system `2026-04-24-001-orama-salvage` → main
 - Live Gbrain ↔ Codex test via Gstack
 - Live Gemini-coder test via `mcp__gemini-cli__ask-gemini`
-
 
 ---
 
@@ -561,15 +574,18 @@ that reads `device_affinity` needs to be audited.
 ## G3 + G2 closed (Part 2 Plan phases 7 + 8)
 
 **G3 — device_affinity → affinity key rename:**
+
 - `PT/config/routing.yml` autoresearch routes: renamed `device_affinity` → `affinity` (key only; value `win-rtx3080` preserved intentionally — future Windows hardware profiles will share the windows_only blocklist but have distinct whitelists, so specific device IDs are required)
 - `orama/bin/config/agent_registry.json` autoresearch_agents: same rename
 - Added regression guard `test_routing_affinity_keys_normalized` (PT) and `test_no_device_affinity_anywhere_in_registry` (orama)
 - **Lesson: never normalize `win-rtx3080` to generic `win`** — device-specific affinity values are the extension point for multi-Windows-profile support
 
 **G2 — PERPETUA_TOOLS_ROOT documented:**
+
 - Added to `PT/.env.example` and `orama/.env.example` with cross-repo usage notes
 
 **G1 — shared: section:**
+
 - Commented out in `PT/config/model_hardware_policy.yml` with TODO block pointing to Part 2 Phase 5
 - Added parametrized tests for both PyYAML and `_simple_policy_parse` paths (3 YAML variants: commented, absent, explicit-empty)
 - Added `_POLICY_CACHE` autouse fixture to prevent cross-test contamination
@@ -579,6 +595,7 @@ that reads `device_affinity` needs to be audited.
 **Problem:** PT is authoritative for hardware policy, but orama needs to run even if PT is temporarily unreachable. Previous design silently disabled enforcement on import failure.
 
 **Solution:** 3-layer `HardwarePolicyResolver` in `api_server.py`:
+
 - L1: sys.path import from PERPETUA_TOOLS_ROOT → PT-authoritative (preferred)
 - L2: `config/hardware_policy_cache.yml` → vendored YAML snapshot, logs CRITICAL warning
 - L3: hard fail if cache also missing — never silently skip enforcement
@@ -592,10 +609,12 @@ that reads `device_affinity` needs to be audited.
 ## Gemini v3.1 Plan Review
 
 **Accepted:**
+
 - Step 2 (PERPETUA_TOOLS_ROOT env consolidation) — already done via .env.example
 - Step 4 (hallucination purge) — already done in prior session; bad IDs live only in docs warning about them
 
 **Rejected:**
+
 - Step 1.1 (symlink orama/utils/hardware_policy.py → PT/utils/hardware_policy.py): fragile across machines, breaks on Windows (no Unix symlinks), breaks in Docker/CI, breaks when repos at different paths. sys.path approach is more portable.
 - Step 1.2 (remove _simple_policy_parse fallback): this IS the disaster recovery fallback for PyYAML-absent environments. Removing it reduces resilience.
 
@@ -606,6 +625,7 @@ that reads `device_affinity` needs to be audited.
 **Problem 2 — restart unavailable:** `openclaw restart` requires `"restart"` in `plugins.allow`. It was absent.
 
 **Fix:** Added to both `~/.alphaclaw/openclaw.json` and `alphaclaw-observability/config/openclaw.json`:
+
 ```json
 "plugins": {
   "allow": ["usage-tracker", "restart", "memory-core"],
@@ -613,6 +633,7 @@ that reads `device_affinity` needs to be audited.
   "load": { "paths": [] }
 }
 ```
+
 Setting `load.paths: []` prevents the startup code from adding the dev-repo path (which caused the duplicate).
 
 **Architecture clarification:** AlphaClaw is a WRAPPER that orchestrates OpenClaw instances. OpenClaw runs standalone. AlphaClaw manages the gateway, plugins, and agent lifecycle AROUND OpenClaw sessions. This is the opposite of what the config file naming suggests — `openclaw.json` is AlphaClaw's config for managing OpenClaw.
@@ -638,6 +659,7 @@ Setting `load.paths: []` prevents the startup code from adding the dev-repo path
 Codex `--full-auto` requires a TTY. When spawned from any Python subprocess (Claude Code, portal API, CI), there is no TTY → "stdin is not a terminal" error.
 
 **Fix: `pty.openpty()` pseudo-terminal wrapper**
+
 ```python
 import pty, select, os
 
@@ -650,17 +672,20 @@ proc = subprocess.Popen(
 os.close(slave_fd)  # parent doesn't need slave end
 # read from master_fd with select() to collect all output
 ```
+
 This makes Codex fully automatable — no human terminal ever required.
 
 **Live in:** `orama-system/scripts/spawn_agents.py → _dispatch_codex()`
 
 **2. Gemini CLI Node Version Fix**
 Gemini CLI (installed under nvm v24) uses `??=` (ES2021). But `#!/usr/bin/env node` resolves to nvm v14 in Claude Code's shell. Fix: create `~/.local/bin/gemini` wrapper:
+
 ```bash
 #!/usr/bin/env bash
 exec /Users/lawrencecyremelgarejo/.nvm/versions/node/v24.14.1/bin/node \
      /Users/lawrencecyremelgarejo/.nvm/versions/node/v24.14.1/bin/gemini "$@"
 ```
+
 `~/.local/bin/` comes before nvm in PATH → wrapper always wins.
 **Live in:** `scripts/setup_codex.sh` (auto-creates wrapper on every `start.sh`)
 
@@ -668,6 +693,7 @@ exec /Users/lawrencecyremelgarejo/.nvm/versions/node/v24.14.1/bin/node \
 File: `orama-system/scripts/spawn_agents.py` and `PT/scripts/spawn_agents.py` (shim)
 
 Supports: `codex`, `gemini`, `lmstudio-mac`, `lmstudio-win`, `all`
+
 - Codex + Gemini + LM Studio Mac run in parallel
 - LM Studio Win serialized via `asyncio.Lock()` (one GPU model at a time)
 - CLI: `python scripts/spawn_agents.py --task "..." --agent codex`
@@ -675,6 +701,7 @@ Supports: `codex`, `gemini`, `lmstudio-mac`, `lmstudio-win`, `all`
 
 **4. Portal Tools & APIs Panel**
 All 18 tools/APIs from AlphaClaw + PT visible in `portal_server.py`:
+
 - Groups: AI Providers, Search & Tools, Messaging Channels, GitHub, CLI, Gateways
 - 3 states: READY (green) / NOT CONFIGURED (amber, inline configure) / KEY SET BUT FAILING (red, replace button)
 - `POST /api/configure-tool` writes to `.env.local` safely (atomic + file lock + rate limit)
@@ -701,23 +728,26 @@ python scripts/spawn_agents.py --task "..." --agent all   # parallel
 ```
 
 ### Gemini Review Pattern (tested and works)
+
 ```bash
 ~/.local/bin/gemini -p "Review X for Y. Be concise."
 ```
+
 Returns structured bullet-point feedback in ~3s.
 
 ### Key Architecture Invariants (updated)
+
 - `spawn_agents.py` is the canonical multi-agent dispatcher for both orama and PT
 - The portal `/api/spawn-agent` always loads spawn_agents.py via importlib + `sys.modules` registration
 - Windows GPU: always `asyncio.Lock()` before LM Studio Win calls
 - `setup_codex.sh` runs on every `start.sh` — codex + gemini are always fixed
 
 ### Open Items
+
 - G1 (shared models): still blocked — needs both machines online
 - G4 (live openclaw.json sync): still blocked
 - Gemini CLI broken binary: wrapper fixes runtime but underlying package may need updating: `nvm use 24 && npm update -g @google/gemini-cli`
 - Win LM Studio offline during this session — need both machines for full parallel dispatch
-
 
 ---
 
@@ -742,6 +772,7 @@ didn't use it when started standalone. The portal showed wrong IPs and couldn't 
 **Fix — shared `utils/ip_resolver.py`:**
 
 Created `orama-system/utils/ip_resolver.py` — single authoritative source for Win IP:
+
 ```
 P1: AlphaClaw gateway (:18789) — live, if running means openclaw.json is current
 P2: ~/.openclaw/openclaw.json  — patched by discover.py after every successful scan
@@ -778,6 +809,7 @@ P6: {outbound-interface-subnet}.103 — absolute last resort, subnet-portable
    - Comments in various files marking old IPs (`.108`, `.101`) as archive
 
 **Files changed:**
+
 - `utils/ip_resolver.py` — NEW shared resolver (P1-P6 chain)
 - `utils/__init__.py` — NEW package init
 - `portal_server.py` — uses ip_resolver; dynamic re-resolve in `api_status()`; gossip write-back
@@ -804,6 +836,7 @@ This confirms the self-healing architecture works as designed.
 
 **What the `.103` fallback constant means:** The hardcoded `.103` fallback in `ip_resolver.py`
 is priority 6 (last resort) and is a best-guess constant. It only fires if ALL of:
+
 - AlphaClaw is down (P1 fails)
 - `openclaw.json` is missing or malformed (P2 fails)
 - `discovery.json` has no reachable entry (P3 fails)
@@ -814,12 +847,14 @@ In practice the real IP (`openclaw.json` P2) always wins. The `.103` constant is
 subnet-portable guess (Windows is always 3rd host on the /24), not the actual IP.
 
 **Docs fixed this session:**
+
 - `PT/docs/MIGRATION.md` Gate 2: removed hardcoded `192.168.254.101:1234`, replaced with
   dynamic note: "Win GPU LAN IP — dynamic, read from `~/.openclaw/openclaw.json`, currently `.105:1234`"
 - `PT/docs/adr/ADR-001-*`: formatting cleanup
 - `PT/docs/system-design-three-repo-architecture.md`: formatting pass
 
 **Pending (blocked on both machines online):**
+
 - G1 shared models list — needs Win + Mac simultaneously
 - G4 live openclaw.json sync across repos
 - Unified `/agent/dispatch` L2 API in PT
@@ -839,6 +874,7 @@ a provider in Mac's LM Studio, ALL models on that remote server appear in Mac's 
 `/v1/models` response as if they were locally loaded. The reverse is also true.
 
 **Why this matters:**
+
 - The original policy assumed you could tell a model's physical home by which machine's
   `/v1/models` endpoint it appeared in. **This assumption is WRONG.**
 - `qwen3.5-27b-...` appears in Mac's `/v1/models` — but it physically runs on Win RTX 3080.
@@ -846,22 +882,26 @@ a provider in Mac's LM Studio, ALL models on that remote server appear in Mac's 
 - Both machines return all 5 models, yet each model has a true physical home.
 
 **Correct mental model:**
+
 ```
 Mac /v1/models  →  [mac-native models] + [win models proxied as local]
 Win /v1/models  →  [win-native models] + [mac models proxied as local]
 ```
 
 **Routing rule that actually works:**
+
 - Do NOT use model presence in `/v1/models` to determine which machine to route to.
 - Use the **provider name** (`lmstudio-mac` vs `lmstudio-win`) as the routing key.
 - The policy YAML `mac_only` / `windows_only` enforces provider-level routing, not detection.
 
 **Policy fix applied:**
+
 - `mac_only: []`, `windows_only: []` — cleared; LMS proxy makes per-machine exclusion unenforceable at the API level
 - `shared:` — all 5 confirmed models added (accessible from either provider endpoint)
 - openclaw.json repaired: both `lmstudio-mac` and `lmstudio-win` now show 5 models each
 
 **discover.py result (2026-04-29, both machines online):**
+
 ```
 mac: ✅ localhost:1234     — 5 models
 win: ✅ 192.168.254.105:1234 — 5 models
@@ -928,16 +968,17 @@ win: ✅ 192.168.254.105:1234 — 5 models
 - **Valid Windows model name**: `Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2`. `Qwen3.5-27B-Instruct` DOES NOT EXIST — never use it.
 - `uv sync --dev` replaces bare `pip install` in bootstrap paths.
 
-
 ### Module rename: ultrathink → orama (2026-04-29)
 
 **Problem**: Phase B renamed files but left internal references stale, causing 16 test failures:
+
 1. `orama_bridge.py` still imported `from orchestrator.ultrathink_mcp_client import` (broken after file rename)
 2. Tests imported from `orchestrator.ultrathink_bridge` / `orchestrator.ultrathink_mcp_client` (old paths)
 3. Test assertions checked `ULTRATHINK_ENDPOINT` / `ultrathink_available` (routing.yml now uses `ORAMA_ENDPOINT` / `orama_available`)
 4. Hardware policy tests relied on live `model_hardware_policy.yml` which was correctly emptied (LM Studio proxy discovery)
 
 **Fixes**:
+
 - `orama_bridge.py`: fix import + logger name to use `orchestrator.orama_mcp_client` / `"orchestrator.orama_bridge"`
 - Tests: replace module paths and env var names to match new routing.yml contract
 - Hardware policy tests: pass explicit `policy=` dicts — self-contained, not coupled to live policy file
@@ -996,6 +1037,7 @@ Missing from spec (still TODO): `message.py`, `graph/nodes.py`, `graph/edges.py`
 ### Python runtime split on this machine (2026-05-02)
 
 Two Python runtimes coexist:
+
 - **Python 3.13**: `/Library/Frameworks/Python.framework/Versions/3.13/bin/python3` — has oramasys packages installed
 - **Python 3.12**: `/Users/lawrencecyremelgarejo/miniconda3/bin/python` — does NOT have v2 packages
 
@@ -1006,6 +1048,7 @@ Use `python3` (or full path `pytest`) for v2 tests. Running `python -m pytest` f
 `continuous-learning-v2` script (`~/.claude/skills/continuous-learning-v2/scripts/instinct-cli.py`) does not exist on disk — plugin is listed but not installed. Running `/instinct-import` fails silently.
 
 **Workaround**: copy YAML files directly into `.claude/homunculus/instincts/inherited/` so future installs pick them up. Done for:
+
 - `Perpetua-Tools-instincts.yaml` → `orama-system/.claude/homunculus/instincts/inherited/`
 - `everything-claude-code-instincts.yaml` → `orama-system/.claude/homunculus/instincts/inherited/`
 
@@ -1016,6 +1059,7 @@ Key instincts to apply manually until script is available: snake_case filenames,
 The `gitStatus` block injected at session start is captured once at launch. By the time a new session starts, repos may have been committed and pushed. Always run `git status` before assuming there is work to do. Both orama-system and Perpetua-Tools appeared dirty in the snapshot but were fully clean when re-checked.
 
 ## 2026-05-02 — Document Integrity & Archiving Policy
+
 - **Symptom**: Critical legacy documentation (AGENT_RESUME.md) was overwritten by an automated summary, losing v1 context.
 - **Cause**: AI tendency to replace files rather than merge or archive (destructive behavior).
 - **Rule**: NEVER delete or overwrite historical context. Always archive legacy documentation to /docs/archive/ or wiki entries.
@@ -1023,6 +1067,7 @@ The `gitStatus` block injected at session start is captured once at launch. By t
 - **Reference**: Legacy AGENT_RESUME.md recovered and archived at docs/archive/AGENT_RESUME_v1_legacy.md.
 
 ## 2026-05-02 — Roadmap Granularity & Documentation Ergonomics
+
 - **Symptom**: Premature "DONE" markers in v2 build order led to confusion about active implementation vs. planned hardening.
 - **Cause**: AI tendency to mark design completion as task completion.
 - **Solution**: Split roadmap into explicit **PLANNING** and **Implementation** phases. Architecture is "launched" (a living process), not merely "concluded."

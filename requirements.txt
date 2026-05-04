@@ -1,4 +1,4 @@
-# orama-system v0.9.8.0 — Runtime dependencies
+# orama-system v0.9.9.8 — Runtime dependencies
 # Matches the usage block in api_server.py docstring.
 
 # Web framework

@@ -142,4 +142,4 @@ curl http://localhost:8001/health
 }
 ```
 
-**Stateless**: no Redis dependency. Durable state owned by Perplexity-Tools (Repo #1).
+**Stateless**: no Redis dependency. Durable state owned by Perpetua-Tools (Repo #1).

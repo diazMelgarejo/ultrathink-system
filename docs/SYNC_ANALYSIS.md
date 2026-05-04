@@ -6,6 +6,9 @@
 > is the **active primary transport** for v1.0 RC. MCP-Optional transport (stdio JSON-RPC)
 > is planned for v1.1. Any references below to "MCP as primary" or "HTTP as backup" reflect
 > older analysis snapshots and should be read as pre-v0.9.9.0 context.
+>
+> **Operator cross-reference:** For fail-closed policy behavior and mandatory post-priority
+> verification checklist, see [docs/wiki/09-policy-fail-closed-and-checklist.md](wiki/09-policy-fail-closed-and-checklist.md).
 ---
 
 ## TL;DR — Status Summary

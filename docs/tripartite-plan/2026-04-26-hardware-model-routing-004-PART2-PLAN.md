@@ -14,7 +14,8 @@
 | Phase 2 — discover.py filter | ✅ Shipped | `filter_models_for_platform()` called before every openclaw.json/discovery.json write |
 | Phase 3 — AlphaClawManager gate | ✅ Shipped | `validate_routing_affinity()` instance method at line 252 of `alphaclaw_manager.py` |
 | Phase 4 — api_server.py API gate | ✅ Shipped | HTTP 400 `HARDWARE_MISMATCH` at line 169; warning log added for stub path |
-| Phase 5 — Live config repair | ❌ Not done | Requires both machines online + `discover.py --status` run |
+| Phase 5 — Live config repair (Mac) | ✅ Done | Mac config repaired and verified in prior session |
+| Phase 5 — Live config repair (Windows) | ⏳ Pending | Requires Windows machine online + `python3 scripts/discover.py --status` |
 | Phase 6 — Docs / LESSONS | ✅ Shipped | `docs/MODEL_HARDWARE_MATRIX.md`, `docs/LESSONS.md`, `AGENT_RESUME.md` all updated |
 | Registry schema (agents[]) | ✅ Fixed | All 7 stage agents now have `"affinity"` keys (commit b2ed93b) |
 
@@ -59,10 +60,10 @@ copy openclaw.json openclaw.json.bak
 export PERPETUA_TOOLS_ROOT=/path/to/perplexity-api/Perpetua-Tools
 
 # Run discovery — this triggers filter_models_for_platform() before every write
-python scripts/discover.py --all
+python3 scripts/discover.py --status
 
 # Verify: mac-only models absent from Windows output, windows-only absent from Mac
-python scripts/hardware_policy_cli.py validate
+python3 scripts/hardware_policy_cli.py --check-openclaw
 ```
 
 ### Step 5.3 — Populate `shared:` section in policy YAML

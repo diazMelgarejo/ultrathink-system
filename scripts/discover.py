@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
-~/.openclaw/scripts/discover.py
+scripts/discover.py
 LM Studio Auto-Discovery Hub — Layer A.
 Always probes by default (no TTL skip). Pass --cached to reuse warm gossip.
 Idempotent: writes nothing if state hash is unchanged.
 """
 
 from __future__ import annotations
-import argparse, asyncio, fcntl, hashlib, json, os, re, shutil, socket, sys, time
+import argparse, asyncio, fcntl, hashlib, json, logging, os, re, shutil, socket, sys, time
 import urllib.error, urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
@@ -36,6 +36,22 @@ GOSSIP_TTL_SECONDS = 300
 
 # ── Repo discovery ────────────────────────────────────────────────────────────
 
+def _resolve_perpetua_root_env() -> Path | None:
+    """Resolve canonical Perpetua root env var with legacy fallback.
+
+    Precedence:
+      1) PERPETUA_TOOLS_ROOT (canonical)
+      2) PERPETUA_TOOLS_PATH (legacy compatibility)
+    """
+    root = (
+        os.environ.get("PERPETUATOOLSROOT", "").strip()
+        or os.environ.get("PERPETUA_TOOLS_ROOT", "").strip()
+    )
+    legacy = os.environ.get("PERPETUA_TOOLS_PATH", "").strip()
+    selected = root or legacy
+    return Path(selected).expanduser() if selected else None
+
+
 def get_repo_paths() -> dict:
     base = Path.home() / "Documents" / "Terminal xCode" / "claude" / "OpenClaw"
     candidates = {
@@ -52,8 +68,10 @@ def get_repo_paths() -> dict:
     result = {}
     for name, paths in candidates.items():
         env_key = name.upper() + "_PATH"
-        if env_val := os.environ.get(env_key):
-            result[name] = Path(env_val)
+        if name == "perpetua_tools":
+            result[name] = _resolve_perpetua_root_env() or next((p for p in paths if p.exists()), None)
+        elif env_val := os.environ.get(env_key):
+            result[name] = Path(env_val).expanduser()
         else:
             result[name] = next((p for p in paths if p.exists()), None)
     return result
@@ -81,8 +99,7 @@ def _simple_policy_parse(text: str) -> dict[str, list[str]]:
 def load_policy(policy_path: Path | None = None) -> dict[str, Any]:
     """Load Perpetua-Tools' canonical hardware policy."""
     if policy_path is None:
-        env_root = os.environ.get("PERPETUA_TOOLS_ROOT", "").strip()
-        pt_root = Path(env_root) if env_root else get_repo_paths().get("perpetua_tools")
+        pt_root = _resolve_perpetua_root_env() or get_repo_paths().get("perpetua_tools")
         if not pt_root:
             return {"windows_only": [], "mac_only": [], "shared": []}
         policy_path = Path(pt_root) / "config" / "model_hardware_policy.yml"
@@ -100,8 +117,17 @@ def load_policy(policy_path: Path | None = None) -> dict[str, Any]:
         "shared": list(loaded.get("shared", []) or []),
     }
 
-def filter_models_for_platform(models: list, platform: str, policy: dict) -> list:
-    """Remove models that are forbidden on the given platform."""
+def _import_pt_hardware_policy():
+    pt_root = _resolve_perpetua_root_env()
+    if not pt_root:
+        raise ImportError("PERPETUATOOLSROOT/PERPETUA_TOOLS_ROOT not set")
+    if str(pt_root) not in sys.path:
+        sys.path.insert(0, str(pt_root))
+    import importlib
+    return importlib.import_module("utils.hardware_policy")
+
+
+def _filter_models_for_platform_local(models: list, platform: str, policy: dict) -> list:
     normalized = platform.lower().strip()
     if normalized == "mac":
         forbidden = {m.lower() for m in policy.get("windows_only", [])}
@@ -110,6 +136,16 @@ def filter_models_for_platform(models: list, platform: str, policy: dict) -> lis
     else:
         forbidden = set()
     return [m for m in models if str(m).lower() not in forbidden]
+
+
+try:
+    _hw_policy = _import_pt_hardware_policy()
+    filter_models_for_platform = _hw_policy.filter_models_for_platform
+except ImportError as exc:
+    logging.critical(
+        "Cannot import PT hardware_policy: %s. Falling back to local filter implementation.", exc
+    )
+    filter_models_for_platform = _filter_models_for_platform_local
 
 def filter_endpoints_for_policy(endpoints: dict, policy: dict | None = None) -> dict:
     """Return a copy of endpoint discovery data with platform-forbidden models removed."""
@@ -259,6 +295,11 @@ def _enforce_backup_limits():
 # ── Config patching ───────────────────────────────────────────────────────────
 
 def patch_openclaw_json(endpoints: dict):
+    if not _resolve_perpetua_root_env():
+        logging.critical(
+            "PERPETUATOOLSROOT/PERPETUA_TOOLS_ROOT not set. Refusing to write openclaw.json."
+        )
+        raise SystemExit(1)
     if not OPENCLAW_JSON.exists(): return
     cfg = _load_json(OPENCLAW_JSON)
     if not cfg: return

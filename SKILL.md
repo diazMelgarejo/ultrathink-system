@@ -132,7 +132,7 @@ When two agents may be working simultaneously:
 8. **Confirm Git identity before committing**: `bash scripts/git/check_identity.sh`
 9. **Stash untracked files before branch surgery**: `git stash push --include-untracked -m "preserve work before <operation>"`
 
-Version registry: **current version is `0.9.9.7`**. Never bump without explicit user instruction. All canonical locations are listed in [docs/wiki/06-multi-agent-collab.md](docs/wiki/06-multi-agent-collab.md).
+Version registry: **current version is `0.9.9.8`**. Never bump without explicit user instruction. All canonical locations are listed in [docs/wiki/06-multi-agent-collab.md](docs/wiki/06-multi-agent-collab.md).
 
 → [docs/wiki/06-multi-agent-collab.md](docs/wiki/06-multi-agent-collab.md)
 
@@ -289,3 +289,9 @@ Extract `choices[0].message.content`, not `reasoning_content`, in any HTTP clien
 
 → See `docs/LESSONS.md` entry: *qwen3.5-9b-mlx is a thinking model (2026-05-01)*
 
+### Optional xAI fallback provider
+
+- If `XAI_API_KEY` is set, `openclaw_bootstrap.py` injects an `xai` provider into
+  `~/.openclaw/openclaw.json` with `grok-4.1-fast` and `grok-code-fast`.
+- Intended scope: finance / market / M&A / factcheck fallback when primary
+  providers are unavailable.

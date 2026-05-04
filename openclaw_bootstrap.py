@@ -183,6 +183,20 @@ def _write_openclaw_config(config_dir: Path, config_file: Path) -> None:
             },
         },
     }
+    xai_api_key = os.getenv("XAI_API_KEY", "").strip()
+    if xai_api_key:
+        config["models"]["providers"]["xai"] = {
+            "baseUrl": "https://api.x.ai/v1",
+            "apiKey": xai_api_key,
+            "api": "openai-completions",
+            "models": [
+                {"id": "grok-4.1-fast", "name": "Grok 4.1 Fast"},
+                {"id": "grok-code-fast", "name": "Grok Code Fast"},
+            ],
+        }
+        print("[openclaw] ✓ xAI provider configured in openclaw.json")
+    else:
+        print("[openclaw] ⚠ XAI_API_KEY not set — xAI Grok fallback provider not configured")
     config_dir.mkdir(parents=True, exist_ok=True)
     config_file.write_text(json.dumps(config, indent=2), encoding="utf-8")
     print(f"[openclaw] ✓ openclaw.json written → {config_file}")
@@ -220,7 +234,9 @@ def _ensure_autoresearch() -> None:
         import datetime
         branch = f"autoresearch/{datetime.date.today().isoformat()}"
         subprocess.run(["git", "checkout", "-b", branch], cwd=repo, check=True)
-        subprocess.run(["pip", "install", "uv"], check=True, capture_output=True)
+        result = subprocess.run(["pip", "install", "uv"], check=False, capture_output=False)
+        if result.returncode != 0:
+            logger.error("pip install uv failed with exit code %d", result.returncode)
         subprocess.run(["uv", "sync", "--dev"], cwd=repo, check=True)
         print("[openclaw] ✓ autoresearch ready")
     except subprocess.CalledProcessError as e:

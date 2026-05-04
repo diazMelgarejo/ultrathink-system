@@ -10,8 +10,10 @@ import sys
 from pathlib import Path
 
 
-APPROVED_NAME = "cyre"
-APPROVED_EMAIL = "Lawrence@cyre.me"
+APPROVED_IDENTITIES = {
+    ("cyre", "Lawrence@cyre.me"),
+    ("Codex", "codex@openai.com"),
+}
 FORBIDDEN_TOKENS = (
     "Lawrence " + "Melgarejo",
     "Lawrence" + "@bettermind.ph",
@@ -225,11 +227,12 @@ def check_identity(root: Path) -> list[str]:
     email = run_git(root, "config", "user.email").stdout.strip()
     if os.getenv("GITHUB_ACTIONS") == "true" and not name and not email:
         return []
-    if name != APPROVED_NAME or email != APPROVED_EMAIL:
+    if (name, email) not in APPROVED_IDENTITIES:
+        expected = " or ".join(f"{n} <{e}>" for n, e in sorted(APPROVED_IDENTITIES))
         return [
             "git identity mismatch: "
             f"found {name or '<unset>'} <{email or '<unset>'}>; "
-            f"expected {APPROVED_NAME} <{APPROVED_EMAIL}>"
+            f"expected {expected}"
         ]
     return []
 

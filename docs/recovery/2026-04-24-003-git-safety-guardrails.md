@@ -5,7 +5,7 @@
 All clean-lineage commits must use:
 
 ```text
-cyre <Lawrence@cyre.me>
+cyre <Lawrence@cyre.me> or Codex <codex@openai.com>
 ```
 
 Before committing:

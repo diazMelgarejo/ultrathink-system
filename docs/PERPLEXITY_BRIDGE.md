@@ -163,3 +163,4 @@ This bridge documentation assumes:
 - Perplexity-Tools: `SKILL.md`, `README.md`
 - orama-system: `README.md`, `docs/api-reference.md`
 - MCP runtime: `bin/mcp_servers/README.md`
+- Operations note: [wiki/09-policy-fail-closed-and-checklist.md](wiki/09-policy-fail-closed-and-checklist.md)

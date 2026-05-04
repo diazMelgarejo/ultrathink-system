@@ -112,7 +112,7 @@ Before any significant change to this repo, load the mother skill:
 
 Git hygiene rules for clean-lineage work:
 
-- Commit identity must be `cyre <Lawrence@cyre.me>`; verify with `bash scripts/git/check_identity.sh`.
+- Commit identity must be `cyre <Lawrence@cyre.me> or Codex <codex@openai.com>`; verify with `bash scripts/git/check_identity.sh`.
 - Use dated branches: `yyyy-mm-dd-001-brief-summary`.
 - Before risky Git work, snapshot status and stash with untracked files.
 - Do not commit `.env`, `.env.local`, or generated `.paths`; update `.env.example` and `.paths.example` instead.

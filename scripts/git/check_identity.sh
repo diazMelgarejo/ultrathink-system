@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-EXPECTED_NAME="cyre"
-EXPECTED_EMAIL="Lawrence@cyre.me"
+ALLOWED_IDENTITIES=(
+  "cyre|Lawrence@cyre.me"
+  "Codex|codex@openai.com"
+)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
@@ -12,9 +14,19 @@ actual_email="$(git -C "$REPO_ROOT" config user.email || true)"
 echo "git user.name=${actual_name:-<unset>}"
 echo "git user.email=${actual_email:-<unset>}"
 
-if [[ "$actual_name" != "$EXPECTED_NAME" || "$actual_email" != "$EXPECTED_EMAIL" ]]; then
-  echo "ERROR: git identity must be exactly: ${EXPECTED_NAME} <${EXPECTED_EMAIL}>" >&2
-  exit 1
-fi
+for pair in "${ALLOWED_IDENTITIES[@]}"; do
+  expected_name="${pair%%|*}"
+  expected_email="${pair##*|}"
+  if [[ "$actual_name" == "$expected_name" && "$actual_email" == "$expected_email" ]]; then
+    echo "OK: approved git identity"
+    exit 0
+  fi
+done
 
-echo "OK: canonical git identity"
+echo "ERROR: git identity must be one of:" >&2
+for pair in "${ALLOWED_IDENTITIES[@]}"; do
+  expected_name="${pair%%|*}"
+  expected_email="${pair##*|}"
+  echo "  - ${expected_name} <${expected_email}>" >&2
+done
+exit 1

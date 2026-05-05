@@ -14,7 +14,7 @@ Pydantic AI uses Python's \`inspect\` module to read function signatures and the
 Our \`graph/tool.py\` plugin will implement a "Slim Tool" decorator.
 
 **Reference Implementation Hint:**
-\`\`\`python
+```python
 import inspect
 from pydantic import create_model
 
@@ -24,4 +24,4 @@ def tool(fn):
     # Generate Pydantic v2 model from the remaining args
     fn._json_schema = InputModel.model_json_schema()
     return fn
-\`\`\`
+```

@@ -1093,3 +1093,11 @@ The `gitStatus` block injected at session start is captured once at launch. By t
 - Historical docs still contain many `Perplexity-Tools` references; active-path docs are cleaned first, historical artifacts are tracked as non-blocking warnings.
 
 → [wiki/09-policy-fail-closed-and-checklist.md](wiki/09-policy-fail-closed-and-checklist.md)
+
+## 2026-05-04 — Technical Architecture: Ghost Path Extraction
+
+- **Symptom**: Advanced v1 features (symlink automation, IP sync) were lost during the structural rewrite to orama-system.
+- **Cause**: Focus on 'clean lineage' led to a feature regression by discarding the 'messy' main backup.
+- **Solution**: Use the `recovery-20260424` branch as a clean-room for extraction.
+- **Rule**: Every 'v1 hack' is a potential v2 primitive. Audit the `backup-main` tag (1675ab4) for high-value logic before finalizing the v2 microkernel.
+- **Reference**: Symlink automation logic identified in Commit 1675ab4 (start.sh).

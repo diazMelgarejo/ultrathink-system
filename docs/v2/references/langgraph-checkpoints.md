@@ -14,9 +14,9 @@ LangGraph uses a **Thread ID + Checkpoint** key-value pair. This allows the same
 We will adopt the **Thread ID** concept as our \`session_id\`. Our \`SqliteCheckpointer\` (Tier 3 plugin) will store the full \`PerpetuaState\` blob after every successful node transition, indexed by \`session_id\`.
 
 **Reference Implementation Hint:**
-\`\`\`python
+```python
 # We copy the "re-entry" logic:
 def aresume(session_id: str, user_input: str):
     last_checkpoint = load_latest(session_id)
     # Re-inject into the node that raised the Interrupt
-\`\`\`
+```

@@ -4,7 +4,7 @@
 
 ## 1. The "V1 Hack" Baseline
 In v0.9.9.8, tool schemas were defined manually in JSON or required heavy boilerplate:
-\`\`\`python
+```python
 # v1 style
 tools = [
     {
@@ -13,7 +13,7 @@ tools = [
         "parameters": { ... large manual json ... }
     }
 ]
-\`\`\`
+```
 **Result**: High friction for developers; prone to schema-code drift.
 
 ## 2. Pydantic AI "Magic" (Technical Analysis)
@@ -26,7 +26,7 @@ Pydantic AI uses three components to automate this:
 We will adopt the **"Shadow Model"** pattern but replace \`griffe\` with a simple regex-based docstring parser (Google-style support only) to keep dependencies minimal.
 
 ### Key Logic (Planned for graph/tool.py):
-\`\`\`python
+```python
 import inspect
 from pydantic import create_model, Field
 
@@ -55,7 +55,7 @@ def tool(fn):
     fn._shadow_model = create_model(f"{fn.__name__}Args", **fields)
     fn._mcp_schema = fn._shadow_model.model_json_schema()
     return fn
-\`\`\`
+```
 
 ## 4. Integration with Primitives
 - **MCP Compatibility**: The \`_mcp_schema\` generated here is directly consumable by the v2 \`MCP-Optional\` transport module.

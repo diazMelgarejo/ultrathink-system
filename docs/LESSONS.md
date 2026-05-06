@@ -1094,6 +1094,80 @@ The `gitStatus` block injected at session start is captured once at launch. By t
 
 → [wiki/09-policy-fail-closed-and-checklist.md](wiki/09-policy-fail-closed-and-checklist.md)
 
+---
+
+## 2026-05-06 — Claude — Cherry-pick conflict resolution silently truncates files
+
+**Agent**: Claude (Sonnet 4.6)
+**Branch**: check-recovery-gemini
+**Severity**: High — data loss risk on every multi-commit cherry-pick
+
+### Problem
+
+After cherry-picking 4 recovery commits (16eacf9, 9e70566, 4de7b09, 9876706)
+onto a branch based on main, conflict resolution incorrectly took the *recovery
+branch's older/shorter* file versions instead of main's richer ones — for 5 files
+across two separate incidents:
+
+| File | main lines | branch after cherry-pick | Lost |
+|------|-----------|--------------------------|------|
+| `scripts/review/repo_hygiene.py` | 363 | 204 | 159 lines of checks |
+| `tests/test_repo_hygiene.py` | 147 | 34 | 113 lines of tests |
+| `scripts/git/check_identity.sh` | 32 | 27 (elif reimpl.) | loop extensibility |
+| `docs/wiki/08-git-hygiene-and-branching.md` | 122 | 122 (wrong content) | Codex identity text |
+| `CLAUDE.md` | 217 | 225 (duplicate block) | duplicate cyre-only block injected |
+
+The first two were silent — `pytest` still ran (just against the 34-line stub),
+reporting 147 passed. No error surfaced until human review of the PR diff.
+
+### Root cause
+
+During `git cherry-pick` with `--strategy-option=ours`, "ours" means the branch
+being cherry-picked INTO at that point in time — which is based on main. But
+add/add conflicts and some content conflicts were resolved in the wrong direction,
+taking the recovery commit's older version of files that main had substantially
+expanded.
+
+### Detection method that works
+
+After any cherry-pick with conflicts, run:
+
+```bash
+for f in $(git diff --name-only main...HEAD); do
+  main_n=$(git show "main:$f" 2>/dev/null | wc -l | tr -d ' ')
+  branch_n=$(git show "HEAD:$f" 2>/dev/null | wc -l | tr -d ' ')
+  [ "$branch_n" -lt "$main_n" ] && echo "SHORTER ⚠  $f  main=$main_n branch=$branch_n"
+done
+```
+
+Any file where branch < main line count is suspicious. Then do a full `git diff
+main HEAD -- <file>` on each and classify every removed line as either intentional
+or accidental.
+
+### Fix
+
+Restore truncated files verbatim from main:
+
+```bash
+git show main:path/to/file > path/to/file
+git add path/to/file
+```
+
+Then verify content diffs for zero-delta files (same line count ≠ same content —
+check for replaced paragraphs, reversed identity text, injected duplicates).
+
+### Rule going forward
+
+**Assume everything is wrong after a cherry-pick with conflicts.**
+Treat the line-count audit as mandatory before any push, not optional.
+Files shorter than main = immediate stop and manual review.
+Line-count parity is necessary but not sufficient — run full `git diff main HEAD`
+on every changed file and justify each removed line.
+
+### Open follow-ups
+
+- Add line-count audit step to `scripts/review/repo_hygiene.py` as a pre-merge
+  CI gate for branches with cherry-pick history (future work).
 ## 2026-05-04 — Technical Architecture: Ghost Path Extraction
 
 - **Symptom**: Advanced v1 features (symlink automation, IP sync) were lost during the structural rewrite to orama-system.
@@ -1101,3 +1175,162 @@ The `gitStatus` block injected at session start is captured once at launch. By t
 - **Solution**: Use the `recovery-20260424` branch as a clean-room for extraction.
 - **Rule**: Every 'v1 hack' is a potential v2 primitive. Audit the `backup-main` tag (1675ab4) for high-value logic before finalizing the v2 microkernel.
 - **Reference**: Symlink automation logic identified in Commit 1675ab4 (start.sh).
+
+---
+
+## 2026-05-06 — Claude — Idempotency, validator drift, and CWD anchoring (Codex P1/P2)
+
+**Agent**: Claude (Sonnet 4.6) + Codex (chatgpt-codex-connector)
+**Branch**: check-recovery-gemini → PR #32
+**Severity**: High — three latent footguns in `start.sh` + cross-validator drift
+
+### What Codex caught that single-pass review missed
+
+PR #32 (commit b7733f1) integrated the `_ensure_symlink` automation from
+commit 1675ab4. Local `pytest` was green and a manual run of the symlink
+logic against the real PT path "worked." Codex review then surfaced three
+issues that would only manifest in production startups:
+
+1. **Regular-file crash under `set -e`** — `_ensure_symlink` only checked
+   `[ ! -L "$link" ]` (not a symlink) before `ln -s`. When the link path
+   was a tracked regular file (e.g. `network_autoconfig.py` is a real
+   tracked Python module in this repo), `ln -s` returned exit 1 with
+   "File exists" and `set -e` killed `start.sh` before any service
+   launched. **Local manual tests missed this** because the link path
+   was empty during testing — the test environment hadn't simulated the
+   tracked-file case.
+
+2. **Validator policy drift** — `repo_hygiene.py` had momentarily been
+   restored to a single-identity policy (`cyre <Lawrence@cyre.me>`),
+   while `check_identity.sh` accepted both `cyre` and `Codex`. Codex
+   sessions would pass the gate-script but fail the hygiene script and
+   the test that wraps it. The two validators must enforce the *same*
+   set or one becomes a fiction.
+
+3. **CWD-dependent symlink** — `_ensure_symlink "network_autoconfig.py"
+   "$_REL_NET_CONFIG"` ran with whatever CWD `start.sh` was invoked
+   from, not `$SCRIPT_DIR`. Worked in dev because we always ran from
+   the repo root. Would silently misroute the symlink the moment a user
+   typed `/path/to/start.sh` from elsewhere.
+
+### Root patterns
+
+These three findings collapse to **two patterns** worth promoting to
+v2 design decisions:
+
+#### Pattern A — Idempotent filesystem helpers (4-state guard)
+
+Any helper that mutates the filesystem must explicitly handle every
+state of the destination, in priority order:
+
+```bash
+_ensure_symlink() {
+  local link="$1" target="$2"
+  if [ -L "$link" ] && [ -e "$link" ]; then
+    return 0                                      # 1. valid symlink → no-op
+  elif [ -L "$link" ] && [ ! -e "$link" ]; then
+    # 2. broken symlink → re-link if target exists
+    [ -e "$target" ] && rm "$link" && ln -s "$target" "$link"
+  elif [ -e "$link" ]; then
+    # 3. regular file/dir → warn and skip (do NOT clobber)
+    echo "WARN: $link occupies path as regular file; skipping symlink"
+  else
+    # 4. nothing → create
+    ln -s "$target" "$link"
+  fi
+}
+```
+
+The non-negotiable property: every branch returns 0. No state crashes
+under `set -e`. Idempotent across N invocations.
+
+#### Pattern B — Single-source policy, multi-validator consumption
+
+Allowed-identity lists, hardware policies, port assignments, allow/deny
+patterns — anything that two scripts both check — must live in **one
+file** that both scripts load. Constants duplicated across `bash` and
+`python` will drift. Drift only surfaces when the rare branch fires.
+
+In v1 today: two validators, two source-of-truth lists. In v2:
+`config/identities.yaml` (or equivalent), loaded by both bash and
+python via shared shim.
+
+#### Pattern C — Anchor every CWD-sensitive call
+
+Operations that resolve paths from `pwd` (`ln -s`, `cd`, relative
+`subprocess` calls, `Path()` without absolute prefix) must run inside
+`(cd "$SCRIPT_DIR" && ...)` or use absolute paths. Defaulting to "the
+caller's CWD" is a footgun that hides until invoked from elsewhere.
+
+### Detection method
+
+For any new shell script touching the filesystem:
+
+```bash
+# Smoke test — assume the worst case for every state
+TMPDIR=$(mktemp -d) && cd "$TMPDIR"
+echo "tracked" > foo                    # state: regular file
+_ensure_symlink "foo" "/some/target"    # must NOT crash under set -e
+ln -s /nonexistent broken_link          # state: broken symlink
+_ensure_symlink "broken_link" "."       # must re-link or warn
+ln -s . valid_link                      # state: valid symlink
+_ensure_symlink "valid_link" "."        # must be no-op
+_ensure_symlink "fresh" "."             # state: nothing
+_ensure_symlink "fresh" "."             # second run — still no error (idempotency)
+```
+
+Run all four states. Run each twice. Exit code must be 0 every time.
+
+### Multi-agent review beats single-agent review
+
+This is the third independent finding from a Codex pass that Claude
+single-pass review missed (Gemini caught the api_server.py state-env
+mismatch on a prior session; Codex caught the cherry-pick truncation
+on this session; Codex caught these three on the same PR). For
+significant changes, multi-model review pays for itself.
+
+### Open follow-ups → see v2 design
+
+These patterns are now first-class v2 design requirements. See:
+- `docs/v2/11-idempotency-and-guard-patterns.md` — codified patterns
+- `docs/v2/10-v1-hacks-automation-orbit.md` — Link Watcher must use
+  the 4-state guard from day one
+- `docs/v2/01-kernel-spec.md` — kernel filesystem helpers MUST be
+  idempotent + CWD-anchored; pre-merge CI gate must run the smoke
+  test above against every fs helper
+
+---
+
+## 2026-05-06 — xAI model retirement 2026-05-15; grok-4.3 + grok-4.20-non-reasoning defaults
+
+**What changed**
+
+xAI is retiring 8 model IDs on 2026-05-15 12:00 PM PT. Any
+`model_hardware_policy.yml` entry or router constant still referencing them
+will cause a hard dispatch failure at that time.
+
+**Retired IDs**
+
+`grok-4-1-fast-reasoning`, `grok-4-1-fast-non-reasoning`,
+`grok-4-fast-reasoning`, `grok-4-fast-non-reasoning`, `grok-4-0709`,
+`grok-code-fast-1`, `grok-3`, `grok-imagine-image-pro`
+
+**Replacement routing (v2 defaults)**
+
+| Workload | New model | Notes |
+|----------|-----------|-------|
+| Reasoning / coding | `grok-4.3` | Coding → PLAN-ONLY until Win-coder slot available; reasoning → full ACT always |
+| Non-reasoning / non-coding | `grok-4.20-non-reasoning` | research, ops, chat, summarisation |
+| Image generation | *(no announced replacement)* | Surface error to user; do not silently fall back |
+
+**Coding ACT gate**: resumes when `swarm_state.md` reports `WIN_CODER: AVAILABLE`
+(same file already polled by the Windows-sequential-load rule).
+
+**Design rule promoted to v2**
+
+- All model ID lists must be single-source in `perpetua-core/config/` (Pattern B
+  from `11-idempotency-and-guard-patterns.md`) — never duplicated in bash + python.
+- Add CI gate `test_no_retired_model_ids` that greps `model_hardware_policy.yml`
+  for any known-retired ID and fails if found.
+
+**Spec doc**: `docs/v2/12-xai-model-migration-2026-05.md`

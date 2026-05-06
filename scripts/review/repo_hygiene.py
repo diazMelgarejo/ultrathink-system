@@ -21,6 +21,8 @@ FORBIDDEN_TOKENS = (
 IDENTITY_DOC_EXCEPTIONS = {
     ".mailmap",
     "docs/wiki/08-git-hygiene-and-branching.md",
+    # v2 spec doc — quotes forbidden tokens as YAML config examples, not leaks
+    "docs/v2/11-idempotency-and-guard-patterns.md",
 }
 PRIVATE_GENERATED_TRACKED = {".env", ".env.local", ".paths"}
 MARKDOWN_LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")

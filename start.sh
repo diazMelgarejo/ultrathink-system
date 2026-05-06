@@ -113,6 +113,74 @@ else
   _info "path" "PT_DIR=${PT_DIR}"
 fi
 
+# ── Symlink Validation (from 1675ab4 — auto-repair PT sibling symlinks) ──────
+# Ensures network_autoconfig.py and lib/shared/agentic_stack are wired to live
+# PT paths. Uses relative path calculation so symlinks survive directory moves.
+_ensure_symlink() {
+  # Usage: _ensure_symlink <link-path> <target-path>
+  # Idempotent: safe to call on every startup.
+  # Runs with the caller's cwd — callers must cd to the intended directory first.
+  # Five-state guard (extends 4-state with stale-target detection):
+  #   1. Valid symlink pointing at target       → no-op
+  #   2. Valid symlink pointing at wrong target → relink (PT_DIR moved)
+  #   3. Broken symlink (dangling)              → repair if target exists
+  #   4. Regular file/dir occupies link path   → warn + skip (preserve user data)
+  #   5. Nothing at link path                  → create
+  local link="$1" target="$2"
+  if [ -L "$link" ] && [ -e "$link" ]; then
+    # Valid symlink — check if it already points at the right target.
+    local current_target
+    current_target="$(readlink "$link")"
+    if [ "$current_target" = "$target" ]; then
+      return 0   # already correct — true no-op
+    fi
+    # PT_DIR moved or target changed — relink to new location.
+    _info "link" "retargeting symlink: $link ($current_target → $target)"
+    rm "$link"
+    ln -s "$target" "$link"
+    return 0
+  elif [ -L "$link" ] && [ ! -e "$link" ]; then
+    # Broken symlink — attempt re-link.
+    _warn "link" "broken symlink: $link — attempting re-link to $target"
+    if [ -e "$target" ]; then
+      rm "$link"
+      ln -s "$target" "$link"
+      _info "link" "re-linked: $link → $target"
+    else
+      _warn "link" "re-link skipped: target $target does not exist"
+    fi
+  elif [ -e "$link" ]; then
+    # Regular file or directory occupies the link path — do not overwrite.
+    # The tracked file takes precedence; symlink creation is skipped silently.
+    _warn "link" "skipping symlink $link: path exists as a regular file/dir (manual migration needed if PT override is desired)"
+  else
+    # Nothing at link path — create the symlink.
+    _info "link" "creating symlink: $link → $target"
+    ln -s "$target" "$link"
+  fi
+}
+
+if [ -n "${PT_DIR:-}" ]; then
+  # network_autoconfig.py — Python module for LAN IP detection
+  _PT_NET_CONFIG="${PT_DIR}/packages/net_utils/network_autoconfig.py"
+  if [ -f "$_PT_NET_CONFIG" ]; then
+    _REL_NET_CONFIG="$(_PYLINK_SRC="$_PT_NET_CONFIG" _PYLINK_BASE="$SCRIPT_DIR" \
+      python3 -c "import os; print(os.path.relpath(os.environ['_PYLINK_SRC'],os.environ['_PYLINK_BASE']))" 2>/dev/null || true)"
+    [ -n "$_REL_NET_CONFIG" ] && (cd "$SCRIPT_DIR" && _ensure_symlink "network_autoconfig.py" "$_REL_NET_CONFIG")
+  fi
+
+  # lib/shared/agentic_stack — shared library from PT
+  _PT_STACK="${PT_DIR}/packages/agentic-stack"
+  if [ -d "$_PT_STACK" ]; then
+    mkdir -p "$SCRIPT_DIR/lib/shared"
+    _REL_STACK="$(_PYLINK_SRC="$_PT_STACK" _PYLINK_BASE="$SCRIPT_DIR/lib/shared" \
+      python3 -c "import os; print(os.path.relpath(os.environ['_PYLINK_SRC'],os.environ['_PYLINK_BASE']))" 2>/dev/null || true)"
+    if [ -n "$_REL_STACK" ]; then
+      (cd "$SCRIPT_DIR/lib/shared" && _ensure_symlink "agentic_stack" "$_REL_STACK")
+    fi
+  fi
+fi
+
 # Write .paths on first run (or if --discover requested)
 if [ ! -f "$PATHS_FILE" ] || [[ "${1:-}" == "--discover" ]]; then
   cat > "$PATHS_FILE" << PATHSEOF
@@ -263,9 +331,9 @@ if not WIN_IP:
     except Exception:
         pass
 
-# ── Priority 4: subnet.103 constant (subnet-portable, not a fixed IP) ────────
+# ── Priority 4: subnet.104 constant (subnet-portable, not a fixed IP) ────────
 # Derives Win IP from Mac's own outbound interface subnet.
-# If Mac is on 192.168.1.x → Win = 192.168.1.103 (works on any /24 without change).
+# If Mac is on 192.168.1.x → Win = 192.168.1.104 (works on any /24 without change).
 # This is ONLY reached if discover.py failed AND openclaw.json is unreadable.
 if not WIN_IP:
     try:
@@ -273,10 +341,10 @@ if not WIN_IP:
         with _s.socket(_s.AF_INET, _s.SOCK_DGRAM) as _sk:
             _sk.connect(('8.8.8.8', 80))
             _local = _sk.getsockname()[0]
-        WIN_IP = '.'.join(_local.split('.')[:3]) + '.103'
-        source = 'subnet.103'
+        WIN_IP = '.'.join(_local.split('.')[:3]) + '.104'
+        source = 'subnet.104'
     except Exception:
-        WIN_IP = '192.168.254.103'   # absolute last resort — static /24 constant
+        WIN_IP = '192.168.254.104'   # absolute last resort — static /24 constant
         source = 'hardcoded-constant'
 
 print(f'MAC_IP={MAC_IP}')
@@ -286,7 +354,7 @@ print(f'IP_SOURCE={source}')
 
 eval "$_IP_VARS"
 MAC_IP="${MAC_IP:-localhost}"
-WIN_IP="${WIN_IP:-192.168.254.103}"
+WIN_IP="${WIN_IP:-192.168.254.104}"
 IP_SOURCE="${IP_SOURCE:-last-resort-constant}"
 
 _info  "ip" "MAC_IP=${MAC_IP}  WIN_IP=${WIN_IP}  source=${IP_SOURCE}"
@@ -358,6 +426,8 @@ export LM_STUDIO_MAC_ENDPOINT="${LM_STUDIO_MAC_ENDPOINT:-http://localhost:1234}"
 export LM_STUDIO_WIN_ENDPOINTS="${LM_STUDIO_WIN_ENDPOINTS:-http://${WIN_IP}:1234}"
 export WINDOWS_IP="${WINDOWS_IP:-${WIN_IP}}"
 export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
+# WIN_LM_STUDIO_HOST — consumed by api_server.py to enable Windows LM Studio provider
+export WIN_LM_STUDIO_HOST="${WIN_LM_STUDIO_HOST:-${WIN_IP}}"
 
 _info "env" "endpoints exported to child processes"
 _var  "env" "OLLAMA_MAC_ENDPOINT"    "$OLLAMA_MAC_ENDPOINT"    "derived"

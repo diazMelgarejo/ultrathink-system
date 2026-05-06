@@ -150,7 +150,9 @@ orama-system/docs/v2/
 ├── 07-agate-vision.md
 ├── 08-technical-architecture-review.md
 ├── 09-comparative-analysis-and-merging-plan.md
-└── 10-v1-hacks-automation-orbit.md
+├── 10-v1-hacks-automation-orbit.md
+├── 11-idempotency-and-guard-patterns.md
+└── 12-xai-model-migration-2026-05.md   ← xAI retirements 2026-05-15; grok-4.3 + grok-4.20-non-reasoning defaults
 ```
 
 ---

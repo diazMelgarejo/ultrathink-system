@@ -18,7 +18,7 @@ sub_skills:
     trigger: "Any content insertion, file write, paste, upload, or scripted output"
 ---
 
-# ultrathink System Skill
+# orama-system Skill
 
 > "Technology married with humanities yields solutions that make hearts sing.
 > Every solution should feel inevitable — so elegant it couldn't be done any other way."

@@ -135,7 +135,8 @@ if [ -n "${PT_DIR:-}" ]; then
   # network_autoconfig.py — Python module for LAN IP detection
   _PT_NET_CONFIG="${PT_DIR}/packages/net_utils/network_autoconfig.py"
   if [ -f "$_PT_NET_CONFIG" ]; then
-    _REL_NET_CONFIG="$(python3 -c "import os.path; print(os.path.relpath('$_PT_NET_CONFIG', '$SCRIPT_DIR'))" 2>/dev/null || true)"
+    _REL_NET_CONFIG="$(_PYLINK_SRC="$_PT_NET_CONFIG" _PYLINK_BASE="$SCRIPT_DIR" \
+      python3 -c "import os; print(os.path.relpath(os.environ['_PYLINK_SRC'],os.environ['_PYLINK_BASE']))" 2>/dev/null || true)"
     [ -n "$_REL_NET_CONFIG" ] && _ensure_symlink "network_autoconfig.py" "$_REL_NET_CONFIG"
   fi
 
@@ -143,7 +144,8 @@ if [ -n "${PT_DIR:-}" ]; then
   _PT_STACK="${PT_DIR}/packages/agentic-stack"
   if [ -d "$_PT_STACK" ]; then
     mkdir -p "$SCRIPT_DIR/lib/shared"
-    _REL_STACK="$(python3 -c "import os.path; print(os.path.relpath('$_PT_STACK', '$SCRIPT_DIR/lib/shared'))" 2>/dev/null || true)"
+    _REL_STACK="$(_PYLINK_SRC="$_PT_STACK" _PYLINK_BASE="$SCRIPT_DIR/lib/shared" \
+      python3 -c "import os; print(os.path.relpath(os.environ['_PYLINK_SRC'],os.environ['_PYLINK_BASE']))" 2>/dev/null || true)"
     if [ -n "$_REL_STACK" ]; then
       (cd "$SCRIPT_DIR/lib/shared" && _ensure_symlink "agentic_stack" "$_REL_STACK")
     fi

@@ -2,14 +2,18 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
 
 
-APPROVED_NAME = "cyre"
-APPROVED_EMAIL = "Lawrence@cyre.me"
+APPROVED_IDENTITIES = {
+    ("cyre", "Lawrence@cyre.me"),
+    ("Codex", "codex@openai.com"),
+}
 FORBIDDEN_TOKENS = (
     "Lawrence " + "Melgarejo",
     "Lawrence" + "@bettermind.ph",
@@ -19,6 +23,37 @@ IDENTITY_DOC_EXCEPTIONS = {
     "docs/wiki/08-git-hygiene-and-branching.md",
 }
 PRIVATE_GENERATED_TRACKED = {".env", ".env.local", ".paths"}
+MARKDOWN_LINK_PATTERN = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+NEW_MARKDOWN_LINE_WARN = 200
+EXISTING_MARKDOWN_LINE_WARN = 500
+GENERATED_ARTIFACT_PATTERNS = (
+    ".DS_Store",
+    "*/.DS_Store",
+    "._*",
+    "*/._*",
+    "__pycache__/*",
+    "*/__pycache__/*",
+    "*.pyc",
+    "*.pyo",
+    ".pytest_cache/*",
+    "*/.pytest_cache/*",
+    ".mypy_cache/*",
+    "*/.mypy_cache/*",
+    "dist/*",
+    "*/dist/*",
+    "build/*",
+    "*/build/*",
+    "DerivedData/*",
+    "*/DerivedData/*",
+    "*.egg-info/*",
+    "*.whl",
+    "*.tar.gz",
+    "*.xcuserstate",
+    "*.xcscmblueprint",
+    "*.xcodeproj/xcuserdata/*",
+    "*.xcworkspace/xcuserdata/*",
+    "*.xcuserdatad/*",
+)
 WORKFLOW_WRITE_MARKERS = (
     "softprops/action-gh-release",
     "peter-evans/create-pull-request",
@@ -27,6 +62,10 @@ WORKFLOW_WRITE_MARKERS = (
     "git push",
 )
 LEGACY_NAME = "ultrathink-system"
+STALE_SKILL_REF_TOKENS = (
+    "bin/" + "skills",
+    "bin" + ".skills",
+)
 HISTORICAL_HINTS = (
     "previous identity",
     "renamed",
@@ -90,16 +129,110 @@ def check_private_generated_tracking(files: list[str]) -> list[str]:
     ]
 
 
+def check_markdown_link_hygiene(root: Path, files: list[str]) -> list[str]:
+    errors: list[str] = []
+    for rel in files:
+        if not rel.endswith(".md"):
+            continue
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for target in MARKDOWN_LINK_PATTERN.findall(text):
+            normalized = target.strip()
+            if normalized.startswith("<") and normalized.endswith(">"):
+                normalized = normalized[1:-1].strip()
+            if normalized.startswith(("http://", "https://", "#", "mailto:")):
+                continue
+            if normalized.startswith("file://") or normalized.startswith("/") or re.match(r"^[A-Za-z]:[\\/]", normalized):
+                errors.append(f"markdown link must be repo-relative: {rel} -> {normalized}")
+    return errors
+
+
+def changed_markdown_files(root: Path) -> set[str]:
+    changed: set[str] = set()
+    for args in (
+        ("diff", "--name-only", "--diff-filter=ACMR", "HEAD", "--", "*.md"),
+        ("diff", "--cached", "--name-only", "--diff-filter=ACMR", "HEAD", "--", "*.md"),
+    ):
+        proc = run_git(root, *args)
+        if proc.returncode == 0:
+            changed.update(line for line in proc.stdout.splitlines() if line.endswith(".md"))
+    return changed
+
+
+def exists_in_head(root: Path, rel: str) -> bool:
+    proc = run_git(root, "cat-file", "-e", f"HEAD:{rel}")
+    return proc.returncode == 0
+
+
+def check_markdown_size_warnings(
+    root: Path,
+    files: list[str],
+    changed: set[str] | None = None,
+    existing: set[str] | None = None,
+) -> list[str]:
+    warnings: list[str] = []
+    changed = changed_markdown_files(root) if changed is None else changed
+    for rel in sorted(changed):
+        if rel not in files or not rel.endswith(".md"):
+            continue
+        path = root / rel
+        if not path.is_file():
+            continue
+        try:
+            line_count = len(path.read_text(encoding="utf-8").splitlines())
+        except UnicodeDecodeError:
+            continue
+        existed_before = rel in existing if existing is not None else exists_in_head(root, rel)
+        if not existed_before and line_count > NEW_MARKDOWN_LINE_WARN:
+            warnings.append(
+                f"{rel} has {line_count} lines; new markdown files over "
+                f"{NEW_MARKDOWN_LINE_WARN} lines should ask the user about offloading "
+                "related content to references/ or sub-skills"
+            )
+        if existed_before and line_count > EXISTING_MARKDOWN_LINE_WARN:
+            warnings.append(
+                f"{rel} has {line_count} lines; existing markdown files over "
+                f"{EXISTING_MARKDOWN_LINE_WARN} lines should ask the user about splitting "
+                "or redirecting detailed content elsewhere"
+            )
+    return warnings
+
+
+def check_generated_artifact_tracking(files: list[str]) -> list[str]:
+    errors: list[str] = []
+    for rel in files:
+        if any(fnmatch.fnmatch(rel, pattern) for pattern in GENERATED_ARTIFACT_PATTERNS):
+            errors.append(f"generated artifact is tracked: {rel}")
+    return errors
+
+
+def check_git_internal_junk(root: Path) -> list[str]:
+    git_dir = root / ".git"
+    refs_dir = git_dir / "refs"
+    if not refs_dir.exists():
+        return []
+    return [
+        f"macOS metadata file inside git refs: {path.relative_to(root)}"
+        for path in refs_dir.rglob(".DS_Store")
+    ]
+
+
 def check_identity(root: Path) -> list[str]:
     name = run_git(root, "config", "user.name").stdout.strip()
     email = run_git(root, "config", "user.email").stdout.strip()
     if os.getenv("GITHUB_ACTIONS") == "true" and not name and not email:
         return []
-    if name != APPROVED_NAME or email != APPROVED_EMAIL:
+    if (name, email) not in APPROVED_IDENTITIES:
+        expected = " or ".join(f"{n} <{e}>" for n, e in sorted(APPROVED_IDENTITIES))
         return [
             "git identity mismatch: "
             f"found {name or '<unset>'} <{email or '<unset>'}>; "
-            f"expected {APPROVED_NAME} <{APPROVED_EMAIL}>"
+            f"expected {expected}"
         ]
     return []
 
@@ -133,10 +266,29 @@ def check_workflow_permissions(root: Path) -> list[str]:
     return errors
 
 
+def check_stale_skill_path_refs(root: Path, files: list[str]) -> list[str]:
+    errors: list[str] = []
+    for rel in files:
+        path = root / rel
+        if not path.is_file() or is_binary(path):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8")
+        except UnicodeDecodeError:
+            continue
+        for token in STALE_SKILL_REF_TOKENS:
+            if token in text:
+                errors.append(f"stale skill path/module reference in tracked file: {rel} -> {token}")
+                break
+    return errors
+
+
 def classify_legacy_name_refs(root: Path, files: list[str]) -> tuple[int, int]:
     active = 0
     historical = 0
     for rel in files:
+        if rel == "scripts/review/repo_hygiene.py":
+            continue
         path = root / rel
         if not path.is_file() or is_binary(path):
             continue
@@ -180,8 +332,13 @@ def main() -> int:
     errors.extend(check_identity(root))
     errors.extend(scan_forbidden_identity(root, files))
     errors.extend(check_private_generated_tracking(files))
+    errors.extend(check_markdown_link_hygiene(root, files))
+    errors.extend(check_generated_artifact_tracking(files))
     errors.extend(check_ecc(root, files))
     errors.extend(check_workflow_permissions(root))
+    errors.extend(check_stale_skill_path_refs(root, files))
+    errors.extend(check_git_internal_junk(root))
+    warnings = check_markdown_size_warnings(root, files)
     active_legacy, historical_legacy = classify_legacy_name_refs(root, files)
 
     for line in report_status(root):
@@ -190,6 +347,8 @@ def main() -> int:
         "INFO: legacy name references "
         f"active={active_legacy} historical_or_allowed={historical_legacy}"
     )
+    for warning in warnings:
+        print(f"WARNING: {warning}")
 
     if errors:
         for error in errors:

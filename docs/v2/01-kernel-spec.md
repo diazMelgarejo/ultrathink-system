@@ -415,6 +415,8 @@ Lifted/skeletonized from today's `orama-system/api_server.py` per D9. Internal-o
 8. `pytest tests/test_structured_output.py` — `chat_structured()` retries on parse failure and increments `retry_count`.
 9. **Import boundary lint**: `grep -r "from oramasys" perpetua-core/` returns nothing. (CI gate.)
 10. Live integration: graph node calls Mac LM Studio (`192.168.x.110:1234`) and Windows LM Studio (`192.168.x.108:1234`) per `model_hardware_policy.yml` routing; `agent_log` table in SQLite shows correct dispatch sequence.
+11. **Idempotent filesystem helpers** (mandatory for every plugin that touches the fs): every helper ships with the 4/5-state guard test from `11-idempotency-and-guard-patterns.md` §2. No fs helper is accepted in `perpetua-core/graph/plugins/` without passing `test_ensure_symlink_all_four_states_idempotent` (or equivalent for its op type). (CI gate.)
+12. **Validator agreement** (mandatory when two or more modules enforce the same allowlist): `test_validators_agree_on_*` CI gate — every shared allowlist/denylist must live in `perpetua-core/config/` and both bash and python validators must read from it. See `11-idempotency-and-guard-patterns.md` §3. (CI gate.)
 
 ---
 

@@ -51,6 +51,20 @@ Acceptance:
 - LM Studio LAN integration: same prompt routed through v2.0 graph hits the same
   Mac vs Windows endpoints as v1 routes it (per `model_hardware_policy.yml`).
 
+### Phase 4 additional CI gates (from `11-idempotency-and-guard-patterns.md`)
+
+These gates are mandatory before Phase 4 is considered complete:
+
+| Gate | File | What it catches |
+|------|------|-----------------|
+| `test_ensure_symlink_all_four_states_idempotent` | per-plugin in `perpetua-core/graph/plugins/tests/` | fs helper crashes under `set -e`; broken-symlink, regular-file, stale-target branches |
+| `test_validators_agree_on_identity_set` | `perpetua-core/tests/test_policy_parity.py` | bash/python allowlist drift — silent commit failures |
+| `test_validators_agree_on_hardware_tiers` | same | hardware-tier allowlist drift across bash and python |
+| `test_*_works_from_unrelated_cwd` | `oramasys/tests/test_start_sh.py` | symlinks landing in caller's CWD instead of `$SCRIPT_DIR` |
+| **Multi-agent review pass** | CI pipeline step | run Codex or Gemini over kernel diff before merge; log new findings to LESSONS.md |
+
+See `11-idempotency-and-guard-patterns.md` §§2–4 for reference implementations and §6 for the 3-pass review pipeline design.
+
 ---
 
 ## Summary of lift-from-v1 inventory

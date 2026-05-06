@@ -1175,3 +1175,126 @@ on every changed file and justify each removed line.
 - **Solution**: Use the `recovery-20260424` branch as a clean-room for extraction.
 - **Rule**: Every 'v1 hack' is a potential v2 primitive. Audit the `backup-main` tag (1675ab4) for high-value logic before finalizing the v2 microkernel.
 - **Reference**: Symlink automation logic identified in Commit 1675ab4 (start.sh).
+
+---
+
+## 2026-05-06 — Claude — Idempotency, validator drift, and CWD anchoring (Codex P1/P2)
+
+**Agent**: Claude (Sonnet 4.6) + Codex (chatgpt-codex-connector)
+**Branch**: check-recovery-gemini → PR #32
+**Severity**: High — three latent footguns in `start.sh` + cross-validator drift
+
+### What Codex caught that single-pass review missed
+
+PR #32 (commit b7733f1) integrated the `_ensure_symlink` automation from
+commit 1675ab4. Local `pytest` was green and a manual run of the symlink
+logic against the real PT path "worked." Codex review then surfaced three
+issues that would only manifest in production startups:
+
+1. **Regular-file crash under `set -e`** — `_ensure_symlink` only checked
+   `[ ! -L "$link" ]` (not a symlink) before `ln -s`. When the link path
+   was a tracked regular file (e.g. `network_autoconfig.py` is a real
+   tracked Python module in this repo), `ln -s` returned exit 1 with
+   "File exists" and `set -e` killed `start.sh` before any service
+   launched. **Local manual tests missed this** because the link path
+   was empty during testing — the test environment hadn't simulated the
+   tracked-file case.
+
+2. **Validator policy drift** — `repo_hygiene.py` had momentarily been
+   restored to a single-identity policy (`cyre <Lawrence@cyre.me>`),
+   while `check_identity.sh` accepted both `cyre` and `Codex`. Codex
+   sessions would pass the gate-script but fail the hygiene script and
+   the test that wraps it. The two validators must enforce the *same*
+   set or one becomes a fiction.
+
+3. **CWD-dependent symlink** — `_ensure_symlink "network_autoconfig.py"
+   "$_REL_NET_CONFIG"` ran with whatever CWD `start.sh` was invoked
+   from, not `$SCRIPT_DIR`. Worked in dev because we always ran from
+   the repo root. Would silently misroute the symlink the moment a user
+   typed `/path/to/start.sh` from elsewhere.
+
+### Root patterns
+
+These three findings collapse to **two patterns** worth promoting to
+v2 design decisions:
+
+#### Pattern A — Idempotent filesystem helpers (4-state guard)
+
+Any helper that mutates the filesystem must explicitly handle every
+state of the destination, in priority order:
+
+```bash
+_ensure_symlink() {
+  local link="$1" target="$2"
+  if [ -L "$link" ] && [ -e "$link" ]; then
+    return 0                                      # 1. valid symlink → no-op
+  elif [ -L "$link" ] && [ ! -e "$link" ]; then
+    # 2. broken symlink → re-link if target exists
+    [ -e "$target" ] && rm "$link" && ln -s "$target" "$link"
+  elif [ -e "$link" ]; then
+    # 3. regular file/dir → warn and skip (do NOT clobber)
+    echo "WARN: $link occupies path as regular file; skipping symlink"
+  else
+    # 4. nothing → create
+    ln -s "$target" "$link"
+  fi
+}
+```
+
+The non-negotiable property: every branch returns 0. No state crashes
+under `set -e`. Idempotent across N invocations.
+
+#### Pattern B — Single-source policy, multi-validator consumption
+
+Allowed-identity lists, hardware policies, port assignments, allow/deny
+patterns — anything that two scripts both check — must live in **one
+file** that both scripts load. Constants duplicated across `bash` and
+`python` will drift. Drift only surfaces when the rare branch fires.
+
+In v1 today: two validators, two source-of-truth lists. In v2:
+`config/identities.yaml` (or equivalent), loaded by both bash and
+python via shared shim.
+
+#### Pattern C — Anchor every CWD-sensitive call
+
+Operations that resolve paths from `pwd` (`ln -s`, `cd`, relative
+`subprocess` calls, `Path()` without absolute prefix) must run inside
+`(cd "$SCRIPT_DIR" && ...)` or use absolute paths. Defaulting to "the
+caller's CWD" is a footgun that hides until invoked from elsewhere.
+
+### Detection method
+
+For any new shell script touching the filesystem:
+
+```bash
+# Smoke test — assume the worst case for every state
+TMPDIR=$(mktemp -d) && cd "$TMPDIR"
+echo "tracked" > foo                    # state: regular file
+_ensure_symlink "foo" "/some/target"    # must NOT crash under set -e
+ln -s /nonexistent broken_link          # state: broken symlink
+_ensure_symlink "broken_link" "."       # must re-link or warn
+ln -s . valid_link                      # state: valid symlink
+_ensure_symlink "valid_link" "."        # must be no-op
+_ensure_symlink "fresh" "."             # state: nothing
+_ensure_symlink "fresh" "."             # second run — still no error (idempotency)
+```
+
+Run all four states. Run each twice. Exit code must be 0 every time.
+
+### Multi-agent review beats single-agent review
+
+This is the third independent finding from a Codex pass that Claude
+single-pass review missed (Gemini caught the api_server.py state-env
+mismatch on a prior session; Codex caught the cherry-pick truncation
+on this session; Codex caught these three on the same PR). For
+significant changes, multi-model review pays for itself.
+
+### Open follow-ups → see v2 design
+
+These patterns are now first-class v2 design requirements. See:
+- `docs/v2/11-idempotency-and-guard-patterns.md` — codified patterns
+- `docs/v2/10-v1-hacks-automation-orbit.md` — Link Watcher must use
+  the 4-state guard from day one
+- `docs/v2/01-kernel-spec.md` — kernel filesystem helpers MUST be
+  idempotent + CWD-anchored; pre-merge CI gate must run the smoke
+  test above against every fs helper

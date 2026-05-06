@@ -17,7 +17,7 @@ These are the manual interventions required in v1.x to maintain system stability
 | **Node Versioning** | Hardcoded shebangs or forced path usage. | **Env Validator**: Runtime check that kills the process if Node < 22 is detected. |
 | **IP Discovery** | Redundant logic in \`discover.py\` and \`start.sh\`. | **Gossip Hub**: \`network_autoconfig.py\` emits live truth to \`GossipBus\`. |
 | **Pairing/Auth** | Manual \`openclaw devices approve\` terminal calls. | **Auth Handshake**: Automated pairing relay via the L2 manager. |
-| **Symlink Drift** | Manual creation/tracking in Git (Mode 120000). | **Link Watcher**: Self-healing symlink repair during pre-flight. |
+| **Symlink Drift** | Manual creation/tracking in Git (Mode 120000). | **Link Watcher**: Self-healing symlink repair during pre-flight. **MUST** use the 5-state guard from `11-idempotency-and-guard-patterns.md` §Pattern A (valid+correct → noop; valid+wrong-target → relink; broken → repair; regular-file → warn+skip; empty → create). |
 
 ---
 

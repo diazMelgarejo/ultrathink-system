@@ -120,9 +120,24 @@ _ensure_symlink() {
   # Usage: _ensure_symlink <link-path> <target-path>
   # Idempotent: safe to call on every startup.
   # Runs with the caller's cwd — callers must cd to the intended directory first.
+  # Five-state guard (extends 4-state with stale-target detection):
+  #   1. Valid symlink pointing at target       → no-op
+  #   2. Valid symlink pointing at wrong target → relink (PT_DIR moved)
+  #   3. Broken symlink (dangling)              → repair if target exists
+  #   4. Regular file/dir occupies link path   → warn + skip (preserve user data)
+  #   5. Nothing at link path                  → create
   local link="$1" target="$2"
   if [ -L "$link" ] && [ -e "$link" ]; then
-    # Valid symlink already present — nothing to do.
+    # Valid symlink — check if it already points at the right target.
+    local current_target
+    current_target="$(readlink "$link")"
+    if [ "$current_target" = "$target" ]; then
+      return 0   # already correct — true no-op
+    fi
+    # PT_DIR moved or target changed — relink to new location.
+    _info "link" "retargeting symlink: $link ($current_target → $target)"
+    rm "$link"
+    ln -s "$target" "$link"
     return 0
   elif [ -L "$link" ] && [ ! -e "$link" ]; then
     # Broken symlink — attempt re-link.

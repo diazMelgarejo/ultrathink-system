@@ -443,21 +443,27 @@ def _has_policy_env() -> bool:
 
 
 def _load_pt_runtime_state() -> dict[str, Any] | None:
-    # PT_AGENTS_STATE is exported by start.sh; PT_RUNTIME_STATE kept as fallback alias
-    state_path = (
-        os.getenv("PT_AGENTS_STATE", "").strip()
-        or os.getenv("PT_RUNTIME_STATE", "").strip()
-    )
-    if not state_path:
-        return None
-    path = Path(state_path)
-    if not path.exists():
-        return None
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("Failed to read PT runtime state %s: %s", path, exc)
-        return None
+    # Try each candidate in priority order; skip vars that point to missing or
+    # unreadable files rather than short-circuiting on the first non-empty env
+    # var.  This makes the function resilient to upgrade / mixed environments
+    # where PT_AGENTS_STATE may be exported but the file not yet created, while
+    # the legacy PT_RUNTIME_STATE still points to a valid path.
+    candidates = [
+        os.getenv("PT_AGENTS_STATE", "").strip(),
+        os.getenv("PT_RUNTIME_STATE", "").strip(),
+    ]
+    for state_path in candidates:
+        if not state_path:
+            continue
+        path = Path(state_path)
+        if not path.is_file():
+            continue
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Failed to read PT runtime state %s: %s", path, exc)
+            continue
+    return None
 
 # ── Request / Response models ─────────────────────────────────────────────────
 

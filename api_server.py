@@ -199,21 +199,6 @@ def _check_policy_available_for_request(model_hint: str, policy_source: str, pt_
                 f"Cannot enforce hardware affinity for '{model_hint}': policy unavailable."
             )
 
-def _legacy_root_env_aliases() -> str:
-    return (
-        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
-        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
-    )
-
-
-def _resolve_perpetua_root_env() -> str:
-    """Resolve PT root env with canonical key first, legacy fallback second."""
-    return (
-        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
-        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
-    )
-
-
 def _validate_hardware_policy(resolved_model: str) -> None:
     """Raise HardwareAffinityError if resolved_model is not valid for Windows execution.
 
@@ -458,7 +443,11 @@ def _has_policy_env() -> bool:
 
 
 def _load_pt_runtime_state() -> dict[str, Any] | None:
-    state_path = os.getenv("PT_RUNTIME_STATE", "").strip()
+    # PT_AGENTS_STATE is exported by start.sh; PT_RUNTIME_STATE kept as fallback alias
+    state_path = (
+        os.getenv("PT_AGENTS_STATE", "").strip()
+        or os.getenv("PT_RUNTIME_STATE", "").strip()
+    )
     if not state_path:
         return None
     path = Path(state_path)
@@ -712,8 +701,3 @@ if __name__ == "__main__":
     import uvicorn
     logger.info("Starting ultrathink API on %s:%d", HOST, PORT)
     uvicorn.run(app, host=HOST, port=PORT, log_level="info")
-def _has_policy_env() -> bool:
-    return bool(
-        os.getenv("PERPETUA_TOOLS_ROOT", "").strip()
-        or os.getenv("PERPETUA_TOOLS_PATH", "").strip()
-    )

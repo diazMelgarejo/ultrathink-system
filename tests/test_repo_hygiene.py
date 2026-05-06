@@ -20,7 +20,7 @@ def test_private_generated_config_is_not_tracked():
 
 def test_repo_hygiene_script_runs_clean():
     result = subprocess.run(
-        ["python", "scripts/review/repo_hygiene.py", "."],
+        ["python3", "scripts/review/repo_hygiene.py", "."],
         cwd=ROOT,
         text=True,
         stdout=subprocess.PIPE,

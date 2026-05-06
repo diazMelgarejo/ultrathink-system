@@ -113,6 +113,43 @@ else
   _info "path" "PT_DIR=${PT_DIR}"
 fi
 
+# ── Symlink Validation (from 1675ab4 — auto-repair PT sibling symlinks) ──────
+# Ensures network_autoconfig.py and lib/shared/agentic_stack are wired to live
+# PT paths. Uses relative path calculation so symlinks survive directory moves.
+_ensure_symlink() {
+  local link="$1" target="$2"
+  if [ ! -L "$link" ]; then
+    _info "link" "creating missing symlink: $link → $target"
+    ln -s "$target" "$link"
+  elif [ ! -e "$link" ]; then
+    _warn "link" "broken symlink: $link — attempting re-link to $target"
+    if [ -e "$target" ]; then
+      rm "$link"
+      ln -s "$target" "$link"
+      _info "link" "re-linked: $link → $target"
+    fi
+  fi
+}
+
+if [ -n "${PT_DIR:-}" ]; then
+  # network_autoconfig.py — Python module for LAN IP detection
+  _PT_NET_CONFIG="${PT_DIR}/packages/net_utils/network_autoconfig.py"
+  if [ -f "$_PT_NET_CONFIG" ]; then
+    _REL_NET_CONFIG="$(python3 -c "import os.path; print(os.path.relpath('$_PT_NET_CONFIG', '$SCRIPT_DIR'))" 2>/dev/null || true)"
+    [ -n "$_REL_NET_CONFIG" ] && _ensure_symlink "network_autoconfig.py" "$_REL_NET_CONFIG"
+  fi
+
+  # lib/shared/agentic_stack — shared library from PT
+  _PT_STACK="${PT_DIR}/packages/agentic-stack"
+  if [ -d "$_PT_STACK" ]; then
+    mkdir -p "$SCRIPT_DIR/lib/shared"
+    _REL_STACK="$(python3 -c "import os.path; print(os.path.relpath('$_PT_STACK', '$SCRIPT_DIR/lib/shared'))" 2>/dev/null || true)"
+    if [ -n "$_REL_STACK" ]; then
+      (cd "$SCRIPT_DIR/lib/shared" && _ensure_symlink "agentic_stack" "$_REL_STACK")
+    fi
+  fi
+fi
+
 # Write .paths on first run (or if --discover requested)
 if [ ! -f "$PATHS_FILE" ] || [[ "${1:-}" == "--discover" ]]; then
   cat > "$PATHS_FILE" << PATHSEOF
@@ -263,9 +300,9 @@ if not WIN_IP:
     except Exception:
         pass
 
-# ── Priority 4: subnet.103 constant (subnet-portable, not a fixed IP) ────────
+# ── Priority 4: subnet.104 constant (subnet-portable, not a fixed IP) ────────
 # Derives Win IP from Mac's own outbound interface subnet.
-# If Mac is on 192.168.1.x → Win = 192.168.1.103 (works on any /24 without change).
+# If Mac is on 192.168.1.x → Win = 192.168.1.104 (works on any /24 without change).
 # This is ONLY reached if discover.py failed AND openclaw.json is unreadable.
 if not WIN_IP:
     try:
@@ -273,10 +310,10 @@ if not WIN_IP:
         with _s.socket(_s.AF_INET, _s.SOCK_DGRAM) as _sk:
             _sk.connect(('8.8.8.8', 80))
             _local = _sk.getsockname()[0]
-        WIN_IP = '.'.join(_local.split('.')[:3]) + '.103'
-        source = 'subnet.103'
+        WIN_IP = '.'.join(_local.split('.')[:3]) + '.104'
+        source = 'subnet.104'
     except Exception:
-        WIN_IP = '192.168.254.103'   # absolute last resort — static /24 constant
+        WIN_IP = '192.168.254.104'   # absolute last resort — static /24 constant
         source = 'hardcoded-constant'
 
 print(f'MAC_IP={MAC_IP}')
@@ -286,7 +323,7 @@ print(f'IP_SOURCE={source}')
 
 eval "$_IP_VARS"
 MAC_IP="${MAC_IP:-localhost}"
-WIN_IP="${WIN_IP:-192.168.254.103}"
+WIN_IP="${WIN_IP:-192.168.254.104}"
 IP_SOURCE="${IP_SOURCE:-last-resort-constant}"
 
 _info  "ip" "MAC_IP=${MAC_IP}  WIN_IP=${WIN_IP}  source=${IP_SOURCE}"
@@ -358,6 +395,8 @@ export LM_STUDIO_MAC_ENDPOINT="${LM_STUDIO_MAC_ENDPOINT:-http://localhost:1234}"
 export LM_STUDIO_WIN_ENDPOINTS="${LM_STUDIO_WIN_ENDPOINTS:-http://${WIN_IP}:1234}"
 export WINDOWS_IP="${WINDOWS_IP:-${WIN_IP}}"
 export GPU_BOX="${GPU_BOX:-WINUSER@${WIN_IP}}"
+# WIN_LM_STUDIO_HOST — consumed by api_server.py to enable Windows LM Studio provider
+export WIN_LM_STUDIO_HOST="${WIN_LM_STUDIO_HOST:-${WIN_IP}}"
 
 _info "env" "endpoints exported to child processes"
 _var  "env" "OLLAMA_MAC_ENDPOINT"    "$OLLAMA_MAC_ENDPOINT"    "derived"

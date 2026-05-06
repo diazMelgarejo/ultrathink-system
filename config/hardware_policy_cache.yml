@@ -1,10 +1,10 @@
 # hardware_policy_cache.yml — orama-system offline DR fallback
 # Source:  /Users/lawrencecyremelgarejo/Documents/Terminal xCode/claude/OpenClaw/perplexity-api/Perpetua-Tools/config/model_hardware_policy.yml
-# Refreshed: 2026-05-01T01:34:04Z  sha256:ca797d86dd4b
+# Refreshed: 2026-05-06T00:00:00Z  (manual update — added ollama fallback model)
 #
 # This file is the Layer-2 disaster recovery fallback.
 # api_server.py uses it ONLY when PT is unreachable at startup.
-# Refresh: python scripts/refresh_policy_cache.py
+# Refresh: python3 scripts/refresh_policy_cache.py
 # DO NOT edit manually — it will be overwritten on next refresh.
 
 mac_only: []
@@ -17,9 +17,11 @@ shared:
   - gemma-4-e4b-it                                        # native: both confirmed
   - gemma-4-26b-a4b-it                                    # native: Win GGUF | proxied: Mac
   - text-embedding-nomic-embed-text-v1.5                  # native: both confirmed
+  - qwen3.5:9b-nvfp4                                      # Ollama Mac fallback — safe when Win Qwen3.5-27b active
 
 shared_aliases:
   - Qwen3.5-9B-MLX-4bit
   - qwen3.5-9b-mlx-4bit
   - Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2
   - gemma-4-26B-A4B-it-Q4_K_M
+  - qwen3.5:9b-nvfp4

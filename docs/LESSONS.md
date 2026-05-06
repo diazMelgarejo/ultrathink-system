@@ -1093,3 +1093,78 @@ The `gitStatus` block injected at session start is captured once at launch. By t
 - Historical docs still contain many `Perplexity-Tools` references; active-path docs are cleaned first, historical artifacts are tracked as non-blocking warnings.
 
 → [wiki/09-policy-fail-closed-and-checklist.md](wiki/09-policy-fail-closed-and-checklist.md)
+
+---
+
+## 2026-05-06 — Claude — Cherry-pick conflict resolution silently truncates files
+
+**Agent**: Claude (Sonnet 4.6)
+**Branch**: check-recovery-gemini
+**Severity**: High — data loss risk on every multi-commit cherry-pick
+
+### Problem
+
+After cherry-picking 4 recovery commits (16eacf9, 9e70566, 4de7b09, 9876706)
+onto a branch based on main, conflict resolution incorrectly took the *recovery
+branch's older/shorter* file versions instead of main's richer ones — for 5 files
+across two separate incidents:
+
+| File | main lines | branch after cherry-pick | Lost |
+|------|-----------|--------------------------|------|
+| `scripts/review/repo_hygiene.py` | 363 | 204 | 159 lines of checks |
+| `tests/test_repo_hygiene.py` | 147 | 34 | 113 lines of tests |
+| `scripts/git/check_identity.sh` | 32 | 27 (elif reimpl.) | loop extensibility |
+| `docs/wiki/08-git-hygiene-and-branching.md` | 122 | 122 (wrong content) | Codex identity text |
+| `CLAUDE.md` | 217 | 225 (duplicate block) | duplicate cyre-only block injected |
+
+The first two were silent — `pytest` still ran (just against the 34-line stub),
+reporting 147 passed. No error surfaced until human review of the PR diff.
+
+### Root cause
+
+During `git cherry-pick` with `--strategy-option=ours`, "ours" means the branch
+being cherry-picked INTO at that point in time — which is based on main. But
+add/add conflicts and some content conflicts were resolved in the wrong direction,
+taking the recovery commit's older version of files that main had substantially
+expanded.
+
+### Detection method that works
+
+After any cherry-pick with conflicts, run:
+
+```bash
+for f in $(git diff --name-only main...HEAD); do
+  main_n=$(git show "main:$f" 2>/dev/null | wc -l | tr -d ' ')
+  branch_n=$(git show "HEAD:$f" 2>/dev/null | wc -l | tr -d ' ')
+  [ "$branch_n" -lt "$main_n" ] && echo "SHORTER ⚠  $f  main=$main_n branch=$branch_n"
+done
+```
+
+Any file where branch < main line count is suspicious. Then do a full `git diff
+main HEAD -- <file>` on each and classify every removed line as either intentional
+or accidental.
+
+### Fix
+
+Restore truncated files verbatim from main:
+
+```bash
+git show main:path/to/file > path/to/file
+git add path/to/file
+```
+
+Then verify content diffs for zero-delta files (same line count ≠ same content —
+check for replaced paragraphs, reversed identity text, injected duplicates).
+
+### Rule going forward
+
+**Assume everything is wrong after a cherry-pick with conflicts.**
+Treat the line-count audit as mandatory before any push, not optional.
+Files shorter than main = immediate stop and manual review.
+Line-count parity is necessary but not sufficient — run full `git diff main HEAD`
+on every changed file and justify each removed line.
+
+### Open follow-ups
+
+- Add line-count audit step to `scripts/review/repo_hygiene.py` as a pre-merge
+  CI gate for branches with cherry-pick history (future work).

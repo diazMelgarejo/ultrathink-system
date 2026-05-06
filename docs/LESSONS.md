@@ -1298,3 +1298,39 @@ These patterns are now first-class v2 design requirements. See:
 - `docs/v2/01-kernel-spec.md` — kernel filesystem helpers MUST be
   idempotent + CWD-anchored; pre-merge CI gate must run the smoke
   test above against every fs helper
+
+---
+
+## 2026-05-06 — xAI model retirement 2026-05-15; grok-4.3 + grok-4.20-non-reasoning defaults
+
+**What changed**
+
+xAI is retiring 8 model IDs on 2026-05-15 12:00 PM PT. Any
+`model_hardware_policy.yml` entry or router constant still referencing them
+will cause a hard dispatch failure at that time.
+
+**Retired IDs**
+
+`grok-4-1-fast-reasoning`, `grok-4-1-fast-non-reasoning`,
+`grok-4-fast-reasoning`, `grok-4-fast-non-reasoning`, `grok-4-0709`,
+`grok-code-fast-1`, `grok-3`, `grok-imagine-image-pro`
+
+**Replacement routing (v2 defaults)**
+
+| Workload | New model | Notes |
+|----------|-----------|-------|
+| Reasoning / coding | `grok-4.3` | Coding → PLAN-ONLY until Win-coder slot available; reasoning → full ACT always |
+| Non-reasoning / non-coding | `grok-4.20-non-reasoning` | research, ops, chat, summarisation |
+| Image generation | *(no announced replacement)* | Surface error to user; do not silently fall back |
+
+**Coding ACT gate**: resumes when `swarm_state.md` reports `WIN_CODER: AVAILABLE`
+(same file already polled by the Windows-sequential-load rule).
+
+**Design rule promoted to v2**
+
+- All model ID lists must be single-source in `perpetua-core/config/` (Pattern B
+  from `11-idempotency-and-guard-patterns.md`) — never duplicated in bash + python.
+- Add CI gate `test_no_retired_model_ids` that greps `model_hardware_policy.yml`
+  for any known-retired ID and fails if found.
+
+**Spec doc**: `docs/v2/12-xai-model-migration-2026-05.md`

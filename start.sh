@@ -117,17 +117,31 @@ fi
 # Ensures network_autoconfig.py and lib/shared/agentic_stack are wired to live
 # PT paths. Uses relative path calculation so symlinks survive directory moves.
 _ensure_symlink() {
+  # Usage: _ensure_symlink <link-path> <target-path>
+  # Idempotent: safe to call on every startup.
+  # Runs with the caller's cwd — callers must cd to the intended directory first.
   local link="$1" target="$2"
-  if [ ! -L "$link" ]; then
-    _info "link" "creating missing symlink: $link → $target"
-    ln -s "$target" "$link"
-  elif [ ! -e "$link" ]; then
+  if [ -L "$link" ] && [ -e "$link" ]; then
+    # Valid symlink already present — nothing to do.
+    return 0
+  elif [ -L "$link" ] && [ ! -e "$link" ]; then
+    # Broken symlink — attempt re-link.
     _warn "link" "broken symlink: $link — attempting re-link to $target"
     if [ -e "$target" ]; then
       rm "$link"
       ln -s "$target" "$link"
       _info "link" "re-linked: $link → $target"
+    else
+      _warn "link" "re-link skipped: target $target does not exist"
     fi
+  elif [ -e "$link" ]; then
+    # Regular file or directory occupies the link path — do not overwrite.
+    # The tracked file takes precedence; symlink creation is skipped silently.
+    _warn "link" "skipping symlink $link: path exists as a regular file/dir (manual migration needed if PT override is desired)"
+  else
+    # Nothing at link path — create the symlink.
+    _info "link" "creating symlink: $link → $target"
+    ln -s "$target" "$link"
   fi
 }
 
@@ -137,7 +151,7 @@ if [ -n "${PT_DIR:-}" ]; then
   if [ -f "$_PT_NET_CONFIG" ]; then
     _REL_NET_CONFIG="$(_PYLINK_SRC="$_PT_NET_CONFIG" _PYLINK_BASE="$SCRIPT_DIR" \
       python3 -c "import os; print(os.path.relpath(os.environ['_PYLINK_SRC'],os.environ['_PYLINK_BASE']))" 2>/dev/null || true)"
-    [ -n "$_REL_NET_CONFIG" ] && _ensure_symlink "network_autoconfig.py" "$_REL_NET_CONFIG"
+    [ -n "$_REL_NET_CONFIG" ] && (cd "$SCRIPT_DIR" && _ensure_symlink "network_autoconfig.py" "$_REL_NET_CONFIG")
   fi
 
   # lib/shared/agentic_stack — shared library from PT

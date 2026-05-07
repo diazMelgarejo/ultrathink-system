@@ -552,12 +552,17 @@ def _render_tools_section(tools: Dict[str, Any]) -> str:
     )
 
 
-def _local_agent_running(agents: List[Dict[str, Any]]) -> bool:
-    """Return True when any agent with a Mac-local backend is actively running."""
+def _ollama_mac_busy_flag(svc: Dict[str, Any]) -> bool:
+    """True when Ollama has a model loaded in VRAM (actively running inference)."""
+    return bool(svc.get("ollama_mac", {}).get("busy", False))
+
+
+def _lmstudio_mac_busy_flag(agents: List[Dict[str, Any]]) -> bool:
+    """True when any running agent is dispatched to the Mac LM Studio backend."""
     for a in agents:
         if a.get("status") == "running":
-            backend = a.get("backend", a.get("coder_backend", ""))
-            if not backend or "mac" in backend.lower() or "ollama" in backend.lower():
+            backend = (a.get("backend") or a.get("coder_backend") or "").lower()
+            if "lmstudio" in backend or "lms-mac" in backend or "lmstudio-mac" in backend:
                 return True
     return False
 
@@ -568,6 +573,7 @@ def _render_agent_dispatch_section(agent_availability: Dict[str, bool]) -> str:
         ("codex",         "Codex",              "CLI · local"),
         ("gemini-review", "Gemini Review",       "CLI · code review"),
         ("gemini",        "Gemini CLI",          "CLI · local"),
+        ("ollama-mac",    "Ollama Mac",          "HTTP · localhost:11434"),
         ("lmstudio-mac",  "LM Studio Mac",       "HTTP · localhost"),
         ("lmstudio-win",  "LM Studio Win",       f"HTTP · .{_get_win_ip().split('.')[-1]} GPU"),
         ("all",           "All (parallel)",      "Codex + Gemini + Mac; Win serial"),
@@ -844,16 +850,20 @@ def _render_html(status: Dict[str, Any]) -> str:
     tools = status.get("tools", {})
     # Agent dispatch availability — derived from service probes + tool probes
     svc = status.get("services", {})
-    _local_busy = _local_agent_running(agents)
+    _ollama_busy = _ollama_mac_busy_flag(svc)
+    _lmstudio_busy = _lmstudio_mac_busy_flag(agents)
     agent_availability = {
-        "lmstudio-mac": svc.get("lmstudio_mac", {}).get("ok", False),
+        "ollama-mac":     svc.get("ollama_mac", {}).get("ok", False) and not _lmstudio_busy,
+        "lmstudio-mac":   svc.get("lmstudio_mac", {}).get("ok", False) and not _ollama_busy,
         "lmstudio-win": (
             svc.get("lmstudio_win", {}).get("ok", False)
             or any(v.get("ok") for k, v in svc.items() if k.startswith("lmstudio_win_"))
         ),
-        "codex":         tools.get("codex-cli", {}).get("ok", False) and not _local_busy,
-        "gemini":        tools.get("gemini-cli", {}).get("ok", False),
-        "gemini-review": tools.get("gemini-cli", {}).get("ok", False) and not _local_busy,
+        "codex":          tools.get("codex-cli", {}).get("ok", False),
+        "gemini":         tools.get("gemini-cli", {}).get("ok", False),
+        "gemini-review":  tools.get("gemini-cli", {}).get("ok", False),
+        "ollama_mac_busy":   _ollama_busy,
+        "lmstudio_mac_busy": _lmstudio_busy,
     }
     return HTML_TEMPLATE.format(
         version=VERSION,
@@ -904,6 +914,16 @@ async def _probe_ollama_models(client: httpx.AsyncClient, endpoint: str) -> tupl
         return True, models
     except Exception:
         return False, []
+
+
+async def _probe_ollama_ps(client: httpx.AsyncClient, endpoint: str) -> bool:
+    """Return True if Ollama has at least one model loaded in VRAM (actively busy)."""
+    try:
+        r = await client.get(f"{endpoint}/api/ps", timeout=PROBE_TIMEOUT)
+        r.raise_for_status()
+        return bool(r.json().get("models"))
+    except Exception:
+        return False
 
 
 async def _probe_activity(client: httpx.AsyncClient) -> List[Dict[str, Any]]:
@@ -1211,12 +1231,15 @@ async def api_status():
             except Exception as _gossip_exc:
                 log.warning("ip gossip write failed: %s", _gossip_exc)
 
+    async with httpx.AsyncClient() as _ps_client:
+        ol_mac_busy = await _probe_ollama_ps(_ps_client, OLLAMA_MAC)
+
     services: Dict[str, Any] = {
         "perplexity_tools": {"ok": pt_ok, "version": pt_ver, "url": PT_URL},
         "ultrathink": {"ok": us_ok, "version": us_ver, "url": US_URL},
         "lmstudio_mac": {"ok": lm_mac_ok, "models": lm_mac_models, "url": LMS_MAC_ENDPOINT},
         "ollama_win": {"ok": ol_win_result[0], "models": ol_win_result[1], "url": _dyn_ollama_win},
-        "ollama_mac": {"ok": ol_mac_result[0], "models": ol_mac_result[1], "url": OLLAMA_MAC},
+        "ollama_mac": {"ok": ol_mac_result[0], "models": ol_mac_result[1], "url": OLLAMA_MAC, "busy": ol_mac_busy},
     }
 
     if len(_dyn_win_lms) == 1:

@@ -55,6 +55,9 @@ LMS_MAC_ENDPOINT = os.getenv("LM_STUDIO_MAC_ENDPOINT", "http://localhost:1234")
 LMS_WIN_ENDPOINT = os.getenv("LM_STUDIO_WIN_ENDPOINTS", _WIN_LMS_DEFAULT).split(",")[0].strip()
 LMS_API_KEY = os.getenv("LM_STUDIO_API_TOKEN", "lm-studio")
 
+OLLAMA_MAC_ENDPOINT = os.getenv("OLLAMA_MAC_ENDPOINT", "http://127.0.0.1:11434")
+MANAGER_MODEL = os.getenv("MANAGER_MODEL", "qwen3.5:9b-nvfp4")
+
 # Windows GPU lock — one model at a time (CLAUDE.md §4 invariant)
 _WIN_GPU_LOCK = asyncio.Lock()
 
@@ -133,6 +136,26 @@ def discover_agents() -> Dict[str, AgentInfo]:
         available=ok,
         version=ver,
         detail=f"Code review mode — {gemini_bin if ok else 'not found'}",
+    )
+
+    # ── Ollama Mac ─────────────────────────────────────────────────────────────
+    ol_mac_ok = False
+    ol_mac_ver = ""
+    try:
+        import httpx as _httpx_probe
+        r = _httpx_probe.get(f"{OLLAMA_MAC_ENDPOINT}/api/tags", timeout=3.0)
+        ol_mac_ok = r.status_code < 400
+        if ol_mac_ok:
+            models = r.json().get("models", [])
+            ol_mac_ver = f"{len(models)} models" if models else "reachable"
+    except Exception:
+        pass
+    agents["ollama-mac"] = AgentInfo(
+        name="Ollama Mac",
+        kind="http",
+        available=ol_mac_ok,
+        version=ol_mac_ver,
+        detail=f"{OLLAMA_MAC_ENDPOINT} — {'reachable' if ol_mac_ok else 'not reachable'}",
     )
 
     # ── LM Studio Mac ──────────────────────────────────────────────────────────
@@ -277,6 +300,30 @@ async def _dispatch_gemini_review(task: str) -> Dict[str, Any]:
     return await _dispatch_gemini(review_prompt)
 
 
+async def _dispatch_ollama_mac(task: str) -> Dict[str, Any]:
+    """Dispatch a task to the local Mac Ollama backend."""
+    import httpx as _httpx
+    import time as _time
+    t0 = _time.monotonic()
+    try:
+        async with _httpx.AsyncClient(timeout=120.0) as client:
+            payload = {
+                "model": MANAGER_MODEL or "qwen3.5:9b-nvfp4",
+                "prompt": task,
+                "stream": False,
+            }
+            r = await client.post(f"{OLLAMA_MAC_ENDPOINT}/api/generate", json=payload)
+            r.raise_for_status()
+            data = r.json()
+            return {
+                "ok": True,
+                "output": data.get("response", ""),
+                "elapsed": round(_time.monotonic() - t0, 2),
+            }
+    except Exception as e:
+        return {"ok": False, "output": str(e), "elapsed": round(_time.monotonic() - t0, 2)}
+
+
 async def _dispatch_lmstudio(endpoint: str, model: str, task: str, *, win_gpu: bool = False) -> Dict[str, Any]:
     """Send a task to an LM Studio OpenAI-compat endpoint. Win GPU is serialized."""
     try:
@@ -342,6 +389,9 @@ async def dispatch(agent_name: str, task: str, model: Optional[str] = None) -> D
     elif agent_name == "gemini-review":
         return await _dispatch_gemini_review(task)
 
+    elif agent_name == "ollama-mac":
+        return await _dispatch_ollama_mac(task)
+
     elif agent_name == "lmstudio-mac":
         m = model or await _get_lmstudio_model(LMS_MAC_ENDPOINT)
         return await _dispatch_lmstudio(LMS_MAC_ENDPOINT, m, task, win_gpu=False)
@@ -351,17 +401,18 @@ async def dispatch(agent_name: str, task: str, model: Optional[str] = None) -> D
         return await _dispatch_lmstudio(LMS_WIN_ENDPOINT, m, task, win_gpu=True)
 
     elif agent_name == "all":
-        # Parallel: Codex + Gemini + LM Studio Mac (non-GPU-bound)
+        # Parallel: Codex + Gemini + Ollama Mac + LM Studio Mac (non-GPU-bound)
         # Sequential: LM Studio Win (GPU-bound, serialized by lock)
         results = await asyncio.gather(
             _dispatch_codex(task),
             _dispatch_gemini(task),
+            _dispatch_ollama_mac(task),
             _dispatch_lmstudio(LMS_MAC_ENDPOINT, model or await _get_lmstudio_model(LMS_MAC_ENDPOINT), task),
             _dispatch_lmstudio(LMS_WIN_ENDPOINT, model or await _get_lmstudio_model(LMS_WIN_ENDPOINT), task, win_gpu=True),
             return_exceptions=True,
         )
         agents_out = {}
-        for name, res in zip(["codex", "gemini", "lmstudio-mac", "lmstudio-win"], results):
+        for name, res in zip(["codex", "gemini", "ollama-mac", "lmstudio-mac", "lmstudio-win"], results):
             if isinstance(res, Exception):
                 agents_out[name] = {"ok": False, "output": str(res), "elapsed": 0}
             else:
@@ -400,7 +451,7 @@ def main():
     parser.add_argument(
         "--agent", "-a",
         default="codex",
-        choices=["codex", "gemini", "lmstudio-mac", "lmstudio-win", "all"],
+        choices=["codex", "gemini", "ollama-mac", "lmstudio-mac", "lmstudio-win", "all"],
         help="Agent to dispatch (default: codex)",
     )
     parser.add_argument("--model", "-m", help="Optional model override for LM Studio agents")

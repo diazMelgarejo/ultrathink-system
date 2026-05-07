@@ -66,7 +66,7 @@ class PerpetuaState(BaseModel):
     session_id: str
     messages: list[dict[str, Any]] = Field(default_factory=list)
     scratchpad: dict[str, Any]    = Field(default_factory=dict)
-    status: Literal["idle", "running", "interrupted", "error", "done"] = "idle"
+    status: Literal["idle", "running", "interrupted", "conflicted", "error", "done"] = "idle"
     error: str | None = None
 
     # Grok additions
@@ -87,10 +87,11 @@ class PerpetuaState(BaseModel):
 
 Field rationale:
 - `messages`/`scratchpad` — distinct: messages = chat-shaped LLM I/O; scratchpad = node-internal working memory
-- `nodes_visited` — auditable graph traversal (Grok)
-- `metadata` — extensible without schema bumps (Grok)
+- `nodes_visited` — auditable graph traversal; GossipBus cross-reference key (Grok + Rule 4)
+- `metadata` — extensible without schema bumps; `metadata["authorized_by"]` records human actor ID when an `Interrupt` is resolved via `aresume` (Grok + Rule 2)
 - `retry_count` — first-class; reducers increment on retry (Grok)
 - routing hints — kept on state so middle-of-graph routing decisions can read them
+- `status="conflicted"` — terminal-until-human state raised when two or more guidelines conflict; treated identically to `"interrupted"` by the engine; cleared only by `aresume(conflict_resolution=...)` (Rule 5)
 
 ---
 
@@ -417,6 +418,9 @@ Lifted/skeletonized from today's `orama-system/api_server.py` per D9. Internal-o
 10. Live integration: graph node calls Mac LM Studio (`192.168.x.110:1234`) and Windows LM Studio (`192.168.x.108:1234`) per `model_hardware_policy.yml` routing; `agent_log` table in SQLite shows correct dispatch sequence.
 11. **Idempotent filesystem helpers** (mandatory for every plugin that touches the fs): every helper ships with the 4/5-state guard test from `11-idempotency-and-guard-patterns.md` §2. No fs helper is accepted in `perpetua-core/graph/plugins/` without passing `test_ensure_symlink_all_four_states_idempotent` (or equivalent for its op type). (CI gate.)
 12. **Validator agreement** (mandatory when two or more modules enforce the same allowlist): `test_validators_agree_on_*` CI gate — every shared allowlist/denylist must live in `perpetua-core/config/` and both bash and python validators must read from it. See `11-idempotency-and-guard-patterns.md` §3. (CI gate.)
+13. **HITL interrupt is always-escapable (Rule 3)**: `pytest tests/test_interrupts.py::test_interrupt_not_suppressible_by_node` — any node that internally catches `Interrupt` and does not re-raise causes this test to fail. `status="interrupted"` and `status="conflicted"` can only be cleared by `aresume()` with a caller-supplied payload.
+14. **GossipBus is append-only (Rule 4)**: `pytest tests/test_gossip.py::test_no_delete_or_update` — `GossipBus` exposes no `delete`, `update`, or `truncate` method. All events are permanent. Test queries the event count before and after a deliberately invalid operation and asserts no rows were removed.
+15. **Authorization event emitted before ToolNode subprocess (Rule 2)**: `pytest tests/test_tool_node.py::test_authorization_event_precedes_subprocess` — GossipBus receives an `authorization` event with non-empty `actor_id` and `tool_cmd` fields before any process is spawned. Test uses a mock bus and asserts event ordering.
 
 ---
 

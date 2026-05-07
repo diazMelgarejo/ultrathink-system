@@ -65,6 +65,20 @@ These gates are mandatory before Phase 4 is considered complete:
 
 See `11-idempotency-and-guard-patterns.md` §§2–4 for reference implementations and §6 for the 3-pass review pipeline design.
 
+### Phase 4 mandatory accountability CI gates
+
+The following gates must be green before parity is declared and v2.0 is released. They verify the five-rule Human Accountability Framework is structurally enforced — not just documented (see `03-safety-v2.5.md` §Human Accountability Framework):
+
+| Gate | Test | Rule enforced |
+|------|------|---------------|
+| Interrupt not suppressible by node | `test_interrupts.py::test_interrupt_not_suppressible_by_node` | R3 — always-escapable |
+| Conflicted status is terminal-until-human | `test_interrupts.py::test_conflicted_state_requires_aresume` | R5 — escalation to humans |
+| GossipBus is append-only | `test_gossip.py::test_no_delete_or_update` | R4 — transparent audit log |
+| Authorization event precedes subprocess | `test_tool_node.py::test_authorization_event_precedes_subprocess` | R2 — human authorization |
+| `aresume` records `authorized_by` in state | `test_interrupts.py::test_aresume_writes_authorized_by` | R2 — accountability chain |
+
+These five tests are CI-blocking. A parity run with any of these failing does not count as Phase 4 complete.
+
 ---
 
 ## Summary of lift-from-v1 inventory

@@ -137,6 +137,20 @@ Both `langchain-ai/langchain` and `langchain-ai/langgraph` ship MIT. Matching th
 
 ---
 
+## Human Accountability as a Retroactive Design Constraint
+
+The five-rule human accountability framework described in `03-safety-v2.5.md` was crystallised after D1–D10 were locked. It is not a new architectural decision — it is a **clarification of what the MAESTRO/SWARM intent always implied**, now made explicit and grounded in established governance frameworks: EU AI Act 2024 (Art. 12–15), NIST AI Risk Management Framework, and Anthropic's Constitutional AI principles.
+
+All locked decisions remain valid. The accountability framework adds no new architectural components; it constrains how existing v2 kernel primitives must behave:
+
+- **D4 (kernel)**: `GossipBus` must be append-only and operator-accessible by default (Rule 4). `Interrupt` must be always-escapable by any human-authenticated caller (Rule 3).
+- **D8 (graph plugins)**: The HITL interrupt plugin must treat `status="interrupted"` and `status="conflicted"` as terminal-until-human states — no plugin may clear them internally (Rules 2, 5).
+- **D5 (Plugin API)**: When the Plugin API goes public in v2.1, it must not expose any method that clears an interrupt or conflicted state without verifying the caller is human-authenticated. Accountability chain must be preserved across API boundaries.
+
+These constraints are verified by `01-kernel-spec.md` §Verification items 11–13 and must pass before any v2.0 release.
+
+---
+
 ## Confirmed not-decisions (parked, not punted)
 
 - **Pydantic AI** as kernel schema lib — rejected per D7 (category error). Kept in `06-open-questions.md` as v2.1+ framework-comparison item.

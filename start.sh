@@ -400,7 +400,45 @@ if [ -n "${PT_DIR:-}" ] && [ -f "${PT_DIR}/orchestrator/alphaclaw_manager.py" ];
     _var  "pt" "PT_ALPHACLAW_PORT" "$PT_ALPHACLAW_PORT" "alphaclaw_manager"
     _var  "pt" "PT_AGENTS_STATE"  "$PT_AGENTS_STATE"  "derived"
   else
-    _warn "pt" "resolve non-fatal (exit=${PT_RESOLVE_OK}) — continuing with offline defaults"
+    # ── Warm-cache fallback ────────────────────────────────────────────────
+    # PT resolve failed (Python unavailable, network timeout, etc.).
+    # Read the last known good routing.json and re-export its values so
+    # downstream services don't start completely blind.
+    _warn "pt" "resolve non-fatal (exit=${PT_RESOLVE_OK}) — trying warm cache"
+    _PT_CACHE="${PT_DIR}/.state/routing.json"
+    if [ -f "$_PT_CACHE" ] && command -v python3 >/dev/null 2>&1; then
+      _PT_CACHED_EXPORTS="$(
+        python3 - "$_PT_CACHE" 2>/dev/null <<'PYEOF'
+import json, sys
+try:
+    d = json.load(open(sys.argv[1]))
+    for k, v in {
+        "PT_MODE":          d.get("mode",          "cached"),
+        "PT_DISTRIBUTED":   str(d.get("distributed", False)).lower(),
+        "PT_ALPHACLAW_PORT": str(d.get("alphaclaw_port", "")),
+        "WIN_IP":           d.get("win_ip", ""),
+        "PT_SCENARIO":      d.get("scenario_name", "FULLY_OFFLINE"),
+    }.items():
+        if v:
+            print(f"export {k}={v!r}")
+    print("export PT_MODE_SOURCE=cache")
+except Exception:
+    pass
+PYEOF
+      )" || true
+      if [ -n "$_PT_CACHED_EXPORTS" ]; then
+        eval "$_PT_CACHED_EXPORTS"
+        PT_MODE="${PT_MODE:-cached}"
+        export PT_AGENTS_STATE="$_PT_CACHE"
+        _warn "pt" "warm cache loaded — mode=${PT_MODE}  scenario=${PT_SCENARIO:-unknown}  (stale data — probe will retry next start)"
+        _var  "pt" "PT_MODE"      "$PT_MODE"      "warm-cache"
+        _var  "pt" "PT_SCENARIO"  "${PT_SCENARIO:-unknown}" "warm-cache"
+      else
+        _warn "pt" "warm cache unreadable — continuing with offline defaults"
+      fi
+    else
+      _warn "pt" "no warm cache at ${_PT_CACHE} — continuing with offline defaults"
+    fi
   fi
 else
   # Fallback: PT manager not available — delegate to bootstrap script directly
@@ -502,10 +540,20 @@ _print_banner() {
   # tier_color: reserved for future ANSI colour output
 
   # Determine tier from reachability (-w 1 = 1s timeout per probe, avoids 30s OS hang)
+  # All three probes run in parallel background subshells; total wall time = max(1s) not 3s.
   local mac_up=0 win_up=0 oc_up=0
-  nc -z -w 1 localhost 1234   >/dev/null 2>&1 && mac_up=1
-  nc -z -w 1 "$win_ip" 1234   >/dev/null 2>&1 && win_up=1
-  nc -z -w 1 localhost 18789  >/dev/null 2>&1 && oc_up=1
+  local _mac_f _win_f _oc_f
+  _mac_f="$(mktemp /tmp/.orama_probe_mac_XXXXXX)"
+  _win_f="$(mktemp /tmp/.orama_probe_win_XXXXXX)"
+  _oc_f="$(mktemp /tmp/.orama_probe_oc_XXXXXX)"
+  ( nc -z -w 1 localhost   1234  >/dev/null 2>&1 && echo 1 || echo 0 ) > "$_mac_f" &
+  ( nc -z -w 1 "$win_ip"   1234  >/dev/null 2>&1 && echo 1 || echo 0 ) > "$_win_f" &
+  ( nc -z -w 1 localhost   18789 >/dev/null 2>&1 && echo 1 || echo 0 ) > "$_oc_f"  &
+  wait
+  mac_up="$(cat "$_mac_f" 2>/dev/null || echo 0)"
+  win_up="$(cat "$_win_f" 2>/dev/null || echo 0)"
+  oc_up="$(cat  "$_oc_f"  2>/dev/null || echo 0)"
+  rm -f "$_mac_f" "$_win_f" "$_oc_f"
 
   if   [ "$mac_up" -eq 1 ] && [ "$win_up" -eq 1 ]; then tier=1; tier_label="FULL  · Mac + Win (both nodes)"
   elif [ "$mac_up" -eq 1 ];                          then tier=2; tier_label="MAC   · Mac only"

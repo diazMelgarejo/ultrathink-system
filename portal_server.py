@@ -786,7 +786,7 @@ def _render_html(status: Dict[str, Any]) -> str:
     ol_mac = svc.get("ollama_mac", {})
     cards.append(_render_card(
         "Ollama — Mac (manager)", ol_mac.get("ok", False), ol_mac.get("url", ""),
-        role="manager: qwen3.5-local",
+        role="manager: qwen3.5:9b-nvfp4",
         models=ol_mac.get("models", []),
     ))
 
@@ -1424,7 +1424,7 @@ async def api_status_html():
     ol_mac = svc.get("ollama_mac", {})
     cards.append(_render_card(
         "Ollama — Mac (manager)", ol_mac.get("ok", False), ol_mac.get("url", ""),
-        role="manager: qwen3.5-local",
+        role="manager: qwen3.5:9b-nvfp4",
         models=ol_mac.get("models", []),
     ))
 

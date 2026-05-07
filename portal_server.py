@@ -13,9 +13,11 @@ Routes:
 from __future__ import annotations
 
 import asyncio
+import html as _html
 import json
 import logging
 import os
+import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -625,7 +627,7 @@ def _render_routing_section(routing: Dict[str, Any] | None) -> str:
     if alert:
         rows.append(
             f'<div class="rt-row" style="background:#fff3cd;color:#856404;font-weight:bold;padding:6px 10px;">'
-            f'⚠ Manager affinity violation: {alert}</div>'
+            f'⚠ Manager affinity violation: {_html.escape(str(alert))}</div>'
         )
     return (
         '<div class="section">'
@@ -1400,22 +1402,23 @@ async def api_spawn_agent(req: SpawnAgentRequest):
     Runs synchronously in a threadpool so FastAPI stays responsive.
     Windows GPU requests are serialized by the _WIN_GPU_LOCK in spawn_agents.py.
     """
-    import importlib.util, sys as _sys
+    import importlib.util
     _scripts_dir = REPO_ROOT / "scripts"
-    _spec = importlib.util.spec_from_file_location("spawn_agents", _scripts_dir / "spawn_agents.py")
-    if _spec is None or _spec.loader is None:
-        return {"ok": False, "output": "spawn_agents.py not found in scripts/", "elapsed": 0}
-    _mod = importlib.util.module_from_spec(_spec)
-    # Register in sys.modules BEFORE exec_module so dataclass annotations resolve correctly
-    import sys as _sys
-    _sys.modules["spawn_agents"] = _mod
-    _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    # Cache spawn_agents module so _WIN_GPU_LOCK is a singleton (not re-created per request)
+    _mod = sys.modules.get("spawn_agents")
+    if _mod is None:
+        _spec = importlib.util.spec_from_file_location("spawn_agents", _scripts_dir / "spawn_agents.py")
+        if _spec is None or _spec.loader is None:
+            return {"ok": False, "output": "spawn_agents.py not found in scripts/", "elapsed": 0}
+        _mod = importlib.util.module_from_spec(_spec)
+        # Register in sys.modules BEFORE exec_module so dataclass annotations resolve correctly
+        sys.modules["spawn_agents"] = _mod
+        _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
     # Affinity pre-flight (non-blocking — logs warning only)
     try:
-        import sys as _sys_aff
         _pt_root = str(PERPETUA_TOOLS_ROOT)
-        if _pt_root not in _sys_aff.path:
-            _sys_aff.path.insert(0, _pt_root)
+        if _pt_root not in sys.path:
+            sys.path.insert(0, _pt_root)
         from orchestrator.alphaclaw_manager import validate_routing_affinity as _vra
         _agent_model = req.model
         _agent_platform = "mac"

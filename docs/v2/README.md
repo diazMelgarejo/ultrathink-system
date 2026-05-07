@@ -152,7 +152,8 @@ orama-system/docs/v2/
 ├── 09-comparative-analysis-and-merging-plan.md
 ├── 10-v1-hacks-automation-orbit.md
 ├── 11-idempotency-and-guard-patterns.md
-└── 12-xai-model-migration-2026-05.md   ← xAI retirements 2026-05-15; grok-4.3 + grok-4.20-non-reasoning defaults
+├── 12-xai-model-migration-2026-05.md   ← xAI retirements 2026-05-15; grok-4.3 + grok-4.20-non-reasoning defaults
+└── 13-local-model-catalog-strategy.md  ← Codex model_catalog_json pattern; qwen3.5-local→qwen3.5:9b-nvfp4 rename; gen script
 ```
 
 ---

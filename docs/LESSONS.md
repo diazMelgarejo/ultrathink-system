@@ -1334,3 +1334,55 @@ will cause a hard dispatch failure at that time.
   for any known-retired ID and fails if found.
 
 **Spec doc**: `docs/v2/12-xai-model-migration-2026-05.md`
+
+---
+
+## 2026-05-07 — Codex CLI unknown-model fallback; local_models.json strategy; qwen3.5-local renamed
+
+### Problem
+
+Codex CLI ships a built-in model catalog for OpenAI cloud models only.
+When pointing it at a local Ollama endpoint with an unregistered model ID
+(`qwen3.5:9b-nvfp4`), Codex falls back to 272K token defaults. The local
+server never sees a context that large; it crashes with overflow errors.
+Plan mode and structured output also break silently because capability
+flags (`supports_reasoning`, `supports_tools`) are unknown.
+
+Compounding this: the previous local alias `qwen3.5-local:latest` was
+deleted from Ollama and replaced by `qwen3.5:9b-nvfp4` — 6 source files
+across two repos still referenced the old ID.
+
+### Fix (immediate — local machine)
+
+1. Created `~/.codex/local_models.json` with correct context caps and
+   capability flags for all Ollama models (local + cloud-proxy).
+2. Added `model_catalog_json = "~/.codex/local_models.json"` to
+   `[model_providers.ollama-launch]` in `~/.codex/config.toml`.
+3. Key values for `qwen3.5:9b-nvfp4`:
+   - native `context_length = 262144` (from `ollama api/show model_info`)
+   - safe local cap: `context_window = 32768` (Mac RAM constraint)
+   - `supports_reasoning = true`, `supports_tools = true`
+
+### Model ID rename sweep
+
+| File | Old → New |
+|------|-----------|
+| `orama-system/setup_macos.py` | `qwen3.5-local:latest` → `qwen3.5:9b-nvfp4` |
+| `orama-system/portal_server.py` (×2) | role string updated |
+| `PT/packages/local-agents/src/client.js` | DEFAULTS + comment |
+| `PT/packages/local-agents/tests/client.test.js` (×6) | test fixtures |
+
+### Design rule promoted to v2
+
+- `~/.codex/local_models.json` is the **single source of truth** for
+  local Ollama model metadata (context caps, capability flags).
+- Auto-generate with `scripts/gen_local_models_json.py` whenever Ollama
+  model list changes. Never edit manually.
+- In v2: `perpetua-core/config/ollama_catalog.json` mirrors this schema;
+  `ollama_catalog.example.json` ships with the repo; real file gitignored.
+- Apply Pattern B (`11-idempotency-and-guard-patterns.md` §3): one config
+  file, many consumers (Codex CLI, HardwarePolicyResolver, LocalAgentClient).
+- CI gate: `test_no_stale_model_ids` greps for retired / old-alias model
+  IDs in all source files and fails if any are found.
+
+**Spec doc**: `docs/v2/13-local-model-catalog-strategy.md`

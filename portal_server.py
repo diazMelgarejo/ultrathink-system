@@ -82,6 +82,19 @@ PERPETUA_TOOLS_ROOT = Path(
     os.getenv("PERPETUA_TOOLS_ROOT", REPO_ROOT.parent / "perplexity-api" / "Perpetua-Tools")
 )
 
+
+def _read_routing_json() -> dict:
+    """Read PT's .state/routing.json for portal display."""
+    import json as _json
+    routing_path = PERPETUA_TOOLS_ROOT / ".state" / "routing.json"
+    try:
+        if routing_path.exists():
+            return _json.loads(routing_path.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    return {}
+
+
 app = FastAPI(title="orama portal", version=VERSION)
 app.add_middleware(
     CORSMiddleware,
@@ -355,6 +368,9 @@ async function refreshData() {{
     if (activity && d.activity_section) activity.innerHTML = d.activity_section;
     const ts = document.getElementById('last-refresh');
     if (ts && d.timestamp) ts.textContent = d.timestamp;
+    if (d.manager_alert) {{
+      showToast('⚠ Manager affinity: ' + d.manager_alert, 'warning');
+    }}
   }} catch(e) {{
     console.warn('orama portal refresh failed:', e);
   }}
@@ -382,6 +398,16 @@ function toggleTheme() {{
     if (btn) btn.textContent = '☀️ Day';
   }}
 }})();
+function showToast(msg, type) {{
+  const t = document.createElement('div');
+  t.style.cssText = 'position:fixed;bottom:20px;right:20px;background:' +
+    (type==='warning'?'#fff3cd':'#d4edda') + ';color:#333;padding:12px 20px;' +
+    'border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:9999;' +
+    'font-weight:bold;max-width:400px;';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 6000);
+}}
 </script>
 </body>
 </html>"""
@@ -584,6 +610,12 @@ def _render_routing_section(routing: Dict[str, Any] | None) -> str:
     synced_at = routing.get("synced_at", "")
     if synced_at:
         rows.append(f'<div class="rt-row"><span class="rt-key">synced at</span><span class="rt-val">{synced_at}</span></div>')
+    alert = routing.get("manager_affinity_alert")
+    if alert:
+        rows.append(
+            f'<div class="rt-row" style="background:#fff3cd;color:#856404;font-weight:bold;padding:6px 10px;">'
+            f'⚠ Manager affinity violation: {alert}</div>'
+        )
     return (
         '<div class="section">'
         '<div class="section-title">Routing State</div>'
@@ -1365,6 +1397,24 @@ async def api_spawn_agent(req: SpawnAgentRequest):
     import sys as _sys
     _sys.modules["spawn_agents"] = _mod
     _spec.loader.exec_module(_mod)  # type: ignore[union-attr]
+    # Affinity pre-flight (non-blocking — logs warning only)
+    try:
+        import sys as _sys_aff
+        _pt_root = str(PERPETUA_TOOLS_ROOT)
+        if _pt_root not in _sys_aff.path:
+            _sys_aff.path.insert(0, _pt_root)
+        from orchestrator.alphaclaw_manager import validate_routing_affinity as _vra
+        _agent_model = req.model
+        _agent_platform = "mac"
+        if _agent_model:
+            _vra(_agent_model, _agent_platform)
+            log.info("[portal] affinity OK: %s → %s", _agent_model, _agent_platform)
+    except ImportError:
+        pass  # PT not on sys.path — skip silently
+    except Exception as _aff_exc:
+        log.warning("[portal] affinity warning for spawn: %s", _aff_exc)
+        # Non-fatal: let dispatch proceed; agent_launcher will hard-gate
+
     result = await _mod.dispatch(req.agent, req.task, model=req.model or None)
     return result
 
@@ -1428,11 +1478,13 @@ async def api_status_html():
         models=ol_mac.get("models", []),
     ))
 
+    routing_state = _read_routing_json()
     return {
         "cards": "\n".join(cards),
         "routing_section": _render_routing_section(status.get("routing")),
         "activity_section": _render_activity_section(status.get("activity", [])),
         "timestamp": datetime.datetime.now().strftime("%H:%M:%S"),
+        "manager_alert": routing_state.get("manager_affinity_alert"),
     }
 
 

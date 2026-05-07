@@ -550,10 +550,21 @@ def _render_tools_section(tools: Dict[str, Any]) -> str:
     )
 
 
+def _local_agent_running(agents: List[Dict[str, Any]]) -> bool:
+    """Return True when any agent with a Mac-local backend is actively running."""
+    for a in agents:
+        if a.get("status") == "running":
+            backend = a.get("backend", a.get("coder_backend", ""))
+            if not backend or "mac" in backend.lower() or "ollama" in backend.lower():
+                return True
+    return False
+
+
 def _render_agent_dispatch_section(agent_availability: Dict[str, bool]) -> str:
     """Render the Agent Dispatch panel with live availability badges."""
     AGENTS = [
         ("codex",         "Codex",              "CLI · local"),
+        ("gemini-review", "Gemini Review",       "CLI · code review"),
         ("gemini",        "Gemini CLI",          "CLI · local"),
         ("lmstudio-mac",  "LM Studio Mac",       "HTTP · localhost"),
         ("lmstudio-win",  "LM Studio Win",       f"HTTP · .{_get_win_ip().split('.')[-1]} GPU"),
@@ -831,14 +842,16 @@ def _render_html(status: Dict[str, Any]) -> str:
     tools = status.get("tools", {})
     # Agent dispatch availability — derived from service probes + tool probes
     svc = status.get("services", {})
+    _local_busy = _local_agent_running(agents)
     agent_availability = {
         "lmstudio-mac": svc.get("lmstudio_mac", {}).get("ok", False),
         "lmstudio-win": (
             svc.get("lmstudio_win", {}).get("ok", False)
             or any(v.get("ok") for k, v in svc.items() if k.startswith("lmstudio_win_"))
         ),
-        "codex": tools.get("codex-cli", {}).get("ok", False),
-        "gemini": tools.get("gemini-cli", {}).get("ok", False),
+        "codex":         tools.get("codex-cli", {}).get("ok", False) and not _local_busy,
+        "gemini":        tools.get("gemini-cli", {}).get("ok", False),
+        "gemini-review": tools.get("gemini-cli", {}).get("ok", False) and not _local_busy,
     }
     return HTML_TEMPLATE.format(
         version=VERSION,

@@ -127,6 +127,13 @@ def discover_agents() -> Dict[str, AgentInfo]:
         version=ver,
         detail=gemini_bin if ok else "not found — install @google/gemini-cli",
     )
+    agents["gemini-review"] = AgentInfo(
+        name="Gemini Review",
+        kind="cli",
+        available=ok,
+        version=ver,
+        detail=f"Code review mode — {gemini_bin if ok else 'not found'}",
+    )
 
     # ── LM Studio Mac ──────────────────────────────────────────────────────────
     mac_ok = asyncio.run(_probe_http_async(LMS_MAC_ENDPOINT)) if not _is_event_loop_running() else False
@@ -259,6 +266,17 @@ async def _dispatch_gemini(task: str) -> Dict[str, Any]:
         return {"ok": False, "output": str(exc), "elapsed": time.time() - t0}
 
 
+async def _dispatch_gemini_review(task: str) -> Dict[str, Any]:
+    """Run Gemini in code-review mode: prefixes task with structured review prompt."""
+    review_prompt = (
+        "You are a code reviewer. Review the following code or describe the review task, "
+        "identify bugs, security issues, style violations, and improvement opportunities. "
+        "Be specific and cite line numbers where possible.\n\n"
+        f"REVIEW TASK: {task}"
+    )
+    return await _dispatch_gemini(review_prompt)
+
+
 async def _dispatch_lmstudio(endpoint: str, model: str, task: str, *, win_gpu: bool = False) -> Dict[str, Any]:
     """Send a task to an LM Studio OpenAI-compat endpoint. Win GPU is serialized."""
     try:
@@ -320,6 +338,9 @@ async def dispatch(agent_name: str, task: str, model: Optional[str] = None) -> D
 
     elif agent_name == "gemini":
         return await _dispatch_gemini(task)
+
+    elif agent_name == "gemini-review":
+        return await _dispatch_gemini_review(task)
 
     elif agent_name == "lmstudio-mac":
         m = model or await _get_lmstudio_model(LMS_MAC_ENDPOINT)

@@ -1440,3 +1440,112 @@ nc -z -w 1 192.168.x.108 1234  # confirm Win LMS reachable
 - Checkpoint written BEFORE CancelledError propagation
 
 **Legacy `orchestrator.py` FastAPI unchanged** — backwards-compatible, will be superseded by V2.
+
+---
+
+## 2026-05-08 — Cross-platform portal + start.sh + Windows counterpart
+
+**Context:** All `start.sh` CLI modes were only surfaced at the terminal; the portal UI had no stop/restart/discover/policy buttons. `pid_on_port()` and `wait_for_port()` used `lsof` and `nc` exclusively, which are macOS-only. No Windows entry point existed.
+
+### What broke / what was missing
+
+| Gap | Root cause |
+|-----|-----------|
+| Portal version stuck at 0.9.9.7 | Forgot to bump `VERSION` constant after v1 work |
+| `/v1/jobs` not visible in UI | V1 supervisor endpoints added to PT but portal never polled them |
+| `--stop`, `--discover`, `--hardware-policy` terminal-only | `portal_server.py` had no corresponding routes |
+| `lsof -ti tcp:PORT` fails on Linux | `lsof` not always installed; `ss` is the Linux equivalent |
+| `nc -z` fails on bare containers | Minimal Docker images ship without `nc`; bash `/dev/tcp` is always available |
+| `nc -z -w 1` banner probes sequential | 3 × 1s = 3s banner lag; should be 3 parallel subshells → max 1s |
+| `setup_macos.py` runs on Linux/CI | Preflight has macOS-specific `xattr` and `codesign` calls; hard-errors on Linux |
+| No Windows start script | No way to boot the stack on the Windows node without WSL |
+
+### Fixes shipped (commit 252a473 on main)
+
+**`portal_server.py`:**
+
+1. `VERSION = "0.9.9.8"` — bump.
+2. **Service Controls bar** (`_render_service_control_section()`):
+   - `POST /api/stop` — SIGTERMs all three services using `_pid_on_port()` (cross-platform: `lsof` → `ss` → fallback)
+   - `POST /api/restart/{service}` — kills + `subprocess.Popen(start_new_session=True)` respawn; logs to `.logs/<svc>.log`
+   - `POST /api/rediscover` — runs `discover.py --force` in a thread executor; returns updated IP summary
+   - `GET /api/hardware-policy` already existed; JS now calls it from the "Re-check Policy" button and toasts result
+3. **Supervisor Jobs panel** (`_render_supervisor_jobs_section()`):
+   - `_probe_supervisor_jobs()` added to the `asyncio.gather` in `api_status()` — zero extra RTT; result included in `supervisor_jobs` key
+   - `GET /api/v1/jobs` proxies to PT; JS `refreshJobs()` polls every 8s independently
+4. New CSS: `.svc-btn`, `.svc-ctrl`, `.jobs-table` — dark theme compatible
+5. `import signal, subprocess, time` added (were missing)
+
+**`start.sh`:**
+
+```bash
+# Before (macOS-only):
+pid_on_port() { lsof -ti "tcp:$1" 2>/dev/null | head -1 || true; }
+while ! nc -z localhost "$port" 2>/dev/null; do
+
+# After (cross-platform):
+pid_on_port() {
+  if command -v lsof; then lsof -ti "tcp:$1" | head -1
+  elif command -v ss;  then ss -tlnp "sport = :$1" | grep -oP 'pid=\K\d+' | head -1
+  elif command -v fuser; then fuser "$1/tcp" | awk '{print $1}' | head -1
+  fi
+}
+_port_open() {
+  if command -v nc; then nc -z localhost "$1" 2>/dev/null
+  else (echo >/dev/tcp/localhost/"$1") 2>/dev/null; fi
+}
+while ! _port_open "$port"; do
+```
+
+- `_nc_probe()` helper in banner — same `nc` vs `/dev/tcp` dual path; all 3 probes remain parallel
+- `setup_macos.py` now guarded: `[ "$_OS_NAME" = "Darwin" ]` — Linux/CI skip with INFO log
+
+**`windows/` folder:**
+
+| File | Role |
+|------|------|
+| `start.ps1` | All 6 CLI modes; `Get-PidOnPort` (netstat), `Wait-ForPort` (TcpClient), `Start-Service` (Popen equivalent via `ProcessStartInfo`) |
+| `install.ps1` | Idempotent venv + deps + openclaw.json defaults; pywin32 + colorama |
+| `requirements-windows.txt` | pywin32, colorama, netifaces |
+| `README.md` | Parity table + architecture notes |
+
+**`windows/start.ps1` platform-translation table:**
+
+| bash | PowerShell |
+|------|-----------|
+| `lsof -ti tcp:PORT` | `netstat -ano` + regex for LISTENING PID |
+| `nc -z localhost PORT` | `TcpClient.ConnectAsync().Wait(500ms)` |
+| `open URL` | `Start-Process URL` |
+| `ipconfig getifaddr en0` | `Get-NetRoute` gateway → `.110` heuristic |
+| `kill PID` | `Stop-Process -Id PID -Force` |
+| subprocess bg `&` | `ProcessStartInfo(CreateNoWindow=true)` + async stream copy |
+| `.paths` sourced file | `.paths.ps1` dot-sourced with `$PtDir`, `$UsPython` vars |
+
+### Key rules derived
+
+- **Never assume `lsof`** — it is missing on Debian minimal, Alpine, and distroless containers. Always cascade: `lsof → ss → fuser`.
+- **Never assume `nc`** — Alpine and scratch images ship without it. Bash `/dev/tcp` is a shell built-in and always available.
+- **`setup_macos.py` guard is mandatory** — the script calls `xattr -cr` and `codesign -s -` which are macOS-only binaries. It will `FileNotFoundError` on Linux.
+- **`-w 1` (timeout) must come before the host in `nc`** — `-z -w 1 host port` works; `-z host port -w 1` silently ignores the flag on some Linux builds.
+- **`Start-Job` vs `ProcessStartInfo`** — PowerShell `Start-Job` creates a new PS host (slow, large). `System.Diagnostics.ProcessStartInfo` with `CreateNoWindow=true` is the correct analogue of bash `cmd &`.
+- **Windows GPU: 1 model at a time** — `install.ps1` prints this as a hard warning; `start.ps1` never sets `LM_STUDIO_WIN_ENDPOINTS` to multiple URLs.
+
+### Verification
+
+```bash
+# macOS
+bash -n start.sh && echo OK                           # syntax
+bash scripts/mac_probe.sh | python3 -m json.tool       # JSON valid
+python3 -c "import ast; ast.parse(open('portal_server.py').read()); print('OK')"
+
+# Linux (simulate)
+_OS_NAME=Linux bash start.sh --status                  # setup_macos skipped
+ss --version && lsof --version || true                 # check which probe tools exist
+```
+
+### Deferred
+
+- `start.ps1` end-to-end on a real Windows + PowerShell 5.1 box (no WSL)
+- `install.ps1` tested with Python 3.11 from python.org (not conda/pyenv)
+- Portal `POST /api/restart/portal` self-restart (kills the process serving the request — needs supervisor process or systemd watchdog to respawn)
+- Linux `ip route get 8.8.8.8` — validate on Ubuntu 22.04 + Debian 12 + Alpine 3.19

@@ -1415,3 +1415,28 @@ Re-run in ~2 days:
 ./start.sh --probe-only       # just probes, no service start
 nc -z -w 1 192.168.x.108 1234  # confirm Win LMS reachable
 ```
+
+---
+
+## 2026-05-08 — V1 supervisor shipped; v2/14 spec written
+
+**Context:** Three reference files synthesised into V1 implementation + V2 spec.
+
+**Perpetua-Tools changes (all in same commit):**
+- `orchestrator/supervisor.py` — V1 `OrchestrationSupervisor` (jsonl, no DB)
+- `orchestrator/worker_registry.py` — static WORKER_REGISTRY (echo, ollama-mac, lmstudio-mac, codex, gemini)
+- `utils/action_validator.py` — two-phase gate
+- `scripts/mac_probe.sh` — hardware detection (Mac14,9 = 16GB/16GPU/arm64/standard tier)
+- 5 new FastAPI endpoints under `/v1/jobs`
+- 192/192 tests green (including 13 new smoke tests)
+
+**orama-system v2 spec added:**
+- `docs/v2/14-supervisor-and-anthropic-patterns.md` — V2 DB persistence, audit log, MAESTRO/SWARM gates, token-efficiency rules, hardware-aware installer plan
+
+**Key rules confirmed for all agent sessions:**
+- `MAX_DEPTH=1`, `MAX_THREADS=25` (Anthropic hard limits)
+- All backends: use POST API, never `ollama run` in a shell
+- `gemini --yolo` required for non-interactive dispatch
+- Checkpoint written BEFORE CancelledError propagation
+
+**Legacy `orchestrator.py` FastAPI unchanged** — backwards-compatible, will be superseded by V2.

@@ -273,8 +273,11 @@ async def _dispatch_gemini(task: str) -> Dict[str, Any]:
 
     t0 = time.time()
     try:
+        # --yolo (alias: -y) auto-approves Gemini tool calls — required for
+        # non-interactive script dispatch. Without it Gemini stalls on the
+        # first sandbox/tool prompt and the subprocess hangs until timeout.
         proc = await asyncio.create_subprocess_exec(
-            gemini_bin, "-p", task,
+            gemini_bin, "--yolo", "-p", task,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             cwd=str(REPO_ROOT),

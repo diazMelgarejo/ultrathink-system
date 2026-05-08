@@ -730,7 +730,9 @@ python scripts/spawn_agents.py --task "..." --agent all   # parallel
 ### Gemini Review Pattern (tested and works)
 
 ```bash
-~/.local/bin/gemini -p "Review X for Y. Be concise."
+# --yolo (alias: -y) auto-approves Gemini tool prompts.
+# Without it, the subprocess hangs at the first sandbox/tool gate.
+~/.local/bin/gemini --yolo -p "Review X for Y. Be concise."
 ```
 
 Returns structured bullet-point feedback in ~3s.
@@ -1386,3 +1388,30 @@ across two repos still referenced the old ID.
   IDs in all source files and fails if any are found.
 
 **Spec doc**: `docs/v2/13-local-model-catalog-strategy.md`
+
+---
+
+## Session 2026-05-08 — start.sh Warm-Cache + Parallel Probes (Layer-3 side)
+
+**Problem:** When PT's `alphaclaw_manager --resolve` failed (Python missing, network blip), `start.sh` fell back to bare offline defaults — services started with empty endpoints. Banner tier-detection ran 3 sequential `nc -z` probes (3s worst case).
+
+**Fixes shipped (1 commit on `main`):**
+
+1. **Warm-cache fallback** — when PT resolve fails, read `.state/routing.json` (last known good state from PT) and re-export `PT_MODE=cached`, `PT_DISTRIBUTED`, `PT_ALPHACLAW_PORT`, `WIN_IP`, `PT_SCENARIO`, `PT_MODE_SOURCE=cache`, `PT_AGENTS_STATE`. Stale-data warning is always printed so operators know cache is in use.
+2. **Parallel banner probes** — 3 `nc -z -w 1` calls now run as background subshells writing to mktemp files, then `wait`. Total banner delay = max(1s) instead of 3s.
+
+**Why this matters with PT v0.9.9.9:**
+- PT now writes `scenario_name` into routing.json. Warm cache reads it and exports `PT_SCENARIO` so banner + portal can show the *last* scenario when resolve is dead.
+- The PT scenario engine + warm cache together mean the constellation degrades gracefully: live → cached → offline-defaults, never opaque hang.
+
+**Gemini CLI syntax update:** `gemini` invocations must now use `--yolo` (alias `-y`) so the subprocess auto-approves tool prompts. Without it Gemini stalls on the first sandbox gate. Patched `scripts/spawn_agents.py:_dispatch_gemini` and the `SKILL.md` example.
+
+**Deferred** (both Mac + Win required):
+- Live `start.sh` validation across LAN (cache hits when Win .108 unreachable but Mac .110 still pingable)
+- Verify banner tier=1 (FULL) when both nodes online
+
+Re-run in ~2 days:
+```bash
+./start.sh --probe-only       # just probes, no service start
+nc -z -w 1 192.168.x.108 1234  # confirm Win LMS reachable
+```

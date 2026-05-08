@@ -271,8 +271,8 @@ claude mcp add --transport stdio orama-ultrathink \
 Run Gemini and Codex concurrently against orama:
 
 ```bash
-# Terminal 1 — Gemini reviews
-gemini "Review the diff in $(pwd) and call @orama for deep analysis"
+# Terminal 1 — Gemini reviews (--yolo auto-approves tool calls; required for non-interactive)
+gemini --yolo "Review the diff in $(pwd) and call @orama for deep analysis"
 
 # Terminal 2 — Codex implements
 codex "Fix the failing test using the orama API at localhost:8001 for reasoning"

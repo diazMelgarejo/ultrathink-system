@@ -228,8 +228,12 @@ fi
 # ── macOS pre-flight ──────────────────────────────────────────────────────────
 # Applies idempotent fixes to the AlphaClaw binary (macOS compat patches).
 # Non-fatal — startup continues on any error.
-if [ -f "$SCRIPT_DIR/setup_macos.py" ]; then
+# Guard: skip entirely on non-macOS (Linux / CI).
+_OS_NAME="$(uname -s 2>/dev/null || echo Unknown)"
+if [ "$_OS_NAME" = "Darwin" ] && [ -f "$SCRIPT_DIR/setup_macos.py" ]; then
   "$US_PYTHON" "$SCRIPT_DIR/setup_macos.py" --quiet 2>&1 | sed 's/^/  /' || true
+elif [ "$_OS_NAME" != "Darwin" ]; then
+  _info "svc" "Non-macOS host (${_OS_NAME}) — skipping setup_macos.py"
 fi
 
 # ── Codex PATH fix (idempotent) ───────────────────────────────────────────────
@@ -495,12 +499,32 @@ fi
 
 # ── helpers ───────────────────────────────────────────────────────────────────
 
-pid_on_port() { lsof -ti "tcp:$1" 2>/dev/null | head -1 || true; }
+pid_on_port() {
+  # Cross-platform: lsof (macOS + Linux), then ss (Linux), then fuser (Linux)
+  if command -v lsof &>/dev/null; then
+    lsof -ti "tcp:$1" 2>/dev/null | head -1 || true
+  elif command -v ss &>/dev/null; then
+    ss -tlnp "sport = :$1" 2>/dev/null | grep -oP 'pid=\K\d+' | head -1 || true
+  elif command -v fuser &>/dev/null; then
+    fuser "$1/tcp" 2>/dev/null | awk '{print $1}' | head -1 || true
+  fi
+}
+
+_port_open() {
+  # Cross-platform TCP probe: nc → /dev/tcp bash built-in
+  local port=$1
+  if command -v nc &>/dev/null; then
+    nc -z localhost "$port" 2>/dev/null
+  else
+    # bash /dev/tcp built-in (works without nc on most Linux)
+    (echo >/dev/tcp/localhost/"$port") 2>/dev/null
+  fi
+}
 
 wait_for_port() {
   local port=$1 label=$2 tries=0
   printf "  waiting for %s (:%s)" "$label" "$port"
-  while ! nc -z localhost "$port" 2>/dev/null; do
+  while ! _port_open "$port"; do
     sleep 0.5; tries=$((tries+1))
     printf "."
     if [ $((tries % 60)) -eq 0 ] && [ $tries -gt 0 ]; then
@@ -546,9 +570,18 @@ _print_banner() {
   _mac_f="$(mktemp /tmp/.orama_probe_mac_XXXXXX)"
   _win_f="$(mktemp /tmp/.orama_probe_win_XXXXXX)"
   _oc_f="$(mktemp /tmp/.orama_probe_oc_XXXXXX)"
-  ( nc -z -w 1 localhost   1234  >/dev/null 2>&1 && echo 1 || echo 0 ) > "$_mac_f" &
-  ( nc -z -w 1 "$win_ip"   1234  >/dev/null 2>&1 && echo 1 || echo 0 ) > "$_win_f" &
-  ( nc -z -w 1 localhost   18789 >/dev/null 2>&1 && echo 1 || echo 0 ) > "$_oc_f"  &
+  # _nc_probe: cross-platform 1-second TCP probe (nc -w1 on macOS/Linux, /dev/tcp fallback)
+  _nc_probe() {
+    local host="$1" port="$2"
+    if command -v nc &>/dev/null; then
+      nc -z -w 1 "$host" "$port" >/dev/null 2>&1
+    else
+      timeout 1 bash -c "(echo >/dev/tcp/${host}/${port})" 2>/dev/null
+    fi
+  }
+  ( _nc_probe localhost   1234  && echo 1 || echo 0 ) > "$_mac_f" &
+  ( _nc_probe "$win_ip"   1234  && echo 1 || echo 0 ) > "$_win_f" &
+  ( _nc_probe localhost   18789 && echo 1 || echo 0 ) > "$_oc_f"  &
   wait
   mac_up="$(cat "$_mac_f" 2>/dev/null || echo 0)"
   win_up="$(cat "$_win_f" 2>/dev/null || echo 0)"

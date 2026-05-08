@@ -17,9 +17,12 @@ import html as _html
 import json
 import logging
 import os
+import signal
+import subprocess
 import sys
+import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 import httpx
 import uvicorn
@@ -39,7 +42,7 @@ except ImportError:
 log = logging.getLogger("ultrathink.portal")
 logging.basicConfig(level=logging.INFO)
 
-VERSION = "0.9.9.7"
+VERSION = "0.9.9.8"
 
 # ── IP Resolution (authoritative — reads openclaw.json, never stale hardcodes) ─
 # Import shared resolver so portal works correctly whether started via start.sh
@@ -235,6 +238,30 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .dispatch-send:hover{{background:#6d28d9}}
   .dispatch-status{{font-size:.7rem;color:#64748b;margin-top:.4rem;min-height:1rem}}
   .dispatch-output{{background:#1e293b;border:1px solid #475569;border-radius:3px;color:#a5f3fc;font-family:monospace;font-size:.7rem;margin-top:.5rem;max-height:14rem;overflow-y:auto;padding:.5rem .75rem;white-space:pre-wrap;display:none}}
+  /* service-control bar */
+  .svc-ctrl{{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.75rem}}
+  .svc-btn{{background:#1e293b;border:1px solid #475569;border-radius:3px;color:#94a3b8;cursor:pointer;font-family:monospace;font-size:.7rem;padding:.35rem .75rem;transition:border-color .15s,color .15s}}
+  .svc-btn:hover{{border-color:#38bdf8;color:#f8fafc}}
+  .svc-btn.danger{{border-color:#ef4444;color:#f87171}}
+  .svc-btn.danger:hover{{background:#7f1d1d;color:#fca5a5}}
+  .svc-btn.warn{{border-color:#f59e0b;color:#fbbf24}}
+  .svc-btn.warn:hover{{background:#78350f;color:#fde68a}}
+  .svc-ctrl-status{{font-size:.7rem;color:#64748b;margin-top:.4rem;min-height:1rem}}
+  /* supervisor jobs table */
+  .jobs-table{{width:100%;border-collapse:collapse;font-size:.72rem;margin-top:.5rem}}
+  .jobs-table th{{color:#64748b;font-weight:600;letter-spacing:.07em;padding:.35rem .6rem;text-align:left;text-transform:uppercase;border-bottom:1px solid #475569}}
+  .jobs-table td{{color:#cbd5e1;padding:.3rem .6rem;border-bottom:1px solid #3f536640;font-family:monospace;vertical-align:middle}}
+  .jobs-table tr:last-child td{{border-bottom:none}}
+  .job-status-queued{{color:#94a3b8}}
+  .job-status-running{{color:#4ade80}}
+  .job-status-done,.job-status-succeeded{{color:#38bdf8}}
+  .job-status-failed{{color:#f87171}}
+  .job-status-cancelled{{color:#f59e0b}}
+  .job-intent{{color:#a78bfa;font-size:.68rem}}
+  .jobs-empty{{color:#64748b;font-size:.75rem;padding:.75rem}}
+  body[data-theme="night"] .svc-btn{{background:#0f1117;border-color:#374151}}
+  body[data-theme="night"] .jobs-table th{{border-color:#374151}}
+  body[data-theme="night"] .jobs-table td{{border-color:#1f2937}}
 </style>
 </head>
 <body>
@@ -249,10 +276,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <div id="cards-grid" class="grid">
 {cards}
 </div>
+{service_control_section}
 <div id="routing-section">{routing_section}</div>
 {hardware_policy_section}
 {tools_section}
 {agent_dispatch_section}
+{supervisor_jobs_section}
 {agent_state_section}
 <div id="activity-section">{activity_section}</div>
 {input_section}
@@ -410,6 +439,83 @@ function showToast(msg, type) {{
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 6000);
 }}
+// ── Service controls ───────────────────────────────────────────────────────
+async function svcAction(action, service) {{
+  const statusEl = document.getElementById('svc-ctrl-status');
+  if (statusEl) statusEl.textContent = action + (service?' '+service:'') + '…';
+  try {{
+    const url = action === 'stop' ? '/api/stop' : '/api/restart/' + service;
+    const r = await fetch(url, {{method:'POST',headers:{{'Content-Type':'application/json'}},body:'{{}}'}});
+    const d = await r.json();
+    const msg = d.message || JSON.stringify(d);
+    if (statusEl) statusEl.textContent = msg;
+    showToast(msg, d.ok ? 'success' : 'warning');
+    if (d.ok) setTimeout(refreshData, 2000);
+  }} catch(e) {{
+    const msg = 'Error: ' + e;
+    if (statusEl) statusEl.textContent = msg;
+  }}
+}}
+async function rediscover() {{
+  const statusEl = document.getElementById('svc-ctrl-status');
+  if (statusEl) statusEl.textContent = 'Re-discovering LAN…';
+  try {{
+    const r = await fetch('/api/rediscover', {{method:'POST',headers:{{'Content-Type':'application/json'}},body:'{{}}'}});
+    const d = await r.json();
+    const msg = d.message || JSON.stringify(d);
+    if (statusEl) statusEl.textContent = msg;
+    showToast(msg, d.ok ? 'success' : 'warning');
+    if (d.ok) setTimeout(refreshData, 3000);
+  }} catch(e) {{
+    if (statusEl) statusEl.textContent = 'Error: ' + e;
+  }}
+}}
+async function recheckPolicy() {{
+  const statusEl = document.getElementById('svc-ctrl-status');
+  if (statusEl) statusEl.textContent = 'Re-checking hardware policy…';
+  try {{
+    const r = await fetch('/api/hardware-policy');
+    const d = await r.json();
+    const ok = d.ok;
+    const violations = (d.violations||[]).join(', ');
+    const msg = ok ? '✓ Policy clean' : '✗ Violations: ' + (violations||'see panel');
+    if (statusEl) statusEl.textContent = msg;
+    showToast(msg, ok ? 'success' : 'warning');
+  }} catch(e) {{
+    if (statusEl) statusEl.textContent = 'Error: ' + e;
+  }}
+}}
+// ── Supervisor jobs refresh ────────────────────────────────────────────────
+async function refreshJobs() {{
+  const tbody = document.getElementById('jobs-tbody');
+  if (!tbody) return;
+  try {{
+    const r = await fetch('/api/v1/jobs');
+    if (!r.ok) return;
+    const jobs = await r.json();
+    if (!jobs.length) {{
+      tbody.innerHTML = '<tr><td colspan="5" class="jobs-empty">No jobs yet</td></tr>';
+      return;
+    }}
+    tbody.innerHTML = jobs.slice(0,20).map(j => {{
+      const cls = 'job-status-' + (j.status||'unknown');
+      const ts = j.created_at ? new Date(j.created_at*1000).toLocaleTimeString() : '';
+      const elapsed = j.elapsed_s != null ? j.elapsed_s.toFixed(1)+'s' : '';
+      return '<tr>' +
+        '<td><span class="job-intent">' + _esc(j.intent||'') + '</span></td>' +
+        '<td><span class="'+cls+'">' + _esc(j.status||'') + '</span></td>' +
+        '<td>' + _esc(j.backend||'') + '</td>' +
+        '<td>' + ts + '</td>' +
+        '<td>' + elapsed + '</td>' +
+        '</tr>';
+    }}).join('');
+  }} catch(e) {{ /* silent */ }}
+}}
+function _esc(s) {{
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}}
+setInterval(refreshJobs, 8000);
+setTimeout(refreshJobs, 1000);
 </script>
 </body>
 </html>"""
@@ -786,6 +892,75 @@ def _render_input_section(queue_depth: int) -> str:
     )
 
 
+def _render_service_control_section() -> str:
+    """Service-control bar: Stop All, per-service Restart, Re-discover LAN, Re-check Policy."""
+    return (
+        '<div class="section">'
+        '<div class="section-title">Service Controls</div>'
+        '<div class="card">'
+        '<div class="svc-ctrl">'
+        '<button class="svc-btn danger" onclick="svcAction(\'stop\')">&#9632; Stop All</button>'
+        '<button class="svc-btn warn" onclick="svcAction(\'restart\',\'pt\')">&#8635; Restart PT :8000</button>'
+        '<button class="svc-btn warn" onclick="svcAction(\'restart\',\'orama\')">&#8635; Restart orama :8001</button>'
+        '<button class="svc-btn warn" onclick="svcAction(\'restart\',\'portal\')">&#8635; Restart Portal :8002</button>'
+        '<button class="svc-btn" onclick="rediscover()">&#8635; Re-discover LAN</button>'
+        '<button class="svc-btn" onclick="recheckPolicy()">&#10003; Re-check Policy</button>'
+        '</div>'
+        '<div class="svc-ctrl-status" id="svc-ctrl-status"></div>'
+        '<div style="font-size:.65rem;color:#475569;margin-top:.4rem">'
+        'CLI: ./start.sh --stop &bull; ./start.sh --discover &bull; ./start.sh --hardware-policy'
+        '</div>'
+        '</div>'
+        '</div>'
+    )
+
+
+def _render_supervisor_jobs_section(jobs: List[Dict[str, Any]]) -> str:
+    """V1 OrchestrationSupervisor jobs panel — polls PT /v1/jobs."""
+    if not jobs:
+        rows_html = '<tr><td colspan="5" class="jobs-empty">No supervisor jobs yet — submit via PT API or agent dispatch</td></tr>'
+    else:
+        def _esc(s: str) -> str:
+            return str(s).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+        row_parts = []
+        import datetime as _dt
+        for j in jobs[:20]:
+            status = j.get("status", "unknown")
+            cls = f"job-status-{status}"
+            ts_raw = j.get("created_at", 0)
+            try:
+                ts_str = _dt.datetime.fromtimestamp(float(ts_raw)).strftime("%H:%M:%S") if ts_raw else "—"
+            except Exception:
+                ts_str = "—"
+            elapsed = j.get("elapsed_s")
+            elapsed_str = f"{float(elapsed):.1f}s" if elapsed is not None else "—"
+            row_parts.append(
+                "<tr>"
+                f'<td><span class="job-intent">{_esc(j.get("intent",""))}</span></td>'
+                f'<td><span class="{cls}">{_esc(status)}</span></td>'
+                f'<td>{_esc(j.get("backend",""))}</td>'
+                f'<td>{ts_str}</td>'
+                f'<td>{elapsed_str}</td>'
+                "</tr>"
+            )
+        rows_html = "".join(row_parts)
+
+    return (
+        '<div class="section">'
+        '<div class="section-title">Supervisor Jobs (PT /v1/jobs)</div>'
+        '<div class="card">'
+        '<table class="jobs-table">'
+        '<thead><tr>'
+        '<th>Intent</th><th>Status</th><th>Backend</th><th>Created</th><th>Elapsed</th>'
+        '</tr></thead>'
+        f'<tbody id="jobs-tbody">{rows_html}</tbody>'
+        '</table>'
+        '</div>'
+        '</div>'
+    )
+
+
 def _render_html(status: Dict[str, Any]) -> str:
     import datetime
 
@@ -865,13 +1040,16 @@ def _render_html(status: Dict[str, Any]) -> str:
         "ollama_mac_busy":   _ollama_busy,
         "lmstudio_mac_busy": _lmstudio_busy,
     }
+    jobs = status.get("supervisor_jobs", [])
     return HTML_TEMPLATE.format(
         version=VERSION,
         cards="\n".join(cards),
+        service_control_section=_render_service_control_section(),
         routing_section=_render_routing_section(routing),
         hardware_policy_section=_render_hardware_policy_section(hardware_policy),
         tools_section=_render_tools_section(tools),
         agent_dispatch_section=_render_agent_dispatch_section(agent_availability),
+        supervisor_jobs_section=_render_supervisor_jobs_section(jobs),
         agent_state_section=_render_agent_state_section(agents),
         activity_section=_render_activity_section(activity_events),
         input_section=_render_input_section(queue_depth),
@@ -963,6 +1141,20 @@ async def _probe_queue_depth(client: httpx.AsyncClient) -> int:
         return r.json().get("queue_depth", 0)
     except Exception:
         return 0
+
+
+async def _probe_supervisor_jobs(client: httpx.AsyncClient) -> List[Dict[str, Any]]:
+    """Fetch V1 supervisor job list from PT /v1/jobs (latest 20, all statuses)."""
+    try:
+        r = await client.get(f"{PT_URL}/v1/jobs", timeout=PROBE_TIMEOUT)
+        r.raise_for_status()
+        data = r.json()
+        # PT returns list directly or {jobs: [...]}
+        if isinstance(data, list):
+            return data
+        return data.get("jobs", [])
+    except Exception:
+        return []
 
 
 def _simple_policy_parse(text: str) -> Dict[str, List[str]]:
@@ -1204,6 +1396,7 @@ async def api_status():
             agents,
             routing,
             queue_depth,
+            supervisor_jobs,
             *lm_win_results,
         ) = await asyncio.gather(
             _probe_http(client, f"{PT_URL}/health"),
@@ -1215,6 +1408,7 @@ async def api_status():
             _probe_agents(client),
             _probe_routing(client),
             _probe_queue_depth(client),
+            _probe_supervisor_jobs(client),
             *[_probe_lms_models(client, ep, LMS_API_TOKEN) for ep in _dyn_win_lms],
         )
 
@@ -1263,6 +1457,7 @@ async def api_status():
         "routing": routing,
         "hardware_policy": hardware_policy,
         "queue_depth": queue_depth,
+        "supervisor_jobs": supervisor_jobs,
         "tools": tools,
         "codex_available": tools.get("codex-cli", {}).get("ok", False),
         "gemini_available": tools.get("gemini-cli", {}).get("ok", False),
@@ -1411,6 +1606,151 @@ async def api_configure_tool(req: ConfigureToolRequest):
         safe = _re.sub(r'[`\'\n\r;$\\]', "", req.value).replace('"', "")
         os.environ[req.env_var] = safe
     return {"ok": ok, "message": msg}
+
+
+# ── Supervisor jobs proxy ─────────────────────────────────────────────────────
+
+@app.get("/api/v1/jobs")
+async def api_get_jobs(status: Optional[str] = None):
+    """Proxy to PT's /v1/jobs — used by the supervisor jobs panel JS poller."""
+    params = {"status": status} if status else {}
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            r = await client.get(f"{PT_URL}/v1/jobs", params=params)
+            r.raise_for_status()
+            return r.json()
+        except Exception as exc:
+            return []
+
+
+# ── Service lifecycle controls ────────────────────────────────────────────────
+
+def _pid_on_port(port: int) -> Optional[int]:
+    """Return PID listening on port, or None. Uses lsof on macOS/Linux."""
+    import shutil
+    # lsof is available on macOS and most Linux distros
+    lsof = shutil.which("lsof")
+    if lsof:
+        try:
+            out = subprocess.check_output(
+                [lsof, "-ti", f"tcp:{port}"], stderr=subprocess.DEVNULL
+            ).decode().strip()
+            pid_str = out.split("\n")[0].strip()
+            return int(pid_str) if pid_str.isdigit() else None
+        except Exception:
+            pass
+    # Fallback: ss (Linux)
+    ss = shutil.which("ss")
+    if ss:
+        try:
+            out = subprocess.check_output(
+                ["ss", "-tlnp", f"sport = :{port}"], stderr=subprocess.DEVNULL
+            ).decode()
+            import re
+            m = re.search(r'pid=(\d+)', out)
+            return int(m.group(1)) if m else None
+        except Exception:
+            pass
+    return None
+
+
+_SERVICE_PORTS = {"pt": 8000, "orama": 8001, "portal": 8002}
+_SERVICE_CMDS = {
+    "pt":     ["python", "-m", "uvicorn", "orchestrator.fastapi_app:app", "--host", "0.0.0.0", "--port", "8000"],
+    "orama":  ["python", "-m", "uvicorn", "api_server:app", "--host", "0.0.0.0", "--port", "8001"],
+    "portal": ["python", "-m", "uvicorn", "portal_server:app", "--host", "0.0.0.0", "--port", "8002"],
+}
+
+
+@app.post("/api/stop")
+async def api_stop():
+    """Kill all three orama services (PT :8000, orama :8001, portal :8002)."""
+    killed = []
+    for name, port in _SERVICE_PORTS.items():
+        pid = _pid_on_port(port)
+        if pid:
+            try:
+                os.kill(pid, signal.SIGTERM)
+                killed.append(f"{name}:{port} (PID {pid})")
+            except Exception as exc:
+                killed.append(f"{name}:{port} kill failed: {exc}")
+        else:
+            killed.append(f"{name}:{port} not running")
+    return {"ok": True, "message": "Stop sent — " + "; ".join(killed)}
+
+
+@app.post("/api/restart/{service}")
+async def api_restart(service: str):
+    """Kill and restart a named service (pt | orama | portal).
+    The service is restarted as a detached background process with the same working
+    directory and inherited environment variables.
+    """
+    if service not in _SERVICE_PORTS:
+        return {"ok": False, "message": f"Unknown service '{service}' — use: pt, orama, portal"}
+    port = _SERVICE_PORTS[service]
+
+    # Kill current process
+    pid = _pid_on_port(port)
+    if pid:
+        try:
+            os.kill(pid, signal.SIGTERM)
+            await asyncio.sleep(1.2)
+        except Exception:
+            pass
+
+    # Determine working dir + python
+    if service == "pt":
+        cwd = str(PERPETUA_TOOLS_ROOT)
+        py = sys.executable
+        env = {**os.environ, "PYTHONPATH": cwd}
+        cmd = [py, "-m", "uvicorn", "orchestrator.fastapi_app:app",
+               "--host", "0.0.0.0", "--port", str(port)]
+    else:
+        cwd = str(REPO_ROOT)
+        py = sys.executable
+        env = {**os.environ, "PYTHONPATH": cwd}
+        module = "api_server:app" if service == "orama" else "portal_server:app"
+        cmd = [py, "-m", "uvicorn", module, "--host", "0.0.0.0", "--port", str(port)]
+
+    log_path = REPO_ROOT / ".logs" / f"{service}.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with open(log_path, "ab") as lf:
+            subprocess.Popen(
+                cmd, cwd=cwd, env=env,
+                stdout=lf, stderr=lf,
+                start_new_session=True,
+            )
+        return {"ok": True, "message": f"Restarting {service} on :{port} — check {log_path.name}"}
+    except Exception as exc:
+        return {"ok": False, "message": f"Restart failed: {exc}"}
+
+
+@app.post("/api/rediscover")
+async def api_rediscover():
+    """Re-run LAN discovery (discover.py --force) and return updated Win IP."""
+    discover_script = Path.home() / ".openclaw" / "scripts" / "discover.py"
+    if not discover_script.exists():
+        return {"ok": False, "message": f"discover.py not found at {discover_script}"}
+    loop = asyncio.get_event_loop()
+
+    def _run():
+        try:
+            result = subprocess.run(
+                [sys.executable, str(discover_script), "--force"],
+                capture_output=True, text=True, timeout=35,
+            )
+            stdout = (result.stdout or "").strip()
+            stderr = (result.stderr or "").strip()
+            ok = result.returncode == 0
+            summary = stdout.splitlines()[-1] if stdout else (stderr.splitlines()[-1] if stderr else "done")
+            return {"ok": ok, "message": f"Discover {'OK' if ok else 'failed'}: {summary[:120]}"}
+        except subprocess.TimeoutExpired:
+            return {"ok": False, "message": "discover.py timed out (>35s)"}
+        except Exception as exc:
+            return {"ok": False, "message": f"discover.py error: {exc}"}
+
+    return await loop.run_in_executor(None, _run)
 
 
 class SpawnAgentRequest(BaseModel):

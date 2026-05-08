@@ -1,0 +1,24 @@
+# Windows-specific Python requirements for orama-system
+# Install: pip install -r windows/requirements-windows.txt
+#
+# These packages are needed on Windows that are either:
+#   (a) not needed on macOS (winreg, pywin32), or
+#   (b) have platform-specific wheel dependencies
+#
+# Core dependencies (cross-platform — also in requirements.txt at repo root)
+# are intentionally omitted here to avoid duplication.
+
+# Windows-specific async process management
+pywin32>=306        # Win32 API bindings (process, registry, services)
+
+# Windows network utilities (netifaces not always available via pip on Windows)
+netifaces>=0.11.0   # cross-platform network interface listing
+
+# ANSI color support in Windows terminal (needed for banner colors in cmd.exe)
+colorama>=0.4.6
+
+# LM Studio API calls (same wheel as macOS, listed for completeness)
+httpx>=0.27.0
+uvicorn[standard]>=0.29.0
+fastapi>=0.111.0
+pydantic>=2.7.0

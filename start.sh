@@ -855,10 +855,11 @@ _print_banner() {
 
 for _prearg in "$@"; do
   case "$_prearg" in
-    --profile=*) export OPENCLAW_PROFILE="${_prearg#--profile=}" ;;
-    --with-mcp)  export WITH_MCP=1 ;;
-    --no-mcp)    export WITH_MCP=0 ;;
-    --no-ollama) export OLLAMA_AUTO_START=0 ;;
+    --profile=*)      export OPENCLAW_PROFILE="${_prearg#--profile=}" ;;
+    --with-mcp)       export WITH_MCP=1 ;;
+    --no-mcp)         export WITH_MCP=0 ;;
+    --no-ollama)      export OLLAMA_AUTO_START=0 ;;
+    --install-watcher) export INSTALL_NETWORK_WATCHER=1 ;;
   esac
 done
 
@@ -958,6 +959,17 @@ echo ""
 
 # Register MCP endpoints after all services are confirmed up
 _register_mcp_endpoints
+
+# ── network watcher install (--install-watcher flag or first-time setup) ──────
+_WATCHER_SCRIPT="$SCRIPT_DIR/scripts/install_network_watch.sh"
+if [[ "${INSTALL_NETWORK_WATCHER:-0}" == "1" ]] && [[ -f "$_WATCHER_SCRIPT" ]]; then
+  _info "watcher" "Installing launchd network-change watcher..."
+  bash "$_WATCHER_SCRIPT" 2>&1 | while IFS= read -r line; do _info "watcher" "$line"; done
+elif ! launchctl list 2>/dev/null | grep -q "com.orama.network-watch"; then
+  # Watcher not installed — nudge user once
+  _warn "watcher" "Network-change watcher not installed. Run: ./start.sh --install-watcher"
+  _warn "watcher" "Without it, IP changes after power cycle require manual ./start.sh --discover"
+fi
 
 if [[ "${1:-}" != "--no-open" ]]; then
   open_browser "$PORTAL_URL"

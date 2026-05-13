@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+    "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  com.orama.network-watch.plist
+  ─────────────────────────────
+  launchd agent: keeps discover.py --watch running as a persistent background
+  service. Restarts automatically if it crashes (ThrottleInterval prevents
+  tight restart loops). Triggers immediately on load (RunAtLoad).
+
+  Install:
+    cp config/com.orama.network-watch.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.orama.network-watch.plist
+
+  Uninstall:
+    launchctl unload ~/Library/LaunchAgents/com.orama.network-watch.plist
+    rm ~/Library/LaunchAgents/com.orama.network-watch.plist
+
+  Check status:
+    launchctl list | grep orama
+    tail -f ~/.openclaw/state/network-watch.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.orama.network-watch</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/env</string>
+        <string>python3</string>
+        <!-- absolute path — symlinked at install time by install_network_watch.sh -->
+        <string>ORAMA_DISCOVER_PY_PATH</string>
+        <string>--watch</string>
+        <string>--watch-interval</string>
+        <string>30</string>
+    </array>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <!-- openclaw.json is writable without PT root — warning only now -->
+        <key>PERPETUA_TOOLS_ROOT</key>
+        <string>PERPETUA_TOOLS_ROOT_PATH</string>
+        <key>OPENCLAW_DIR</key>
+        <string>HOME_OPENCLAW_DIR</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Restart if the process exits (crash or signal) -->
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- Don't restart faster than every 60 s to avoid tight crash loops -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <key>StandardOutPath</key>
+    <string>HOME_OPENCLAW_DIR/state/network-watch.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>HOME_OPENCLAW_DIR/state/network-watch.log</string>
+</dict>
+</plist>

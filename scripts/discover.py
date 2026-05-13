@@ -199,17 +199,53 @@ def _mac_lan_ip():
         return None
 
 def discover_endpoints() -> dict:
+    """Probe Mac and Windows LM Studio instances.
+
+    Mac identification strategy (in order):
+      1. localhost:1234  — classic single-machine dev setup
+      2. mac_lan_ip:1234 — LM Studio bound to all interfaces (common after
+         power cycle or when LAN access is needed from other machines)
+      3. Seed from last_discovery.json mac.ip — avoids full subnet scan on
+         unchanged topologies
+
+    Windows identification:
+      Any responding LM Studio on the subnet that is NOT the Mac's own IP.
+      Falls back to last-known-good IP, then full subnet scan.
+    """
     result = {"mac": None, "win": None}
+
+    # Step 1: try localhost first (zero network traffic, instant)
     mac_models = probe_models("http://localhost:1234")
     if mac_models:
         result["mac"] = {"ip": "localhost", "models": mac_models}
 
-    last = _load_json(LAST_DISCOVERY_JSON)
-    win_last_ip = (last or {}).get("endpoints", {}).get("win", {}).get("ip", "")
     mac_lan = _mac_lan_ip()
     exclude = {"localhost", "127.0.0.1"}
     if mac_lan:
         exclude.add(mac_lan)
+
+    # Step 2: if localhost missed, probe the Mac's own LAN IP
+    # (LM Studio often binds to 0.0.0.0 and is reachable via LAN IP)
+    if not result["mac"] and mac_lan:
+        mac_models_lan = probe_models(f"http://{mac_lan}:1234")
+        if mac_models_lan:
+            result["mac"] = {"ip": mac_lan, "models": mac_models_lan}
+            print(f"  ℹ️  Mac LM Studio found at LAN IP {mac_lan} (not localhost)", file=sys.stderr)
+
+    # Step 3: seed from last discovery for Mac (avoids scan when IP unchanged)
+    last = _load_json(LAST_DISCOVERY_JSON)
+    if not result["mac"] and last:
+        mac_last_ip = (last.get("endpoints", {}).get("mac", {}) or {}).get("ip", "")
+        if mac_last_ip and mac_last_ip not in ("", "localhost", "127.0.0.1"):
+            mac_models_seed = probe_models(f"http://{mac_last_ip}:1234")
+            if mac_models_seed:
+                result["mac"] = {"ip": mac_last_ip, "models": mac_models_seed}
+                print(f"  ℹ️  Mac LM Studio rediscovered at {mac_last_ip} (seeded from cache)", file=sys.stderr)
+
+    win_last_ip = (last or {}).get("endpoints", {}).get("win", {}).get("ip", "")
+    # Mac's LAN IP (or discovered IP) must not be treated as Windows
+    if result["mac"] and result["mac"]["ip"] not in ("localhost", "127.0.0.1"):
+        exclude.add(result["mac"]["ip"])
 
     if win_last_ip and win_last_ip not in exclude:
         win_models = probe_models(f"http://{win_last_ip}:1234")
@@ -295,11 +331,13 @@ def _enforce_backup_limits():
 # ── Config patching ───────────────────────────────────────────────────────────
 
 def patch_openclaw_json(endpoints: dict):
+    # PERPETUATOOLSROOT is only needed for PT-specific policy operations.
+    # openclaw.json IP patching works fine without it — just warn if absent.
     if not _resolve_perpetua_root_env():
-        logging.critical(
-            "PERPETUATOOLSROOT/PERPETUA_TOOLS_ROOT not set. Refusing to write openclaw.json."
+        logging.warning(
+            "PERPETUATOOLSROOT/PERPETUA_TOOLS_ROOT not set — skipping PT-specific policy "
+            "checks, but openclaw.json IP update will still proceed."
         )
-        raise SystemExit(1)
     if not OPENCLAW_JSON.exists(): return
     cfg = _load_json(OPENCLAW_JSON)
     if not cfg: return
@@ -538,6 +576,106 @@ def _cmd_restore(target: str):
     RECOVERY_SOURCE_TXT.write_text("manual_restore\n")
     print(f"✅ Restored: Mac={mac.get('ip', '?')} Win={win.get('ip', '?')}")
 
+def _watch_loop(interval: int = 30) -> None:
+    """Poll for network changes and re-run discovery when topology shifts.
+
+    Strategy:
+      - Every `interval` seconds, probe both known IPs for liveness.
+      - If liveness changes (a node appears/disappears) run full discovery.
+      - On macOS, also listens for scutil network-change events via subprocess
+        so recovery happens within seconds of a DHCP renewal after power cycle.
+
+    The watch loop runs until killed (SIGINT/SIGTERM).
+    """
+    import subprocess, signal, threading
+
+    _stop = threading.Event()
+
+    def _sig(*_): _stop.set()
+    signal.signal(signal.SIGINT,  _sig)
+    signal.signal(signal.SIGTERM, _sig)
+
+    def _quick_alive(ip: str) -> bool:
+        """TCP connect probe — faster than full /v1/models round-trip."""
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(1.0)
+            host = "127.0.0.1" if ip in ("localhost", "127.0.0.1") else ip
+            s.connect((host, LM_STUDIO_PORT))
+            s.close()
+            return True
+        except Exception:
+            return False
+
+    def _current_liveness() -> dict:
+        state = _load_json(LAST_DISCOVERY_JSON) or {}
+        ep = state.get("endpoints", {})
+        mac_ip = (ep.get("mac") or {}).get("ip", "")
+        win_ip = (ep.get("win") or {}).get("ip", "")
+        return {
+            "mac": _quick_alive(mac_ip) if mac_ip else False,
+            "win": _quick_alive(win_ip) if win_ip else False,
+            "mac_lan": _mac_lan_ip(),
+        }
+
+    def _scutil_listener():
+        """macOS: wait for scutil network-change event, then set stop flag so
+        the main loop immediately re-probes.  Runs in a daemon thread."""
+        try:
+            proc = subprocess.Popen(
+                ["scutil"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.DEVNULL,
+                text=True,
+            )
+            assert proc.stdin and proc.stdout
+            proc.stdin.write("n.add com.apple.system.config.network_change\n")
+            proc.stdin.write("n.watch\n")
+            proc.stdin.flush()
+            for line in proc.stdout:
+                if "notification" in line.lower() or "changed" in line.lower():
+                    print("🔔 Network change detected — triggering rediscovery...", file=sys.stderr)
+                    _stop.set()   # wake the main loop immediately
+                    _stop.clear() # re-arm for next event (set() wakes, clear() re-arms)
+                    run_discovery(force=True, cached=False)
+                if _stop.is_set():
+                    break
+            proc.kill()
+        except Exception:
+            pass  # scutil not available or permission denied — polling fallback handles it
+
+    # Start macOS network-change listener in background
+    t = threading.Thread(target=_scutil_listener, daemon=True)
+    t.start()
+
+    last_liveness = _current_liveness()
+    print(f"👁️  Network watcher started (poll every {interval}s). Ctrl-C to stop.", file=sys.stderr)
+
+    while not _stop.wait(timeout=interval):
+        current = _current_liveness()
+        topology_changed = (
+            current["mac"] != last_liveness["mac"] or
+            current["win"] != last_liveness["win"] or
+            current["mac_lan"] != last_liveness["mac_lan"]
+        )
+        if topology_changed:
+            print(
+                f"⚡ Topology change: mac={last_liveness['mac']}→{current['mac']} "
+                f"win={last_liveness['win']}→{current['win']} "
+                f"mac_lan={last_liveness['mac_lan']}→{current['mac_lan']}",
+                file=sys.stderr,
+            )
+            run_discovery(force=True, cached=False)
+            last_liveness = _current_liveness()
+        else:
+            # Refresh timestamp so consumers know watcher is alive
+            state = _load_json(LAST_DISCOVERY_JSON)
+            if state:
+                state["watcher_heartbeat"] = datetime.now(timezone.utc).isoformat()
+                LAST_DISCOVERY_JSON.write_text(json.dumps(state, indent=2))
+
+
 def main():
     p = argparse.ArgumentParser(
         description="LM Studio Auto-Discovery (always probes by default; use --cached to skip when warm)",
@@ -549,10 +687,18 @@ def main():
     p.add_argument("--status",  action="store_true", help="Show current state (no probe)")
     p.add_argument("--restore", metavar="TARGET",    help="latest | YYYY-MM-DD | profile:name")
     p.add_argument("--prune",   action="store_true", help="Manually prune backups")
+    p.add_argument("--watch",   action="store_true",
+                   help="Run continuously: re-probe on network change (scutil) or topology shift")
+    p.add_argument("--watch-interval", type=int, default=30, metavar="SEC",
+                   help="Polling interval for --watch mode (default: 30s)")
     args = p.parse_args()
     if args.status:  _cmd_status(); sys.exit(0)
     if args.restore: _cmd_restore(args.restore); sys.exit(0)
     if args.prune:   _enforce_backup_limits(); print("✅ Pruned."); sys.exit(0)
+    if args.watch:
+        run_discovery(force=True, cached=False)  # initial probe
+        _watch_loop(interval=args.watch_interval)
+        sys.exit(0)
     # When --cached is given, respect TTL (skip if warm); otherwise always probe.
     if args.cached:
         sys.exit(run_discovery(force=False, cached=True))

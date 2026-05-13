@@ -1,5 +1,4 @@
 {
-  "_comment": "mac-orchestrator profile — local-first Coordinator pattern using Ollama qwen3.5:9b-nvfp4 as primary. Activate via: OPENCLAW_PROFILE=mac-orchestrator ./start.sh",
   "agents": {
     "defaults": {
       "bootstrapMaxChars": 5000,
@@ -9,10 +8,15 @@
         "primary": "ollama/qwen3.5:9b-nvfp4"
       },
       "models": {
-        "google/gemini-3.1-pro-preview": {},
-        "google/gemini-3.1-flash-lite-preview": {},
+        "google/gemini-2.5-flash-FALL": {},
+        "google/gemini-2.5-flash-lite-FALL": {},
         "google/gemini-2.5-pro": {},
-        "google/gemini-2.5-flash-FALL": {}
+        "google/gemini-3-flash-preview": {},
+        "google/gemini-3-flash-preview-FALL": {},
+        "google/gemini-3.1-flash-lite-preview": {},
+        "google/gemini-3.1-flash-lite-preview-FALL": {},
+        "google/gemini-3.1-pro-preview": {},
+        "google/gemini-3.1-pro-preview-FALL": {}
       },
       "thinkingDefault": "off",
       "workspace": "${HOME}/.openclaw/agents/default"
@@ -23,25 +27,26 @@
         "default": true,
         "id": "main",
         "model": {
-          "primary": "ollama/qwen3.5:9b-nvfp4",
           "fallbacks": [
             "google/gemini-3.1-pro-preview",
-            "google/gemini-2.5-pro"
-          ]
+            "google/gemini-3-flash-preview",
+            "google/gemini-3.1-flash-lite-preview",
+            "google/gemini-3.1-flash-lite-preview-FALL",
+            "google/gemini-2.5-pro",
+            "google/gemini-2.5-flash-FALL",
+            "google/gemini-2.5-flash-lite-FALL"
+          ],
+          "primary": "lmstudio-mac/qwen3.5-9b-mlx"
         },
-        "name": "Mac Orchestrator (Coordinator)",
-        "systemPrompt": "You are the Coordinator. Never write code yourself. Your job is to plan, delegate, and synthesize. Spawn workers for research and implementation tasks. Parse results from <result> tags only. Communicate intent via <task-notification> blocks.",
+        "name": "Main Agent",
         "thinkingDefault": "off",
         "workspace": "${HOME}/.alphaclaw/.openclaw/workspace"
       },
       {
         "id": "mac-researcher",
         "model": {
-          "primary": "ollama/qwen3.5:9b-nvfp4",
-          "fallbacks": ["google/gemini-2.5-pro"]
+          "primary": "lmstudio-mac/qwen3.5-9b-mlx"
         },
-        "name": "Mac Researcher (Worker)",
-        "systemPrompt": "You are a parallel worker. Receive tasks via <task-notification>. Execute research or code editing tools. Return ONLY a <result> and a condensed <summary> of what changed. Do not include trial-and-error reasoning in your response.",
         "thinkingDefault": "off",
         "workspace": "${HOME}/.openclaw/agents/mac-researcher"
       },
@@ -50,8 +55,6 @@
         "model": {
           "primary": "lmstudio-win/qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2"
         },
-        "name": "Win Researcher (Heavy Worker)",
-        "systemPrompt": "You are a parallel worker on the Windows GPU node. Receive tasks via <task-notification>. Execute deep code analysis or generation. Return ONLY a <result> and condensed <summary>.",
         "tools": {
           "profile": "coding"
         },
@@ -60,10 +63,8 @@
       {
         "id": "orchestrator",
         "model": {
-          "primary": "ollama/qwen3.5:9b-nvfp4",
-          "fallbacks": ["google/gemini-2.5-pro"]
+          "primary": "lmstudio-mac/qwen3.5-9b-mlx"
         },
-        "name": "Meta Orchestrator",
         "thinkingDefault": "off",
         "workspace": "${HOME}/.openclaw/agents/orchestrator"
       },
@@ -76,22 +77,393 @@
           "profile": "coding"
         },
         "workspace": "${HOME}/.openclaw/agents/coder"
+      },
+      {
+        "id": "autoresearcher",
+        "model": {
+          "primary": "lmstudio-win/qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2"
+        },
+        "workspace": "${HOME}/autoresearch"
       }
+    ]
+  },
+  "auth": {
+    "profiles": {
+      "google:default": {
+        "mode": "api_key",
+        "provider": "google"
+      },
+      "openai:default": {
+        "mode": "api_key",
+        "provider": "openai"
+      }
+    }
+  },
+  "channels": {
+    "discord": {
+      "enabled": false
+    },
+    "telegram": {
+      "botToken": "8543428829:AAExz5YpoKTrxT7yuMlJZwvM6tFhGkcn-V4",
+      "enabled": true
+    },
+    "whatsapp": {
+      "accounts": {
+        "default": {
+          "enabled": true
+        }
+      },
+      "enabled": true
+    }
+  },
+  "commands": {
+    "ownerAllowFrom": [
+      "whatsapp:+14159419166"
+    ]
+  },
+  "diagnostics": {
+    "enabled": true,
+    "otel": {
+      "enabled": true,
+      "logs": true,
+      "metrics": true,
+      "traces": true
+    }
+  },
+  "env": {
+    "shellEnv": {
+      "enabled": true
+    }
+  },
+  "gateway": {
+    "auth": {
+      "mode": "token",
+      "token": "d3aea7fea7ba51a1dff69b84662ae97d53dd3c2bcb182781"
+    },
+    "bind": "lan",
+    "controlUi": {
+      "allowedOrigins": [
+        "http://localhost:3000"
+      ]
+    },
+    "mode": "local",
+    "port": 18789,
+    "trustedProxies": [
+      "127.0.0.1"
     ]
   },
   "mcp": {
     "servers": {
       "ai-cli-mcp": {
+        "args": [
+          "-y",
+          "ai-cli-mcp@latest"
+        ],
         "command": "npx",
-        "args": ["-y", "ai-cli-mcp@latest"],
         "env": {
           "MCP_CLAUDE_DEBUG": "false"
         }
       },
       "gemini-cli": {
-        "command": "npx",
-        "args": ["-y", "gemini-mcp-tool"]
+        "args": [
+          "-y",
+          "gemini-mcp-tool@latest"
+        ],
+        "command": "npx"
       }
+    }
+  },
+  "meta": {
+    "lastTouchedAt": "2026-05-02T04:04:56.855Z",
+    "lastTouchedVersion": "2026.4.29"
+  },
+  "models": {
+    "providers": {
+      "gemini-fallback": {
+        "api": "openai-completions",
+        "apiKey": "AIzaSyBR4DfaiCs4EbQPv381e7tQXSmKTKAyPYQ",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "models": [
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-3.1-pro-preview-FALL",
+            "maxTokens": 32768,
+            "name": "Gemini 3.1 PRO Preview-FALL"
+          },
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-3-flash-preview-FALL",
+            "maxTokens": 32768,
+            "name": "Gemini 3 Flash Preview-FALL"
+          },
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-3.1-flash-lite-preview-FALL",
+            "maxTokens": 32768,
+            "name": "Gemini 3.1 Flash Lite Preview-FALL"
+          },
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-2.5-flash-FALL",
+            "maxTokens": 32768,
+            "name": "Gemini 2.5 Flash-FALL"
+          },
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-2.5-flash-lite-FALL",
+            "maxTokens": 32768,
+            "name": "Gemini 2.5 Flash Lite-FALL"
+          }
+        ]
+      },
+      "gemini-main": {
+        "api": "openai-completions",
+        "apiKey": "${env:OPENCLAW_MODELS_PROVIDERS_GEMINI_MAIN_APIKEY}",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "models": [
+          {
+            "contextWindow": 131072,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-3.1-pro-preview",
+            "maxTokens": 32768,
+            "name": "Gemini 3.1 PRO Preview"
+          },
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-3-flash-preview",
+            "maxTokens": 32768,
+            "name": "Gemini 3 Flash Preview"
+          },
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-3.1-flash-lite-preview",
+            "maxTokens": 32768,
+            "name": "Gemini 3.1 Flash Lite Preview"
+          },
+          {
+            "contextWindow": 131072,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-2.5-pro",
+            "maxTokens": 32768,
+            "name": "Gemini 2.5 PRO"
+          },
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-2.5-flash",
+            "maxTokens": 32768,
+            "name": "Gemini 2.5 Flash"
+          },
+          {
+            "contextWindow": 65536,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "google/gemini-2.5-flash-lite",
+            "maxTokens": 32768,
+            "name": "Gemini 2.5 Flash Lite"
+          }
+        ]
+      },
+      "lmstudio-mac": {
+        "api": "openai-completions",
+        "apiKey": "lm-studio",
+        "baseUrl": "http://localhost:1234/v1",
+        "models": [
+          {
+            "contextWindow": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3.5-9b-mlx",
+            "maxTokens": 8192,
+            "name": "Mac LMS — qwen3.5-9b-mlx"
+          },
+          {
+            "contextWindow": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "gemma-4-e4b-it",
+            "maxTokens": 8192,
+            "name": "Mac LMS — gemma-4-e4b-it"
+          }
+        ]
+      },
+      "lmstudio-win": {
+        "api": "openai-completions",
+        "apiKey": "lm-studio",
+        "baseUrl": "http://192.168.254.104:1234/v1",
+        "models": [
+          {
+            "contextWindow": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2",
+            "maxTokens": 8192,
+            "name": "Win LMS — qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2"
+          },
+          {
+            "contextWindow": 32768,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "gemma-4-26b-a4b-it",
+            "maxTokens": 8192,
+            "name": "Win LMS — gemma-4-26b-a4b-it"
+          }
+        ]
+      },
+      "ollama": {
+        "api": "ollama",
+        "apiKey": "ollama-local",
+        "baseUrl": "http://127.0.0.1:11434",
+        "models": [
+          {
+            "contextWindow": 262144,
+            "cost": {
+              "cacheRead": 0,
+              "cacheWrite": 0,
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3.5:9b-nvfp4",
+            "input": [
+              "text",
+              "image"
+            ],
+            "name": "qwen3.5:9b-nvfp4",
+            "reasoning": true
+          }
+        ]
+      },
+      "ollama-mac": {
+        "api": "ollama",
+        "apiKey": "ollama-local",
+        "baseUrl": "http://127.0.0.1:11434",
+        "models": [
+          {
+            "contextWindow": 8192,
+            "cost": {
+              "input": 0,
+              "output": 0
+            },
+            "id": "qwen3.5-local:latest",
+            "maxTokens": 4096,
+            "name": "Qwen3.5 Local Fallback"
+          }
+        ]
+      }
+    }
+  },
+  "tools": {
+    "alsoAllow": [
+      "ollama_web_search",
+      "ollama_web_fetch"
+    ],
+    "exec": {
+      "security": "full",
+      "strictInlineEval": false
+    },
+    "web": {
+      "fetch": {
+        "enabled": false
+      },
+      "search": {
+        "enabled": false
+      }
+    }
+  },
+  "update": {
+    "auto": {
+      "betaCheckIntervalHours": 24,
+      "enabled": true
+    },
+    "channel": "beta",
+    "checkOnStart": true
+  },
+  "wizard": {
+    "lastRunAt": "2026-04-28T00:10:47.383Z",
+    "lastRunCommand": "doctor",
+    "lastRunMode": "local",
+    "lastRunVersion": "2026.4.25-beta.1"
+  },
+  "plugins": {
+    "allow": [
+      "telegram",
+      "google",
+      "memory-core",
+      "usage-tracker",
+      "whatsapp",
+      "openclaw-web-search"
+    ],
+    "entries": {
+      "google": {
+        "enabled": true
+      },
+      "openclaw-web-search": {
+        "enabled": true
+      },
+      "telegram": {
+        "enabled": true
+      },
+      "usage-tracker": {
+        "enabled": true,
+        "hooks": {
+          "allowConversationAccess": true
+        }
+      },
+      "whatsapp": {
+        "enabled": true
+      }
+    },
+    "load": {
+      "paths": [
+        "${HOME}/.alphaclaw/node_modules/@chrysb/alphaclaw/lib/plugin/usage-tracker"
+      ]
     }
   }
 }

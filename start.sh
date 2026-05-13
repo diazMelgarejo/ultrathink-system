@@ -553,6 +553,225 @@ open_browser() {
   fi
 }
 
+# ── ollama idempotent startup ─────────────────────────────────────────────────
+# Ensures ollama server is running and the Mac Orchestrator model is warm.
+# Non-fatal — failures are logged and execution continues.
+# Env knobs: OLLAMA_AUTO_START=0 to skip; OLLAMA_WARM_MODEL to override model.
+
+_ollama_ensure_ready() {
+  [ "${OLLAMA_AUTO_START:-1}" != "1" ] && return 0
+
+  local model="${OLLAMA_WARM_MODEL:-qwen3.5:9b-nvfp4}"
+  local endpoint="${OLLAMA_MAC_ENDPOINT:-http://localhost:11434}"
+
+  # 1. Server check / start
+  if ! curl -sf "${endpoint}/api/version" >/dev/null 2>&1; then
+    _info "ollama" "server not running — starting ollama serve..."
+    mkdir -p "${LOG_DIR}"
+    nohup ollama serve >>"${LOG_DIR}/ollama.log" 2>&1 &
+    local i=0
+    while [ $i -lt 12 ]; do
+      sleep 1; i=$((i+1))
+      curl -sf "${endpoint}/api/version" >/dev/null 2>&1 && break
+    done
+    if curl -sf "${endpoint}/api/version" >/dev/null 2>&1; then
+      _info "ollama" "server ready at ${endpoint}"
+    else
+      _warn "ollama" "server did not start in 12s — see ${LOG_DIR}/ollama.log"
+      return 0
+    fi
+  else
+    _info "ollama" "server already running at ${endpoint}"
+  fi
+
+  # 2. Model availability check / pull
+  local model_base="${model%%:*}"
+  if ! ollama list 2>/dev/null | grep -qF "${model_base}"; then
+    _info "ollama" "model ${model} not installed — pulling..."
+    ollama pull "${model}" >>"${LOG_DIR}/ollama.log" 2>&1 || {
+      _warn "ollama" "pull failed — continuing without model warm-up"
+      return 0
+    }
+  fi
+
+  # 3. Warm model into GPU memory with indefinite keep-alive (non-blocking)
+  local already_loaded
+  already_loaded=$(curl -sf "${endpoint}/api/ps" 2>/dev/null | \
+    python3 -c "
+import sys,json
+ps=json.load(sys.stdin)
+names=[m.get('name','') for m in ps.get('models',[])]
+print('yes' if any('${model_base}' in n for n in names) else 'no')
+" 2>/dev/null || echo "no")
+
+  if [ "$already_loaded" = "yes" ]; then
+    _info "ollama" "model ${model} already loaded in memory"
+  else
+    _info "ollama" "warming ${model} into GPU memory (keep_alive=-1)..."
+    curl -sf -X POST "${endpoint}/api/generate" \
+      -H "Content-Type: application/json" \
+      -d "{\"model\":\"${model}\",\"keep_alive\":-1}" \
+      >/dev/null 2>&1 &
+    _info "ollama" "warm-up dispatched (non-blocking)"
+  fi
+}
+
+# ── per-profile openclaw config ───────────────────────────────────────────────
+# Usage:  OPENCLAW_PROFILE=mac-orchestrator ./start.sh
+#         ./start.sh --profile=mac-orchestrator
+#
+# Config search order:
+#   ~/.openclaw/openclaw-{profile}.json   (user-level overrides)
+#   {SCRIPT_DIR}/config/{profile}.json    (repo-committed defaults)
+#
+# Activates by symlinking ~/.openclaw/openclaw.json → selected profile.
+# Original is backed up as openclaw.json.pre-{profile} on first switch.
+
+_openclaw_select_profile() {
+  local profile="${OPENCLAW_PROFILE:-}"
+  [ -z "$profile" ] && return 0
+
+  local candidates=(
+    "${HOME}/.openclaw/openclaw-${profile}.json"
+    "${SCRIPT_DIR}/config/openclaw-${profile}.json"
+    "${SCRIPT_DIR}/config/${profile}.json"
+  )
+  local config_file=""
+  for c in "${candidates[@]}"; do
+    [ -f "$c" ] && { config_file="$c"; break; }
+  done
+
+  if [ -z "$config_file" ]; then
+    _warn "profile" "no config found for '${profile}' — using global default"
+    _warn "profile" "tried: ${candidates[*]}"
+    return 0
+  fi
+
+  local active="${HOME}/.openclaw/openclaw.json"
+  local backup="${HOME}/.openclaw/openclaw.json.pre-${profile}"
+
+  # Back up original once (idempotent)
+  if [ -f "$active" ] && [ ! -L "$active" ] && [ ! -f "$backup" ]; then
+    cp "$active" "$backup"
+    _info "profile" "global config backed up → ${backup}"
+  fi
+
+  # Symlink active → selected profile (replace stale symlink)
+  local target_real; target_real="$(realpath "$config_file" 2>/dev/null || echo "$config_file")"
+  local active_real; active_real="$(realpath "$active" 2>/dev/null || echo "")"
+  if [ "$target_real" = "$active_real" ]; then
+    _info "profile" "profile '${profile}' already active"
+  else
+    ln -sf "$config_file" "$active"
+    _info "profile" "activated profile '${profile}' → ${config_file}"
+  fi
+
+  export OPENCLAW_CONFIG="${config_file}"
+  _var "profile" "OPENCLAW_CONFIG" "$OPENCLAW_CONFIG" "profile selection"
+}
+
+# ── MCP endpoint registration ─────────────────────────────────────────────────
+# Registers orama agent-swarm as MCP server in Claude Code, Gemini CLI, Codex.
+# Enable with:  ./start.sh --with-mcp   or   WITH_MCP=1 ./start.sh
+# MCP server starts on OPENCLAW_MCP_PORT (default 18790).
+# All registrations are idempotent.
+
+_register_mcp_endpoints() {
+  [ "${WITH_MCP:-0}" != "1" ] && return 0
+
+  local mcp_port="${OPENCLAW_MCP_PORT:-18790}"
+  _info "mcp" "registering orama-swarm MCP (port ${mcp_port})..."
+
+  # Claude Code — idempotent
+  if command -v claude >/dev/null 2>&1; then
+    claude mcp remove orama-swarm >/dev/null 2>&1 || true
+    if claude mcp add orama-swarm \
+        -e "OPENCLAW_CONFIG=${OPENCLAW_CONFIG:-}" \
+        -e "ORAMA_PORT=${US_PORT:-8001}" \
+        -- openclaw mcp serve --port "$mcp_port" \
+        >/dev/null 2>&1; then
+      _info "mcp" "Claude Code: orama-swarm registered"
+    else
+      _warn "mcp" "Claude Code: registration failed (openclaw needs Node 22+)"
+    fi
+  fi
+
+  # Gemini CLI — merge into ~/.gemini/settings.json
+  if command -v gemini >/dev/null 2>&1; then
+    local gcfg="${HOME}/.gemini/settings.json"
+    mkdir -p "$(dirname "$gcfg")"
+    [ -f "$gcfg" ] || echo '{}' > "$gcfg"
+    python3 -c "
+import json,pathlib
+p=pathlib.Path('${gcfg}')
+c=json.loads(p.read_text()) if p.exists() else {}
+c.setdefault('mcpServers',{})['orama-swarm']={'command':'openclaw','args':['mcp','serve','--port','${mcp_port}']}
+p.write_text(json.dumps(c,indent=2))
+" 2>/dev/null && _info "mcp" "Gemini CLI: orama-swarm registered" || \
+      _warn "mcp" "Gemini CLI: settings.json update skipped"
+  fi
+
+  # Codex CLI — merge into ~/.codex/config.json
+  if command -v codex >/dev/null 2>&1; then
+    local ccfg="${HOME}/.codex/config.json"
+    mkdir -p "$(dirname "$ccfg")"
+    [ -f "$ccfg" ] || echo '{}' > "$ccfg"
+    python3 -c "
+import json,pathlib
+p=pathlib.Path('${ccfg}')
+c=json.loads(p.read_text()) if p.exists() else {}
+c.setdefault('mcpServers',{})['orama-swarm']={'command':'openclaw','args':['mcp','serve','--port','${mcp_port}']}
+p.write_text(json.dumps(c,indent=2))
+" 2>/dev/null && _info "mcp" "Codex CLI: orama-swarm registered" || \
+      _warn "mcp" "Codex CLI: config.json update skipped"
+  fi
+
+  # Start background MCP server
+  if command -v openclaw >/dev/null 2>&1; then
+    local stale; stale="$(pid_on_port "$mcp_port" 2>/dev/null || true)"
+    [ -n "$stale" ] && kill "$stale" 2>/dev/null || true
+    openclaw mcp serve --port "$mcp_port" >>"${LOG_DIR}/mcp.log" 2>&1 &
+    echo $! > "${LOG_DIR}/mcp.pid"
+    _info "mcp" "MCP server PID $(cat "${LOG_DIR}/mcp.pid") listening on :${mcp_port}"
+  else
+    _warn "mcp" "openclaw not in PATH — MCP server not started"
+    _warn "mcp" "hint: nvm use 22 && openclaw mcp serve --port ${mcp_port}"
+  fi
+}
+
+# ── graceful shutdown ──────────────────────────────────────────────────────────
+# SIGTERM/SIGINT handler.  Sends USR1 to orama engine to flush gossip/context
+# to SQLite, then stops MCP server and all three services.
+# Logs and SQLite state are preserved; in-flight requests drain for 2s.
+
+_graceful_shutdown() {
+  _info "shutdown" "signal received — flushing context before exit..."
+
+  # Ask orama engine to flush gossip/state to SQLite (USR1 = soft flush)
+  local orama_pid; orama_pid="$(pid_on_port "${US_PORT:-8001}" 2>/dev/null || true)"
+  if [ -n "$orama_pid" ]; then
+    kill -USR1 "$orama_pid" 2>/dev/null || true
+    sleep 2
+  fi
+
+  # Stop MCP server
+  if [ -f "${LOG_DIR}/mcp.pid" ]; then
+    kill "$(cat "${LOG_DIR}/mcp.pid")" 2>/dev/null || true
+    rm -f "${LOG_DIR}/mcp.pid"
+  fi
+
+  # Stop all orama services
+  for _p in "${PT_PORT:-8000}" "${US_PORT:-8001}" "${PORTAL_PORT:-8002}"; do
+    local _pid; _pid="$(pid_on_port "$_p" 2>/dev/null || true)"
+    [ -n "$_pid" ] && kill "$_pid" 2>/dev/null || true
+  done
+
+  _info "shutdown" "all services stopped. logs preserved at ${LOG_DIR}/"
+  exit 0
+}
+
+trap '_graceful_shutdown' SIGTERM SIGINT
+
 # ── ASCII art banner ───────────────────────────────────────────────────────────
 # Displays at every startup (not --stop/--status). Shows live tier + agent grid.
 _print_banner() {
@@ -605,16 +824,16 @@ _print_banner() {
   echo ""
   echo "╔══════════════════════════════════════════════════════════════════╗"
   echo "║                                                                  ║"
-  printf "║   ██████╗ ██████╗  █████╗ ███╗   ███╗ █████╗                   ║\n"
-  printf "║  ██╔═══██╗██╔══██╗██╔══██╗████╗ ████║██╔══██╗                  ║\n"
-  printf "║  ██║   ██║██████╔╝███████║██╔████╔██║███████║                  ║\n"
-  printf "║  ██║   ██║██╔══██╗██╔══██║██║╚██╔╝██║██╔══██║                  ║\n"
-  printf "║  ╚██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║                  ║\n"
-  printf "║   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝  v0.9.9.8      ║\n"
+  printf "║   ██████╗ ██████╗  █████╗ ███╗   ███╗ █████╗                     ║\n"
+  printf "║  ██╔═══██╗██╔══██╗██╔══██╗████╗ ████║██╔══██╗                    ║\n"
+  printf "║  ██║   ██║██████╔╝███████║██╔████╔██║███████║                    ║\n"
+  printf "║  ██║   ██║██╔══██╗██╔══██║██║╚██╔╝██║██╔══██║                    ║\n"
+  printf "║  ╚██████╔╝██║  ██║██║  ██║██║ ╚═╝ ██║██║  ██║                    ║\n"
+  printf "║   ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝     ╚═╝╚═╝  ╚═╝  v0.9.9.8          ║\n"
   echo "║                                                                  ║"
-  echo "║  ὅραμα — vision/revelation · Layer 3 orchestration/meta-intel   ║"
+  echo "║  ὅραμα — vision/revelation · Layer 3 orchestration/meta-intel    ║"
   echo "╠══════════════════════════════════════════════════════════════════╣"
-  printf "║  OpenClaw  %s %-8s  AlphaClaw → Perpetua-Tools → orama     ║\n" "$oc_status" ":18789"
+  printf "║  OpenClaw  %s %-8s  AlphaClaw → Perpetua-Tools → orama           ║\n" "$oc_status" ":18789"
   printf "║  Tier %-1s    %-52s║\n" "$tier" "$tier_label"
   printf "║  Mode      %-52s║\n" "$mode"
   echo "╠══════════════════════════════════════════════════════════════════╣"
@@ -623,11 +842,25 @@ _print_banner() {
   printf "║  Win %s  %-9s  %-45s║\n" "$win_mark" "$win_ip" "qwen3.5-27b (GGUF RTX 3080 · ctx 131k)"
   printf "║       %-63s║\n" "agents: $win_agents"
   echo "╠══════════════════════════════════════════════════════════════════╣"
-  printf "║  PT   :%-5s   orama :%-5s   Portal :%-5s                      ║\n" \
+  printf "║  PT   :%-5s   orama :%-5s   Portal :%-5s                         ║\n" \
     "${PT_PORT:-8000}" "${US_PORT:-8001}" "${PORTAL_PORT:-8002}"
   echo "╚══════════════════════════════════════════════════════════════════╝"
   echo ""
 }
+
+# ── argument pre-processing ──────────────────────────────────────────────────
+# Scan all positional args for flags that co-exist with --stop/--status/--no-open.
+# Sets OPENCLAW_PROFILE, WITH_MCP, OLLAMA_AUTO_START without consuming $@
+# (the existing ${1:-} checks below still work unchanged).
+
+for _prearg in "$@"; do
+  case "$_prearg" in
+    --profile=*) export OPENCLAW_PROFILE="${_prearg#--profile=}" ;;
+    --with-mcp)  export WITH_MCP=1 ;;
+    --no-mcp)    export WITH_MCP=0 ;;
+    --no-ollama) export OLLAMA_AUTO_START=0 ;;
+  esac
+done
 
 # ── --stop ────────────────────────────────────────────────────────────────────
 
@@ -663,6 +896,12 @@ if [[ "${1:-}" == "--status" ]]; then
 fi
 
 # ── start services ────────────────────────────────────────────────────────────
+
+# Idempotent ollama startup (Mac Orchestrator model warm-up)
+_ollama_ensure_ready
+
+# Activate per-profile openclaw config (no-op if OPENCLAW_PROFILE unset)
+_openclaw_select_profile
 
 _print_banner
 
@@ -712,8 +951,13 @@ echo ""
 printf "  Logs  : %s/\n" "$LOG_DIR"
 printf "  Stop  : ./start.sh --stop\n"
 printf "  Debug : ORAMA_DEBUG=1 ./start.sh\n"
+printf "  MCP   : ./start.sh --with-mcp  (exposes swarm to Claude/Codex/Gemini)\n"
+printf "  Profile: OPENCLAW_PROFILE=mac-orchestrator ./start.sh\n"
 echo "────────────────────────────────────────────────────────────────────"
 echo ""
+
+# Register MCP endpoints after all services are confirmed up
+_register_mcp_endpoints
 
 if [[ "${1:-}" != "--no-open" ]]; then
   open_browser "$PORTAL_URL"

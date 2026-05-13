@@ -1,0 +1,97 @@
+{
+  "_comment": "mac-orchestrator profile — local-first Coordinator pattern using Ollama qwen3.5:9b-nvfp4 as primary. Activate via: OPENCLAW_PROFILE=mac-orchestrator ./start.sh",
+  "agents": {
+    "defaults": {
+      "bootstrapMaxChars": 5000,
+      "bootstrapTotalMaxChars": 30000,
+      "contextInjection": "continuation-skip",
+      "model": {
+        "primary": "ollama/qwen3.5:9b-nvfp4"
+      },
+      "models": {
+        "google/gemini-3.1-pro-preview": {},
+        "google/gemini-3.1-flash-lite-preview": {},
+        "google/gemini-2.5-pro": {},
+        "google/gemini-2.5-flash-FALL": {}
+      },
+      "thinkingDefault": "off",
+      "workspace": "${HOME}/.openclaw/agents/default"
+    },
+    "list": [
+      {
+        "agentDir": "${HOME}/.alphaclaw/.openclaw/agents/main/agent",
+        "default": true,
+        "id": "main",
+        "model": {
+          "primary": "ollama/qwen3.5:9b-nvfp4",
+          "fallbacks": [
+            "google/gemini-3.1-pro-preview",
+            "google/gemini-2.5-pro"
+          ]
+        },
+        "name": "Mac Orchestrator (Coordinator)",
+        "systemPrompt": "You are the Coordinator. Never write code yourself. Your job is to plan, delegate, and synthesize. Spawn workers for research and implementation tasks. Parse results from <result> tags only. Communicate intent via <task-notification> blocks.",
+        "thinkingDefault": "off",
+        "workspace": "${HOME}/.alphaclaw/.openclaw/workspace"
+      },
+      {
+        "id": "mac-researcher",
+        "model": {
+          "primary": "ollama/qwen3.5:9b-nvfp4",
+          "fallbacks": ["google/gemini-2.5-pro"]
+        },
+        "name": "Mac Researcher (Worker)",
+        "systemPrompt": "You are a parallel worker. Receive tasks via <task-notification>. Execute research or code editing tools. Return ONLY a <result> and a condensed <summary> of what changed. Do not include trial-and-error reasoning in your response.",
+        "thinkingDefault": "off",
+        "workspace": "${HOME}/.openclaw/agents/mac-researcher"
+      },
+      {
+        "id": "win-researcher",
+        "model": {
+          "primary": "lmstudio-win/qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2"
+        },
+        "name": "Win Researcher (Heavy Worker)",
+        "systemPrompt": "You are a parallel worker on the Windows GPU node. Receive tasks via <task-notification>. Execute deep code analysis or generation. Return ONLY a <result> and condensed <summary>.",
+        "tools": {
+          "profile": "coding"
+        },
+        "workspace": "${HOME}/.openclaw/agents/win-researcher"
+      },
+      {
+        "id": "orchestrator",
+        "model": {
+          "primary": "ollama/qwen3.5:9b-nvfp4",
+          "fallbacks": ["google/gemini-2.5-pro"]
+        },
+        "name": "Meta Orchestrator",
+        "thinkingDefault": "off",
+        "workspace": "${HOME}/.openclaw/agents/orchestrator"
+      },
+      {
+        "id": "coder",
+        "model": {
+          "primary": "lmstudio-win/qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2"
+        },
+        "tools": {
+          "profile": "coding"
+        },
+        "workspace": "${HOME}/.openclaw/agents/coder"
+      }
+    ]
+  },
+  "mcp": {
+    "servers": {
+      "ai-cli-mcp": {
+        "command": "npx",
+        "args": ["-y", "ai-cli-mcp@latest"],
+        "env": {
+          "MCP_CLAUDE_DEBUG": "false"
+        }
+      },
+      "gemini-cli": {
+        "command": "npx",
+        "args": ["-y", "gemini-mcp-tool"]
+      }
+    }
+  }
+}

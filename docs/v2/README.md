@@ -1,8 +1,7 @@
 # oramasys v2 — Master Spec Index
 
 **Date opened:** 2026-04-30
-**Last updated:** 2026-05-14 (Phase 1 kernel shipped; as-built deltas recorded)
-**Status:** Active — kernel Phase 1 shipped; Phase 2 planning
+**Status:** Tentative — spec tree under brainstorming review
 **Source of truth (raw):** `OpenClaw/v2/{1-Perplexity-Lang-Lang.md, 2-GPT-5.5-Thinking.md, 3-Gemini-3.1-PRO.md, 4-Grok.md}`
 
 ---
@@ -28,7 +27,7 @@ Local-first + airgapped capable. Dependency-minimal. MIT-licensed (matches LangC
 | **D5** | Plugin API | Internal in v2.0, public versioned API in v2.1 |
 | **D6** | Spec layout | Master + per-module sub-specs under `orama-system/docs/v2/` |
 | **D7** | Schema lib | Pydantic v2 in kernel (already in stack); Pydantic AI logged as v2.1+ research item, *as a framework comparison*, not schema swap |
-| **D8** | Kernel tier | **Originally "Tier 3 (~220 lines)"; README revised same day to "~70-line + plugins".** As-built (2026-05-14): `engine.py` is ~130 lines, integrated (no `graph/plugins/` dir). Full reconciliation is OQ16 — see `15-phase1-as-built.md` Δ1. |
+| **D8** | Kernel tier | **Revised 2026-04-30: 70-line kernel + `graph/plugins/`** — engine.py stays ~70 lines; checkpointer/interrupts/subgraphs/tool/streaming/structured_output ship as on-demand plugins (see `01-kernel-spec.md`) |
 | **D9** | Build approach | GPT Phase 1–4 order (primitives → graph → HTTP → parity tests); lift proven pieces from v1 |
 | **D10** | License | MIT (matches LangChain + LangGraph) |
 
@@ -39,16 +38,14 @@ Full rationale and the Perplexity/GPT/Gemini/Grok evidence behind each decision 
 ## Sequencing
 
 ```
-2026-05-14 ✅            →   Phase 2           →   Phase 3        →   v2.1 / v2.5
-─────────────────             ──────────             ──────────         ──────────
-v1.0 RC closed                engine hardening       oramasys repo      public Plugin
-v2.0 kernel Phase 1           (@tool decorator,      FastAPI surface    API (semver,
-DONE: perpetua-core           max_steps guard,       LLMClient wired    OpenAPI),
-commit 9cb153a                GossipBus async,       parity tests vs    MAESTRO/SWARM
-13 smoke tests green          OQ16 resolved)         v1.0 RC            overlays (v2.5)
-repo: diazMelgarejo/
-perpetua-core
-(→ oramasys org via OQ14)
+NOW (May 2026)        →   next           →   ?              →   ?
+─────────────────         ──────────         ──────────         ──────────
+v1.0 RC closed ✅         v2.0 parity        v2.1 public        v2.5 safety
+v2.0 kernel done ✅       tests (Phase 4)    Plugin API         (MAESTRO + SWARM
+(perpetua-core +          wire LLMClient     promotion          overlays + non-kernel
+oramasys + agate,         to dispatch_node,  (semver,           self-improve
+36 tests green)           non-kernel mods    OpenAPI)           evaluator)
+                          orbit at own pace
 ```
 
 Calendar-free. Each phase gates on completion criteria, not dates.
@@ -68,10 +65,10 @@ Calendar-free. Each phase gates on completion criteria, not dates.
                                   ▼
                  ┌─────────────────────────────────────┐
                  │      perpetua-core (kernel)         │
-                 │   • PerpetuaState (dataclass)       │
+                 │   • PerpetuaState                   │
                  │   • LLMClient (OpenAI-compat)       │
                  │   • HardwarePolicyResolver          │
-                 │   • MiniGraph engine (~130-line)    │
+                 │   • MiniGraph engine (70-line)      │
                  │   • GossipBus (SQLite event log)    │
                  └─────────────────────────────────────┘
                               ▲           ▲
@@ -118,7 +115,7 @@ Explicit list of things deferred to non-kernel modules or later versions. Don't 
 
 | Module | Source | Target version | Blocking? | Status |
 |--------|--------|----------------|-----------|--------|
-| Kernel (perpetua-core) | this spec | v2.0 | **YES** | **Phase 1 DONE** — commit `9cb153a`, 13 smoke tests ✅ (2026-05-14); repo at `diazMelgarejo/perpetua-core` (→ oramasys org pending OQ14). Phase 2 items pending: OQ11, OQ12, OQ16, Δ7 (`@tool`). |
+| Kernel | this spec | v2.0 | **YES** | **DONE** v2.0-alpha.1 (36 tests ✅, 2026-05-02) |
 | Multi-agent network | v1 carry-over | v2.0+ (parallel) | no | stub |
 | MCP-Optional transport | ex-v1.1 roadmap | v2.0+ | no | stub |
 | Redis coordination | ex-v1.1 roadmap | v2.0+ | no | stub |
@@ -156,8 +153,7 @@ orama-system/docs/v2/
 ├── 10-v1-hacks-automation-orbit.md
 ├── 11-idempotency-and-guard-patterns.md
 ├── 12-xai-model-migration-2026-05.md   ← xAI retirements 2026-05-15; grok-4.3 + grok-4.20-non-reasoning defaults
-├── 13-local-model-catalog-strategy.md  ← Codex model_catalog_json pattern; qwen3.5-local→qwen3.5:9b-nvfp4 rename; gen script
-└── 15-phase1-as-built.md               ← spec vs. reality deltas from Phase 1 (2026-05-14); OQ13-OQ17 sourced here
+└── 13-local-model-catalog-strategy.md  ← Codex model_catalog_json pattern; qwen3.5-local→qwen3.5:9b-nvfp4 rename; gen script
 ```
 
 ---
@@ -166,13 +162,7 @@ orama-system/docs/v2/
 
 Tracked in [`06-open-questions.md`](./06-open-questions.md). Highlights:
 
-- **OQ16 (blocks Phase 2)**: Reconcile D8 — `engine.py` ~130-line integrated vs. ~70-line + `plugins/` as README specified
-- **OQ13 (blocks Phase 3)**: `PerpetuaState` as `dataclass` vs. `BaseModel` — must decide before FastAPI HTTP layer
-- **OQ15 (blocks Phase 3)**: `OramaToPTBridge` + `TaskPlan` migration from v1 layer to `oramasys`
-- OQ14: `perpetua-core` org transfer to `oramasys` (after OQ4 GitHub org creation)
 - Pydantic AI evaluation (as a framework competitor) at v2.1+ checkpoint
 - LM Studio LAN endpoint canonicalization (Mac `.110:1234`, Windows `.108:1234` per user memory; `routing.json` already verified `distributed=true`)
 - GGUF spec extension RFC (community-pending since Oct 2024) for `system_requirements` metadata
 - Naming: hardware policy spec → publish as `agate` (Perplexity proposal) when stable
-
-Phase 1 spec-vs-reality deltas fully documented in [`15-phase1-as-built.md`](./15-phase1-as-built.md).

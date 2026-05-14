@@ -1548,4 +1548,59 @@ ss --version && lsof --version || true                 # check which probe tools
 - `start.ps1` end-to-end on a real Windows + PowerShell 5.1 box (no WSL)
 - `install.ps1` tested with Python 3.11 from python.org (not conda/pyenv)
 - Portal `POST /api/restart/portal` self-restart (kills the process serving the request — needs supervisor process or systemd watchdog to respawn)
+
+---
+
+## 2026-05-14: Monumental Error — Wrong Repo Build Documented as Canonical Phase 1
+
+**Session:** docs/v2 enrichment (intended: post-Phase 1 reconciliation)
+**Artifact:** `docs/wiki/10-wrong-repo-build-what-not-to-do.md` ← read this for the full delta record
+
+### What happened
+
+An AI agent (Claude) built a v2 kernel in the **wrong local directory**
+(`OpenClaw/perpetua-core`) instead of the correct one (`Documents/oramasys/perpetua-core`),
+pushed it to a **non-canonical GitHub remote** (`diazMelgarejo/perpetua-core`), then created
+`docs/v2/15-phase1-as-built.md` and modified 4 other `docs/v2/` files documenting this
+wrong build **as if it were the canonical Phase 1 implementation**.
+
+The canonical v2 build had already been shipped **13 days earlier** (2026-05-01) at:
+- `oramasys/perpetua-core` — commit `2f717f5`, 32 tests, 65-line kernel + all 6 plugins
+- `oramasys/oramasys` — commit `d123420`, 4 tests, FastAPI glass-window
+- `oramasys/agate` — commits `755e1de`/`f1d5a57`, hardware policy spec + GGUF RFC
+
+All 3 canonical repos were `0 ahead / 0 behind` their GitHub remotes. The docs were
+correct before the wrong commit (`5f21e83`).
+
+### Violations of the agreed spec
+
+| Spec decision | Canonical (`oramasys/perpetua-core`) | Divergent (`diazMelgarejo/perpetua-core`) |
+|---------------|--------------------------------------|------------------------------------------|
+| D8 revision: 65-line + plugins | ✅ 65-line engine + `graph/plugins/` | ❌ ~130-line integrated, no plugins/ |
+| D7: Pydantic v2 BaseModel | ✅ `class PerpetuaState(BaseModel)` | ❌ `pydantic.dataclasses.dataclass` |
+| Spec: `scratchpad: dict[str,Any]` | ✅ `scratchpad: dict[str, Any]` | ❌ `scratchpad: str = ""` |
+| D2: `oramasys` org | ✅ `oramasys/perpetua-core` | ❌ `diazMelgarejo/perpetua-core` |
+| Python 3.11+ | ✅ `requires-python = ">=3.11"` | ❌ Python 3.9.6 |
+| `@tool` decorator | ✅ `graph/plugins/tool.py` done | ❌ absent |
+| Async GossipBus | ✅ `aiosqlite` | ❌ `sqlite3` sync |
+
+### Root cause
+
+- Did not verify `git remote -v` before first push of the new repo
+- Did not check whether canonical build already existed before "building Phase 1"
+- Skipped the AskUserQuestion gates that the plan required
+- Proceeded without brainstorming/planning approval
+
+### Fix applied (this commit)
+
+- `docs/v2/15-phase1-as-built.md` (wrong-build doc) → **MOVED** to `docs/wiki/10-wrong-repo-build-what-not-to-do.md` as a cautionary artifact
+- `docs/v2/00-context-and-decisions.md`, `04-build-order.md`, `06-open-questions.md`, `README.md` → **REVERTED** to `935ce54` (pre-5f21e83, correct state)
+
+### Never again
+
+1. **Before any `git push` to a new repo:** run `git remote -v` and confirm the remote matches the agreed org (`oramasys/*` for v2, `diazMelgarejo/*` for v1-legacy)
+2. **Before "building Phase 1":** search for the repo in the correct org — it may already exist
+3. **Never skip `AskUserQuestion` gates** in a plan — they exist precisely to prevent this
+4. **`oramasys/*` is the ONLY valid home for v2 code.** `diazMelgarejo/*` is v1-legacy only.
+5. **The shipped canonical scaffold (`oramasys/*`) takes precedence** over any in-session build
 - Linux `ip route get 8.8.8.8` — validate on Ubuntu 22.04 + Debian 12 + Alpine 3.19

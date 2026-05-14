@@ -289,16 +289,20 @@ All candidates pass through `policy.validate_or_raise()` — fail closed on affi
 
 ### 5.3 Role-to-backend map (ROLE_BACKEND_MAP in PT)
 
-| Role | Specialization | Provider | Model |
+**Preferred default combo:** Ollama Mac (`qwen3.5:9b-nvfp4`) + LM Studio Win (Qwen3.5-27B).
+Mac roles use `ollama` as primary provider; `lmstudio-mac` is fallback only when Ollama is unavailable.
+
+| Role | Specialization | Provider (primary) | Model |
 |---|---|---|---|
 | `executor-agent` | python-coding, test-writing, default | `lmstudio-win` | Qwen3.5-27B-Claude-4.6-Opus |
-| `context-agent` | market-research, m&a-research, default | `lmstudio-mac` | mlx-community/Qwen3.5-9B-MLX-4bit |
+| `context-agent` | market-research, m&a-research, default | **`ollama`** | `qwen3.5:9b-nvfp4` |
 | `verifier-agent` | default | `lmstudio-win` | Qwen3.5-27B-Claude-4.6-Opus |
-| `crystallizer-agent` | default | `lmstudio-mac` | mlx-community/gemma-4-e4b-it-4bit |
+| `crystallizer-agent` | default | **`ollama`** | `qwen3.5:9b-nvfp4` |
 | `architect-agent` | default | `lmstudio-win` | Qwen3.5-27B-Claude-4.6-Opus |
-| `refiner-agent` | default | `lmstudio-mac` | mlx-community/Qwen3.5-9B-MLX-4bit |
+| `refiner-agent` | default | **`ollama`** | `qwen3.5:9b-nvfp4` |
 
-**lmstudio-mac** is always `http://localhost:1234/v1` — LAN IP is docs/discovery metadata only, never in Mac-local config. (§ 1 rule, commit `a82ab51`.)
+Mac fallback chain: `ollama` → `lmstudio-mac` (only when Ollama port 11434 unreachable).
+**lmstudio-mac** baseUrl is always `http://localhost:1234/v1`. LAN IP is docs/discovery metadata only. (commit `a82ab51`)
 
 ### 5.4 `LMStudioWinBackend` (PT — first-class, not hinted)
 

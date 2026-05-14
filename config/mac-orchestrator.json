@@ -174,7 +174,7 @@
     }
   },
   "meta": {
-    "lastTouchedAt": "2026-05-02T04:04:56.855Z",
+    "lastTouchedAt": "2026-05-13T15:07:57.361959+00:00",
     "lastTouchedVersion": "2026.4.29"
   },
   "models": {
@@ -309,51 +309,91 @@
         "baseUrl": "http://localhost:1234/v1",
         "models": [
           {
+            "id": "gemma-4-26b-a4b-it",
+            "name": "Mac LMS \u2014 gemma-4-26b-a4b-it",
             "contextWindow": 32768,
+            "maxTokens": 8192,
             "cost": {
               "input": 0,
               "output": 0
-            },
-            "id": "qwen3.5-9b-mlx",
-            "maxTokens": 8192,
-            "name": "Mac LMS — qwen3.5-9b-mlx"
+            }
           },
           {
+            "id": "gemma-4-e4b-it",
+            "name": "Mac LMS \u2014 gemma-4-e4b-it",
             "contextWindow": 32768,
+            "maxTokens": 8192,
             "cost": {
               "input": 0,
               "output": 0
-            },
-            "id": "gemma-4-e4b-it",
+            }
+          },
+          {
+            "id": "qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2",
+            "name": "Mac LMS \u2014 qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2",
+            "contextWindow": 32768,
             "maxTokens": 8192,
-            "name": "Mac LMS — gemma-4-e4b-it"
+            "cost": {
+              "input": 0,
+              "output": 0
+            }
+          },
+          {
+            "id": "qwen3.5-9b-mlx",
+            "name": "Mac LMS \u2014 qwen3.5-9b-mlx",
+            "contextWindow": 32768,
+            "maxTokens": 8192,
+            "cost": {
+              "input": 0,
+              "output": 0
+            }
           }
         ]
       },
       "lmstudio-win": {
         "api": "openai-completions",
         "apiKey": "lm-studio",
-        "baseUrl": "http://192.168.254.104:1234/v1",
+        "baseUrl": "http://192.168.254.102:1234/v1",
         "models": [
           {
+            "id": "gemma-4-26b-a4b-it",
+            "name": "Win LMS \u2014 gemma-4-26b-a4b-it",
             "contextWindow": 32768,
+            "maxTokens": 8192,
             "cost": {
               "input": 0,
               "output": 0
-            },
-            "id": "qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2",
-            "maxTokens": 8192,
-            "name": "Win LMS — qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2"
+            }
           },
           {
+            "id": "gemma-4-e4b-it",
+            "name": "Win LMS \u2014 gemma-4-e4b-it",
             "contextWindow": 32768,
+            "maxTokens": 8192,
             "cost": {
               "input": 0,
               "output": 0
-            },
-            "id": "gemma-4-26b-a4b-it",
+            }
+          },
+          {
+            "id": "qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2",
+            "name": "Win LMS \u2014 qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2",
+            "contextWindow": 32768,
             "maxTokens": 8192,
-            "name": "Win LMS — gemma-4-26b-a4b-it"
+            "cost": {
+              "input": 0,
+              "output": 0
+            }
+          },
+          {
+            "id": "qwen3.5-9b-mlx",
+            "name": "Win LMS \u2014 qwen3.5-9b-mlx",
+            "contextWindow": 32768,
+            "maxTokens": 8192,
+            "cost": {
+              "input": 0,
+              "output": 0
+            }
           }
         ]
       },

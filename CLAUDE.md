@@ -33,8 +33,17 @@ Any change requires updating both repos in lockstep and revising the unified pla
 8. **Lockstep commits for shared contracts.** Any change to shared schema fields, exception classes, policy keys, or model IDs commits to both repos in the same session.
 
 ### Hardware routing invariants
+
+**Preferred default combo (both machines online):**
+| Machine | Backend | Endpoint | Model |
+|---------|---------|----------|-------|
+| Mac | **Ollama** ← first-class priority | `http://localhost:11434` | `qwen3.5:9b-nvfp4` |
+| Mac | LM Studio (secondary/fallback only) | `http://localhost:1234` | qwen3.5-9b-mlx |
+| Windows | LM Studio via LAN | `$LM_STUDIO_WIN_ENDPOINTS` | Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2 |
+
+- **Mac = Ollama first.** Ollama (`localhost:11434`, `qwen3.5:9b-nvfp4`) is the primary Mac inference backend. LM Studio Mac is secondary/fallback. Zero overlap: Mac GPU runs Ollama, Windows GPU runs LM Studio. Never both heavy models on one machine.
 - **`lmstudio-mac.baseUrl` is always `http://localhost:1234/v1`.** The Mac LAN IP (e.g. `192.168.254.100`) is discovery metadata only — written to `devices.yml.lan_ip` and `last_discovery.json` for documentation and Windows-side routing. Never in any Mac-local config.
-- **Win host from env only.** `LM_STUDIO_WIN_ENDPOINTS` is the single env var. Default must be invalid (e.g. `REQUIRED_SET_IN_ENV`) so misconfiguration fails loudly.
+- **Win host from env only.** `LM_STUDIO_WIN_ENDPOINTS` is the single env var (full URL). Default must be invalid (e.g. `REQUIRED_SET_IN_ENV`) so misconfiguration fails loudly.
 - **One heavy model at a time on the Windows GPU.** `asyncio.Lock` on `LMStudioWinBackend` for models in `_heavy_models`. Check `GPU: BUSY` in `swarm_state.md` before dispatching.
 
 ### Shared types ownership

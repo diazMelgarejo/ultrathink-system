@@ -11,7 +11,7 @@ allowed-tools: state-manager, message-bus, agent-delegator, parallel-executor
 
 ## Purpose
 
-Main coordinator that manages the ultrathink 5-stage workflow across a network of specialized agents. Ensures quality gates between stages and manages refinement loops.
+Main orchestrator that manages the ultrathink 5-stage workflow across a network of specialized agents. Ensures quality gates between stages and manages refinement loops.
 
 ## When to Use
 

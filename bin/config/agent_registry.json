@@ -2,6 +2,17 @@
   "version": "0.9.9.8",
   "network_name": "ultrathink-agent-network",
   "description": "Unified ultrathink agent network — 7 ultrathink stage agents + 4 OpenClaw SOUL agents",
+  "worker_template": {
+    "type": "worker",
+    "contract": "TaskEnvelope in, WorkerResult out",
+    "hard_rules": [
+      "Return compact summary only — no raw session logs in output",
+      "Write artifacts to disk before returning status=done",
+      "Set verification_hints for any low-confidence output",
+      "depth is always 0 — workers do not enqueue sub-workers"
+    ],
+    "default_constraints": ["max_tokens:4096", "no_external_api_without_approval"]
+  },
   "openclaw_agents": {
     "mac-researcher":  { "soul": "bin/agents/mac-researcher/SOUL.md",  "provider": "lmstudio-mac",  "model": "Qwen3.5-9B-MLX-4bit", "affinity": "mac", "gateway": "http://127.0.0.1:18789" },
     "win-researcher":  { "soul": "bin/agents/win-researcher/SOUL.md",  "provider": "lmstudio-win",  "model": "Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2", "affinity": "win", "gateway": "http://127.0.0.1:18789" },
@@ -11,7 +22,7 @@
   "agents": [
     {
       "id": "orchestrator",
-      "type": "coordinator",
+      "type": "orchestrator",
       "affinity": "mac",
       "skill_path": "agents/orchestrator/ultrathink-orchestrator.md",
       "logic_path": "agents/orchestrator/orchestrator_logic.py",
@@ -110,7 +121,7 @@
     },
     "autoresearch-orchestrator": {
       "id": "autoresearch-orchestrator",
-      "type": "coordinator",
+      "type": "orchestrator",
       "affinity": "mac",
       "model_role": "strategy",
       "responsibilities": [

@@ -8,6 +8,49 @@
 
 ---
 
+## § 0 — ABSOLUTE ARCHITECTURAL CONTRACTS (Never Change Without Full Contract Revision)
+
+*Source: `docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md` § 1–2. These are permanent.
+Any change requires updating both repos in lockstep and revising the unified plan.*
+
+### Terminology (enforced — grep must return 0 hits in active code)
+| **Banned** | **Correct** | Scope |
+|---|---|---|
+| `coordinator` / `Coordinator` as a role name | `orchestrator` | All APIs, schemas, config keys, route names, doc headings |
+| `Perplexity-Tools` | `Perpetua-Tools` | All active `.py`, config, non-historical docs |
+| `deviceaffinity` | `affinity` | All JSON/YAML config, Python readers |
+| `qwen3-coder:14b` | (no default — must be explicit or fail) | Env defaults, any hardcoded model string |
+| `WIN_LM_STUDIO_HOST` / `WIN_LM_STUDIO_PORT` | `LM_STUDIO_WIN_ENDPOINTS` | Env vars, backend config |
+
+### Eight governing principles
+1. **"Orchestrator" is the only public control-plane term.** "Coordinator" may appear in prose comments explaining behavior, never in any public API, schema field, config key, route, or doc heading.
+2. **Workers are one generic primitive.** All roles (executor, verifier, crystallizer, etc.) are specializations of `TaskEnvelope in → WorkerResult out`. One template, many overlays.
+3. **PT is the runtime/state authority.** PT owns: job queue, hardware affinity, model routing, GPU safety, LAN routing, durable artifacts, session state. orama never holds durable state.
+4. **orama is the methodology/planning authority.** orama owns: stage planning, role templates, prompt contracts, verification rubrics. It is stateless. It returns plans and summaries.
+5. **Fail closed at gateways — discovery tools degrade gracefully.** `api_server.py` fails closed on missing `PERPETUATOOLSROOT` or affinity violations. `discover.py` and the network watcher warn and continue — crashing the watcher every 60s is worse than degrading.
+6. **Workers do not spawn sub-workers in V1.** `depth=0` validated server-side on `JobSpec` and `TaskEnvelope` — not a convention.
+7. **JSON/Pydantic is the wire format. XML/tags are prompt-rendering only.** Never parse XML as Python inter-process protocol.
+8. **Lockstep commits for shared contracts.** Any change to shared schema fields, exception classes, policy keys, or model IDs commits to both repos in the same session.
+
+### Hardware routing invariants
+- **`lmstudio-mac.baseUrl` is always `http://localhost:1234/v1`.** The Mac LAN IP (e.g. `192.168.254.100`) is discovery metadata only — written to `devices.yml.lan_ip` and `last_discovery.json` for documentation and Windows-side routing. Never in any Mac-local config.
+- **Win host from env only.** `LM_STUDIO_WIN_ENDPOINTS` is the single env var. Default must be invalid (e.g. `REQUIRED_SET_IN_ENV`) so misconfiguration fails loudly.
+- **One heavy model at a time on the Windows GPU.** `asyncio.Lock` on `LMStudioWinBackend` for models in `_heavy_models`. Check `GPU: BUSY` in `swarm_state.md` before dispatching.
+
+### Shared types ownership
+- All five shared types (`OrchestrationSession`, `TaskEnvelope`, `WorkerAssignment`, `WorkerResult`, `VerificationResult`) live in **PT** (`orchestrator/contracts.py`).
+- orama imports them from PT. Never the reverse.
+- All validators use Pydantic V2 `@field_validator`, never deprecated `@validator`.
+
+### Verifier gate
+- Crystallization is **never dispatched** without an approved `VerificationResult`.
+- This invariant is **enforced in code** (`dispatch_crystallization` raises `PermissionError` if `verdict != "approved"`), not a convention.
+
+### V1 scope boundary
+- §§ 7–8 of the unified plan (MAESTRO/HITL gates, IDE session API) are **deferred to v2**. Do not implement in v1. Do not reference as current behavior.
+
+---
+
 ## 1. Continuous Learning — Always On
 
 Every session **must** use [continuous-learning-v2](https://github.com/affaan-m/everything-claude-code/tree/main/skills/continuous-learning-v2).

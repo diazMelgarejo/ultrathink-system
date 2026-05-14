@@ -127,6 +127,8 @@ User chose Tier 3 over Tier 1 (~80 lines) and Tier 2 (~150 lines). Borrowed feat
 
 Tradeoff: kernel grows ~3x beyond Perplexity's original 70-line target, but ships substantial UX out of the box. Documented as explicit departure from "ruthless" cut.
 
+> **Implementation note (2026-05-01):** The D8 revision (README: "~70-line kernel + `graph/plugins/`") is what shipped in `oramasys/perpetua-core`. Engine is 65 lines; all Tier-3 features are in `graph/plugins/`. The ~220-line framing above describes the INTENT (all Tier-3 features); the revision describes the STRUCTURE (engine pure, features extracted to plugins). Both are satisfied by the canonical build.
+
 ### D9 — GPT Phase 1–4 order; lift proven pieces
 
 Sequence: primitives → graph engine → HTTP surface → parity tests. Lift battle-tested code from v1: FastAPI surface skeleton from `api_server.py`, `HardwareAffinityError` exception class (already canonicalized in 2026-04-28 revamp), `model_hardware_policy.yml` schema, LM Studio routing config from `routing.json`.

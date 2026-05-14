@@ -18,17 +18,25 @@ The 3 new repositories (\`agate\`, \`oramasys\`, \`perpetua-core\`) have been in
 
 ---
 
-## Phase 1 — Primitives Hardening (\`perpetua-core\`) ← NEXT
+## Phase 1 — Primitives Hardening (\`perpetua-core\`) ✅ DONE (2026-05-01)
 
-Merge Gemini Hardening improvements into the existing primitives.
-- **Implement**: Async background writer for \`gossip.py\` (High Performance).
-- **Enforce**: OS-agnostic paths in all templates.
+**Shipped:** \`oramasys/perpetua-core\` commit \`2f717f5\` — async \`GossipBus\` (aiosqlite), all 6 \`graph/plugins/\` implemented, 32 tests passing (Python 3.11+).
+See \`15-phase1-as-built.md\` for full module table and OQ resolutions.
 
-## Phase 2 — Engine & Safety Integration (\`perpetua-core/graph/\`) ← NEXT
+## Phase 2 — Engine & Safety Integration (\`perpetua-core/graph/\`) — PARTIALLY DONE
 
-- **Implement**: \`GraphPlugin\` Protocol in \`engine.py\`.
-- **Implement**: \`max_steps\` safety guard in \`ainvoke\`.
-- **Implement**: Sentinel Node for SWARM misalignment monitoring.
+**Done (shipped in 2f717f5):**
+- \`GraphPlugin\` protocol: all 6 plugins in \`graph/plugins/\`
+- Conditional edges (callable in \`add_edge\`)
+- HITL interrupts (duck-typed \`Interrupt\` exception)
+- Streaming (plugin)
+- Subgraphs (plugin)
+- \`@tool\` decorator (plugin)
+
+**Still needed (Phase 2 next work):**
+- \`max_steps\` safety guard in \`ainvoke\` (OQ12 — prevents infinite loops)
+- Sentinel Node for SWARM misalignment monitoring
+- \`perpetua_core/message.py\` typed Message wrapper (OQ17 — before Phase 3 LLMClient wiring)
 
 ## Phase 3 — Orchestration & API Layer (\`oramasys/\`) ← NEXT
 

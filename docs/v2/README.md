@@ -90,6 +90,7 @@ Calendar-free. Each phase gates on completion criteria, not dates.
 |------|---------|---------|
 | `perpetua-core/` | Data + state + LLM + hardware policy + gossip + graph engine | (no internal upward deps) |
 | `oramasys/` | Graph DSL composition + FastAPI surface + app nodes | imports `perpetua_core` only |
+| `oramasys/agate/` | Hardware policy specification + future gateway/bridge layer | imports `perpetua_core` (side-car) |
 
 **Rule**: any time you find yourself wanting `perpetua-core` to import `oramasys`, you have a layering bug.
 
@@ -153,7 +154,9 @@ orama-system/docs/v2/
 ├── 10-v1-hacks-automation-orbit.md
 ├── 11-idempotency-and-guard-patterns.md
 ├── 12-xai-model-migration-2026-05.md   ← xAI retirements 2026-05-15; grok-4.3 + grok-4.20-non-reasoning defaults
-└── 13-local-model-catalog-strategy.md  ← Codex model_catalog_json pattern; qwen3.5-local→qwen3.5:9b-nvfp4 rename; gen script
+├── 13-local-model-catalog-strategy.md  ← Codex model_catalog_json pattern; qwen3.5-local→qwen3.5:9b-nvfp4 rename; gen script
+├── 14-supervisor-and-anthropic-patterns.md
+└── 15-phase1-as-built.md              ← canonical oramasys/* v2.0-alpha.1 (2026-05-01); OQ resolutions
 ```
 
 ---

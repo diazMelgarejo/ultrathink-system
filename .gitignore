@@ -43,3 +43,7 @@ DerivedData/
 
 # discover.py runtime marker
 config/.policy_cache_refreshed
+
+# lib/ — agentic_stack and other generated/vendored shared libraries
+# (content is managed externally; never commit here)
+lib/

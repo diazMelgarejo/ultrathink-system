@@ -1,28 +1,23 @@
-# Next Steps — 2026-05-13 State
+# Next Steps — 2026-05-14 State
 
 ## CI State (Periscope diazMelgarejo/periscope)
 
 | Workflow | Tag | Status | Remaining |
 |---|---|---|---|
-| Docker | `v0.29.2-periscope.2-bd1d2bf` | ✅ pass | — |
-| Release (go binaries + wheels) | `v0.29.2-periscope.2-bd1d2bf` | ✅ pass | — |
-| Desktop Release (5 platforms) | `v0.29.2-periscope.2-bd1d2bf` | ✅ pass | — |
-| PyPI publish | `v0.29.2-periscope.2-bd1d2bf` | ❌ `invalid-publisher` | **User action: configure OIDC trusted publisher on pypi.org** |
+| Docker | `v0.29.2-periscope.2-945bda3` | ✅ pass | — |
+| Release (go binaries + wheels) | `v0.29.2-periscope.2-945bda3` | ✅ pass | — |
+| Desktop Release (5 platforms) | `v0.29.2-periscope.2-945bda3` | ✅ pass | — |
+| PyPI publish | `v0.29.2-periscope.2-945bda3` | ✅ **disabled** (name conflict) | — |
 
-Release artifacts live at: https://github.com/diazMelgarejo/periscope/releases/tag/v0.29.2-periscope.2-bd1d2bf
+**All 4 CI workflows fully green.** Release artifacts at: https://github.com/diazMelgarejo/periscope/releases/tag/v0.29.2-periscope.2-945bda3
+
+> PyPI disabled: the `periscope` package name on PyPI is taken by an unrelated project (Patrick Dessalle, v0.2.4).
+> To re-enable: set repo variable `ENABLE_PYPI_PUBLISH=true` + choose a unique package name + configure OIDC trusted publisher.
 
 ## Periscope — User Action Queue
 
-### A. PyPI Trusted Publisher (one-time admin)
-1. Go to https://pypi.org → sign in (or create account for `periscope` package)
-2. Settings → Trusted Publishers → Add Publisher
-3. Fill in:
-   - **PyPI project name**: `periscope`
-   - **Owner**: `diazMelgarejo`
-   - **Repository**: `periscope`
-   - **Workflow filename**: `release.yml`
-   - **Environment**: `pypi`
-4. Next tag push will auto-publish wheels (no API key needed)
+### ~~A. PyPI Trusted Publisher~~ (blocked — name conflict, disabled)
+The `periscope` name on PyPI is taken. Options: (a) leave disabled — binaries ship via GitHub Releases, (b) rename package (e.g., `periscope-viewer`) and re-enable. No action needed now.
 
 ### B. Tauri Updater Signing (enables auto-update in desktop app)
 Add 3 secrets in GitHub → Settings → Secrets and variables → Actions:
@@ -71,7 +66,7 @@ The only occurrence is inside an error message string in `fastapi_app.py:489` �
 `tests/test_api_server.py` has multiple tests asserting 400 + `"HARDWARE_MISMATCH"` body.
 `pytest tests/` → **152/152 pass**.
 
-**All 5 issues from the revamp plan are resolved. Ready to tag v1.0.0-rc.1.**
+**All 5 issues from the revamp plan are resolved. ✅ Tagged v1.0.0-rc.1 on 2026-05-14.**
 
 ---
 
@@ -144,9 +139,11 @@ Build sequence (Phase 1–4, per GPT + Decision D9):
 
 ## Priority Order (recommended)
 
-1. 🔴 **Periscope PyPI** — user action, 5 min (unblocks PyPI publishing)
-2. 🔴 **Tauri signing secrets** — user action, 5 min (unlocks auto-update CI)  
+1. ✅ **Periscope CI fully green** — PyPI disabled (name conflict); all 4 workflows pass on `v0.29.2-periscope.2-945bda3`
+2. 🔴 **Tauri signing secrets** — user action, 5 min (unlocks auto-update in desktop app)
 3. ✅ **Issues 0–4 all resolved** — 152 orama tests pass, 32 PT tests pass
-4. 🏁 **Tag orama v1.0.0-rc.1** — ready now; run `git tag v1.0.0-rc.1 && git push origin v1.0.0-rc.1`
-5. 🏗️ **Part C: Coordinator/Worker** — 1–2 sessions, ~4 hrs
-6. 🏗️ **v2.0 kernel scaffold** — Phase 1 primitives, ~3 hrs per phase
+4. ✅ **Tagged orama v1.0.0-rc.1** — pushed 2026-05-14
+5. ✅ **Network resilience** — launchd watcher running (PID via `launchctl list com.orama.network-watch`), EDEADLK fixed, IPs auto-updated on topology change
+6. 🏗️ **Part C: Coordinator/Worker** — 1–2 sessions, ~4 hrs (next)
+7. 🏗️ **Win --with-mcp test** — when Windows comes back online, verify `WITH_MCP=1 ./start.sh --with-mcp`
+8. 🏗️ **v2.0 kernel scaffold** — Phase 1 primitives, ~3 hrs per phase (after Part C)

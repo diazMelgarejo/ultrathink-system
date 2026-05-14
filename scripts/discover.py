@@ -358,8 +358,9 @@ def patch_openclaw_json(endpoints: dict):
     mac = endpoints.get("mac")
     win = endpoints.get("win")
     if mac:
-        url = "http://localhost:1234/v1" if mac["ip"] == "localhost" else f"http://{mac['ip']}:1234/v1"
-        providers.setdefault("lmstudio-mac", {})["baseUrl"] = url
+        # lmstudio-mac ALWAYS uses localhost — the LAN IP is discovery metadata only.
+        # Native Mac processes must never route to themselves via the LAN interface.
+        providers.setdefault("lmstudio-mac", {})["baseUrl"] = "http://localhost:1234/v1"
         providers["lmstudio-mac"]["models"] = [
             {"id": m, "name": f"Mac LMS — {m}", "contextWindow": 32768,
              "maxTokens": 8192, "cost": {"input": 0, "output": 0}}
@@ -421,8 +422,8 @@ def patch_models_yml(mac_ip: str, win_ip: str, pt_repo: Path):
     if not f.exists(): return
     content = original = _read_text_safe(f)
     if content is None: return
-    mac_url = "http://localhost:1234" if mac_ip == "localhost" else f"http://{mac_ip}:1234"
-    content = re.sub(r'(\$\{LM_STUDIO_MAC_ENDPOINT:-)[^}]+(\})', rf'\g<1>{mac_url}\2', content)
+    # lmstudio-mac ALWAYS localhost — LAN IP is informational only, never in Mac configs.
+    content = re.sub(r'(\$\{LM_STUDIO_MAC_ENDPOINT:-)[^}]+(\})', r'\g<1>http://localhost:1234\2', content)
     content = re.sub(r'(\$\{LM_STUDIO_WIN_ENDPOINTS:-)[^}:,\n]+', rf'\g<1>http://{win_ip}', content)
     if content != original:
         _write_text_safe(f, content)
@@ -431,9 +432,9 @@ def write_env_lmstudio(endpoints: dict, repo_paths: dict):
     endpoints = filter_endpoints_for_policy(endpoints)
     mac = endpoints.get("mac") or {}
     win = endpoints.get("win") or {}
-    mac_ip = mac.get("ip", "")
-    win_ip = win.get("ip", "")
-    mac_url = "http://localhost:1234" if mac_ip == "localhost" else f"http://{mac_ip}:1234"
+    win_ip = (win.get("ip") or "")
+    # lmstudio-mac ALWAYS localhost — LAN IP is informational/docs only, never in Mac endpoint configs.
+    mac_url = "http://localhost:1234"
     win_url = f"http://{win_ip}:1234" if win_ip else ""
     mac_models = mac.get("models", [])
     win_models = win.get("models", [])

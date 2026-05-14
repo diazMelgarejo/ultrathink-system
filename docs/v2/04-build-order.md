@@ -14,23 +14,43 @@ v1 is at 0.9.9.8. **Gate cleared.**
 
 ## Phase 0 — Repository Initialization ✅ DONE (2026-05-02)
 
-The 3 new repositories (\`agate\`, \`oramasys\`, \`perpetua-core\`) have been initialized at \`/Users/lawrencecyremelgarejo/Documents/oramasys/\`. Initial code for state, LLM client, policy, and the MiniGraph engine has been committed.
+The 3 new repositories (`agate`, `oramasys`, `perpetua-core`) have been initialized at `/Users/lawrencecyremelgarejo/Documents/oramasys/`. Initial code for state, LLM client, policy, and the MiniGraph engine has been committed.
 
 ---
 
-## Phase 1 — Primitives Hardening (\`perpetua-core\`) ← NEXT
+## Phase 1 — Primitives + Graph Kernel (`perpetua-core`) ✅ DONE (2026-05-14)
 
-Merge Gemini Hardening improvements into the existing primitives.
-- **Implement**: Async background writer for \`gossip.py\` (High Performance).
-- **Enforce**: OS-agnostic paths in all templates.
+**Shipped commit:** `9cb153a` "feat: perpetua-core v2 kernel Phase 1" at `github.com/diazMelgarejo/perpetua-core`
+**Tests:** 13 smoke tests, all passing (Python 3.9.6)
 
-## Phase 2 — Engine & Safety Integration (\`perpetua-core/graph/\`) ← NEXT
+Modules shipped: `state.py`, `llm.py`, `policy.py`, `gossip.py`, `graph/engine.py`, `graph/nodes.py`, `graph/edges.py`
 
-- **Implement**: \`GraphPlugin\` Protocol in \`engine.py\`.
-- **Implement**: \`max_steps\` safety guard in \`ainvoke\`.
-- **Implement**: Sentinel Node for SWARM misalignment monitoring.
+Also shipped in orama-system v1 layer (not v2 kernel):
+- `bin/agents/dispatcher.py` — `OramaToPTBridge` with verifier gate
+- `bin/agents/orchestrator/task_schema.py` — planning types (`WorkerSpec`, `StageSpec`, `TaskPlan`, `PlanResult`)
+- `bin/agents/orchestrator/dispatch_loop.py` — `run_plan()` stage executor
+- `tests/test_bridge.py` — 11 tests: verifier gate + parallel fan-out
 
-## Phase 3 — Orchestration & API Layer (\`oramasys/\`) ← NEXT
+**Spec-vs-reality deltas from Phase 1:** see `15-phase1-as-built.md`.
+
+**Phase 2 prerequisite decisions (must resolve before Phase 2 starts):**
+- **OQ16** — engine.py ~130-line integrated vs. ~70-line + `plugins/` (shapes all graph work)
+- **OQ13** — `PerpetuaState` as dataclass vs. BaseModel (must decide before HTTP layer planning)
+
+---
+
+## Phase 2 — Engine & Safety Hardening (`perpetua-core/graph/`) ← NEXT
+
+Prerequisite: OQ16 resolved (engine architecture decision).
+
+- **Implement**: `@tool` decorator in `graph/tool.py` (Δ7 from `15-phase1-as-built.md`)
+- **Implement**: `max_steps` safety guard in `ainvoke` (OQ12)
+- **Implement**: `GossipBus` async background writer (OQ11)
+- **Resolve**: `graph/plugins/` or keep integrated (OQ16)
+- **Implement**: Sentinel Node for SWARM misalignment monitoring
+- **Bump**: Python 3.9 → 3.11 in `pyproject.toml` (OQ7)
+
+## Phase 3 — Orchestration & API Layer (`oramasys/`) ← NEXT
 
 - **Verify**: API Server properly consumes PT affinity signals.
 - **Wire**: LLMClient to \`dispatch_node\`.

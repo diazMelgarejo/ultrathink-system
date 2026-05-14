@@ -127,6 +127,8 @@ User chose Tier 3 over Tier 1 (~80 lines) and Tier 2 (~150 lines). Borrowed feat
 
 Tradeoff: kernel grows ~3x beyond Perplexity's original 70-line target, but ships substantial UX out of the box. Documented as explicit departure from "ruthless" cut.
 
+> **As-built reconciliation note (2026-05-14):** This doc says "~220 lines". README.md D8 was revised same day to "~70-line kernel + `graph/plugins/`". Neither description matches what actually shipped: `engine.py` is **~130 lines with all Tier-3 features integrated** (no `graph/plugins/` directory). The revision to the README happened in a separate session from the original D8 decision and was not carried back here. The as-built design is the truth on disk; both spec descriptions are superseded. Full reconciliation is deferred to **OQ16** — see `06-open-questions.md` and `15-phase1-as-built.md` Δ1.
+
 ### D9 — GPT Phase 1–4 order; lift proven pieces
 
 Sequence: primitives → graph engine → HTTP surface → parity tests. Lift battle-tested code from v1: FastAPI surface skeleton from `api_server.py`, `HardwareAffinityError` exception class (already canonicalized in 2026-04-28 revamp), `model_hardware_policy.yml` schema, LM Studio routing config from `routing.json`.

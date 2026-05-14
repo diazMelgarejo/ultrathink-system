@@ -105,7 +105,12 @@ def load_policy(policy_path: Path | None = None) -> dict[str, Any]:
         policy_path = Path(pt_root) / "config" / "model_hardware_policy.yml"
     if not policy_path.exists():
         return {"windows_only": [], "mac_only": [], "shared": []}
-    text = policy_path.read_text(encoding="utf-8")
+    try:
+        with open(str(policy_path), "r", encoding="utf-8") as _fh:
+            text = _fh.read()
+    except OSError as exc:
+        logging.warning("load_hardware_policy: cannot read %s: %s", policy_path, exc)
+        return {"windows_only": [], "mac_only": [], "shared": []}
     try:
         import yaml  # type: ignore
         loaded = yaml.safe_load(text) or {}
@@ -141,9 +146,13 @@ def _filter_models_for_platform_local(models: list, platform: str, policy: dict)
 try:
     _hw_policy = _import_pt_hardware_policy()
     filter_models_for_platform = _hw_policy.filter_models_for_platform
-except ImportError as exc:
-    logging.critical(
-        "Cannot import PT hardware_policy: %s. Falling back to local filter implementation.", exc
+except (ImportError, OSError) as exc:
+    # OSError [Errno 11] "Resource deadlock avoided" can occur in launchd context
+    # on macOS when sys.path contains directories with spaces (known VFS quirk).
+    # Fall back gracefully — discover.py runs fine without the PT policy module.
+    logging.warning(
+        "Cannot import PT hardware_policy (%s: %s). Falling back to local filter.",
+        type(exc).__name__, exc,
     )
     filter_models_for_platform = _filter_models_for_platform_local
 
@@ -276,8 +285,11 @@ def compute_hash(endpoints: dict) -> str:
     return hashlib.sha1(key.encode()).hexdigest()
 
 def _load_json(path: Path):
-    try: return json.loads(path.read_text())
-    except Exception: return None
+    try:
+        with open(str(path), "r", encoding="utf-8") as fh:
+            return json.loads(fh.read())
+    except Exception:
+        return None
 
 def _lock_path() -> Path:
     if LOCK_FILE != DEFAULT_LOCK_FILE:
@@ -361,12 +373,36 @@ def patch_openclaw_json(endpoints: dict):
             for m in win["models"] if "embed" not in m.lower()
         ]
     cfg.setdefault("meta", {})["lastTouchedAt"] = datetime.now(timezone.utc).isoformat()
-    OPENCLAW_JSON.write_text(json.dumps(cfg, indent=2))
+    try:
+        with open(str(OPENCLAW_JSON), "w", encoding="utf-8") as fh:
+            fh.write(json.dumps(cfg, indent=2))
+    except OSError as exc:
+        logging.warning("patch_openclaw_json: cannot write %s: %s", OPENCLAW_JSON, exc)
+
+def _read_text_safe(path: Path) -> str | None:
+    """Read text from path using plain open() — avoids pathlib EDEADLK on macOS launchd."""
+    try:
+        with open(str(path), "r", encoding="utf-8") as fh:
+            return fh.read()
+    except OSError as exc:
+        logging.warning("_read_text_safe: cannot read %s: %s", path, exc)
+        return None
+
+def _write_text_safe(path: Path, content: str) -> bool:
+    """Write text to path using plain open() — avoids pathlib EDEADLK on macOS launchd."""
+    try:
+        with open(str(path), "w", encoding="utf-8") as fh:
+            fh.write(content)
+        return True
+    except OSError as exc:
+        logging.warning("_write_text_safe: cannot write %s: %s", path, exc)
+        return False
 
 def patch_devices_yml(mac_ip: str, win_ip: str, pt_repo: Path):
     f = pt_repo / "config" / "devices.yml"
     if not f.exists(): return
-    content = original = f.read_text()
+    content = original = _read_text_safe(f)
+    if content is None: return
     content = re.sub(
         r'(- id: "mac-studio".*?lan_ip:\s*")[^"]+(")',
         lambda m: m.group(1) + mac_ip + m.group(2),
@@ -378,17 +414,18 @@ def patch_devices_yml(mac_ip: str, win_ip: str, pt_repo: Path):
         content, flags=re.DOTALL
     )
     if content != original:
-        f.write_text(content)
+        _write_text_safe(f, content)
 
 def patch_models_yml(mac_ip: str, win_ip: str, pt_repo: Path):
     f = pt_repo / "config" / "models.yml"
     if not f.exists(): return
-    content = original = f.read_text()
+    content = original = _read_text_safe(f)
+    if content is None: return
     mac_url = "http://localhost:1234" if mac_ip == "localhost" else f"http://{mac_ip}:1234"
     content = re.sub(r'(\$\{LM_STUDIO_MAC_ENDPOINT:-)[^}]+(\})', rf'\g<1>{mac_url}\2', content)
     content = re.sub(r'(\$\{LM_STUDIO_WIN_ENDPOINTS:-)[^}:,\n]+', rf'\g<1>http://{win_ip}', content)
     if content != original:
-        f.write_text(content)
+        _write_text_safe(f, content)
 
 def write_env_lmstudio(endpoints: dict, repo_paths: dict):
     endpoints = filter_endpoints_for_policy(endpoints)
@@ -417,7 +454,12 @@ def write_env_lmstudio(endpoints: dict, repo_paths: dict):
     )
     for repo_path in repo_paths.values():
         if repo_path and Path(repo_path).exists():
-            (Path(repo_path) / ".env.lmstudio").write_text(content)
+            env_path = Path(repo_path) / ".env.lmstudio"
+            try:
+                with open(str(env_path), "w", encoding="utf-8") as fh:
+                    fh.write(content)
+            except OSError as exc:
+                logging.warning("write_env_lmstudio: cannot write %s: %s", env_path, exc)
 
 # ── Recovery tiers ────────────────────────────────────────────────────────────
 

@@ -142,7 +142,9 @@ See [`../CLAUDE-instru.md § 5`](../CLAUDE-instru.md) for the full next-stage pl
 - Embedding: `ollama:bge-m3` (1024 dims) — `~/.gbrain/config.json`
 - Backend: Supabase PostgreSQL via Session Pooler (port 6543)
 - 9,510/9,510 chunks embedded across 1,153 pages
-- Default database backend decision: **pending** — do not assume PGLite or alternative until recorded in docs
+- Storage roadmap **decided** (2026-05-15) — see [`../CLAUDE-instru.md § 5`](../CLAUDE-instru.md):
+  - v2.1: LanceDB + bge-m3 for RAG/session memory; v2.5: DuckDB for fleet analytics
+  - gbrain (pgvector) = codebase index; LanceDB = orama job/decision history — these coexist
 
 ---
 

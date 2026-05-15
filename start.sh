@@ -225,6 +225,26 @@ if [[ "${1:-}" == "--hardware-policy" ]]; then
   exit $?
 fi
 
+# ── hard requirements probe (fail closed on Ollama + models) ─────────────────
+# Runs before any service logic. Idempotent — fast when already satisfied.
+# Stamps .requirements.stamp so repeat runs skip pip install unless deps change.
+# Flags: ORAMA_SKIP_ENSURE=1 to bypass (CI / headless envs with pre-installed deps).
+if [[ "${ORAMA_SKIP_ENSURE:-0}" != "1" ]] && [ -f "$SCRIPT_DIR/scripts/ensure_requirements.sh" ]; then
+  _info "ensure" "probing hard requirements..."
+  if ! bash "$SCRIPT_DIR/scripts/ensure_requirements.sh" --quiet \
+       2>&1 | tee -a "$LOG_DIR/startup-$(date +%Y%m%d).log" | sed 's/^/  [ensure] /'; then
+    _err "ensure" "Hard requirements not satisfied — cannot start. See output above."
+    exit 1
+  fi
+
+  # Also run PT ensure_requirements if PT_DIR is resolved
+  if [ -n "${PT_DIR:-}" ] && [ -f "${PT_DIR}/scripts/ensure_requirements.sh" ]; then
+    _info "ensure" "probing PT (Perpetua-Tools) requirements..."
+    bash "${PT_DIR}/scripts/ensure_requirements.sh" --quiet \
+      2>&1 | tee -a "$LOG_DIR/startup-$(date +%Y%m%d).log" | sed 's/^/  [pt-ensure] /' || true
+  fi
+fi
+
 # ── macOS pre-flight ──────────────────────────────────────────────────────────
 # Applies idempotent fixes to the AlphaClaw binary (macOS compat patches).
 # Non-fatal — startup continues on any error.
@@ -898,7 +918,8 @@ fi
 
 # ── start services ────────────────────────────────────────────────────────────
 
-# Idempotent ollama startup (Mac Orchestrator model warm-up)
+# Ollama model warm-up — loads model into GPU VRAM (different from pull/install).
+# Hard install checks already ran above in ensure_requirements.sh.
 _ollama_ensure_ready
 
 # Activate per-profile openclaw config (no-op if OPENCLAW_PROFILE unset)

@@ -3,7 +3,9 @@
 > **Canonical path**: `docs/LESSONS.md`<br/>
 > **Previous path**: `.claude/lessons/LESSONS.md` (now redirects here)<br/>
 > **Purpose**: GitHub-auditable persistent memory across all ECC, AutoResearcher, and Claude sessions.<br/>
-> **Cross-repo companion**: [Perplexity-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/LESSONS.md)
+> **Cross-repo companion**: [Perpetua-Tools/docs/LESSONS.md](../../perplexity-api/Perpetua-Tools/docs/LESSONS.md) · [GitHub](https://github.com/diazMelgarejo/Perpetua-Tools/blob/main/docs/LESSONS.md)
+> **Architecture authority**: [2026-05-14--UNIFIED-ABSORPTION-PLAN.md](2026-05-14--UNIFIED-ABSORPTION-PLAN.md)
+> **Navigation hub**: [CLAUDE-instru.md](../../../CLAUDE-instru.md)
 >
 > **Rules**:
 >

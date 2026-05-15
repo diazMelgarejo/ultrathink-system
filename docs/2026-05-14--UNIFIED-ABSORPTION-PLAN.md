@@ -3,6 +3,14 @@
 *Canonical spec for orama-system + Perpetua-Tools v1. Supersedes all prior PLAN / PLAN2 docs.*
 *Source: `OpenClaw/v1/07-steps+combined.md` — synthesized from 4 prior design conversations.*
 
+**Cross-repo navigation:**
+| Repo | Role | Key files |
+|------|------|-----------|
+| orama-system (L3) | Stateless orchestration/planning — **THIS REPO** | `CLAUDE.md`, `SKILL.md`, `bin/orama-system/SKILL.md` |
+| Perpetua-Tools (L2) | Runtime/state authority, shared types | `CLAUDE.md`, `orchestrator/contracts.py`, `docs/adapter-interface-contract.md` |
+| AlphaClaw (L1) | Infrastructure — referenced only, never imported | `CLAUDE.md` (do not modify) |
+| Navigation hub | Cross-repo instructions and doc registry | [`../CLAUDE-instru.md`](../../CLAUDE-instru.md) |
+
 ---
 
 ## § 0 — Critique and Corrections (Applied Before Canonicalization)

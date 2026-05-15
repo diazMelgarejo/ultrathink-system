@@ -1,269 +1,179 @@
-# orama-system — Claude Code Mandatory Rules
+# orama-system — Claude Code Navigation
 
-> This file is loaded by Claude Code at the start of every session.
-> All rules below are **non-negotiable** for every agent (ECC, AutoResearcher, Claude).
->
-> **Repo renamed**: ultrathink-system → orama-system (2026-04-20, ὅραμα = vision/revelation)
+> Renamed: ultrathink-system → orama-system (2026-04-20, ὅραμα = "that which is seen / vision / revelation")
+> Package: `@diazmelgarejo/orama-system@0.9.9.8`
 > GitHub: <https://github.com/diazMelgarejo/orama-system>
 
 ---
 
-## § 0 — ABSOLUTE ARCHITECTURAL CONTRACTS (Never Change Without Full Contract Revision)
+## Meta-rule: Progressive Disclosure (Horse Pulls Cart)
 
-*Source: `docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md` § 1–2. These are permanent.
-Any change requires updating both repos in lockstep and revising the unified plan.*
+**Documents own content. This file navigates.**
 
-### Terminology (enforced — grep must return 0 hits in active code)
-| **Banned** | **Correct** | Scope |
-|---|---|---|
-| `coordinator` / `Coordinator` as a role name | `orchestrator` | All APIs, schemas, config keys, route names, doc headings |
-| `Perplexity-Tools` | `Perpetua-Tools` | All active `.py`, config, non-historical docs |
-| `deviceaffinity` | `affinity` | All JSON/YAML config, Python readers |
-| `qwen3-coder:14b` | (no default — must be explicit or fail) | Env defaults, any hardcoded model string |
-| `WIN_LM_STUDIO_HOST` / `WIN_LM_STUDIO_PORT` | `LM_STUDIO_WIN_ENDPOINTS` | Env vars, backend config |
+> "The horse pulls the cart, not the other way around."
 
-### Eight governing principles
-1. **"Orchestrator" is the only public control-plane term.** "Coordinator" may appear in prose comments explaining behavior, never in any public API, schema field, config key, route, or doc heading.
-2. **Workers are one generic primitive.** All roles (executor, verifier, crystallizer, etc.) are specializations of `TaskEnvelope in → WorkerResult out`. One template, many overlays.
-3. **PT is the runtime/state authority.** PT owns: job queue, hardware affinity, model routing, GPU safety, LAN routing, durable artifacts, session state. orama never holds durable state.
-4. **orama is the methodology/planning authority.** orama owns: stage planning, role templates, prompt contracts, verification rubrics. It is stateless. It returns plans and summaries.
-5. **Fail closed at gateways — discovery tools degrade gracefully.** `api_server.py` fails closed on missing `PERPETUATOOLSROOT` or affinity violations. `discover.py` and the network watcher warn and continue — crashing the watcher every 60s is worse than degrading.
-6. **Workers do not spawn sub-workers in V1.** `depth=0` validated server-side on `JobSpec` and `TaskEnvelope` — not a convention.
-7. **JSON/Pydantic is the wire format. XML/tags are prompt-rendering only.** Never parse XML as Python inter-process protocol.
-8. **Lockstep commits for shared contracts.** Any change to shared schema fields, exception classes, policy keys, or model IDs commits to both repos in the same session.
-
-### Hardware routing invariants
-
-**Preferred default combo (both machines online):**
-| Machine | Backend | Endpoint | Model |
-|---------|---------|----------|-------|
-| Mac | **Ollama** ← first-class priority | `http://localhost:11434` | `qwen3.5:9b-nvfp4` |
-| Mac | LM Studio (secondary/fallback only) | `http://localhost:1234` | qwen3.5-9b-mlx |
-| Windows | LM Studio via LAN | `$LM_STUDIO_WIN_ENDPOINTS` | Qwen3.5-27B-Claude-4.6-Opus-Reasoning-Distilled-v2 |
-
-- **Mac = Ollama first.** Ollama (`localhost:11434`, `qwen3.5:9b-nvfp4`) is the primary Mac inference backend. LM Studio Mac is secondary/fallback. Zero overlap: Mac GPU runs Ollama, Windows GPU runs LM Studio. Never both heavy models on one machine.
-- **`lmstudio-mac.baseUrl` is always `http://localhost:1234/v1`.** The Mac LAN IP (e.g. `192.168.254.100`) is discovery metadata only — written to `devices.yml.lan_ip` and `last_discovery.json` for documentation and Windows-side routing. Never in any Mac-local config.
-- **Win host from env only.** `LM_STUDIO_WIN_ENDPOINTS` is the single env var (full URL). Default must be invalid (e.g. `REQUIRED_SET_IN_ENV`) so misconfiguration fails loudly.
-- **One heavy model at a time on the Windows GPU.** `asyncio.Lock` on `LMStudioWinBackend` for models in `_heavy_models`. Check `GPU: BUSY` in `swarm_state.md` before dispatching.
-
-### Shared types ownership
-- All five shared types (`OrchestrationSession`, `TaskEnvelope`, `WorkerAssignment`, `WorkerResult`, `VerificationResult`) live in **PT** (`orchestrator/contracts.py`).
-- orama imports them from PT. Never the reverse.
-- All validators use Pydantic V2 `@field_validator`, never deprecated `@validator`.
-
-### Verifier gate
-- Crystallization is **never dispatched** without an approved `VerificationResult`.
-- This invariant is **enforced in code** (`dispatch_crystallization` raises `PermissionError` if `verdict != "approved"`), not a convention.
-
-### V1 scope boundary
-- §§ 7–8 of the unified plan (MAESTRO/HITL gates, IDE session API) are **deferred to v2**. Do not implement in v1. Do not reference as current behavior.
+- When in doubt: read the doc, don't restate it here.
+- This file's job is routing + constraints. Docs are the source of truth.
+- Skills operationalize docs — they don't copy them.
+- Full instructions → [`../CLAUDE-instru.md`](../CLAUDE-instru.md)
 
 ---
 
-## 1. Continuous Learning — Always On
+## § 0 — Architectural Contracts
 
-Every session **must** use [continuous-learning-v2](https://github.com/affaan-m/everything-claude-code/tree/main/skills/continuous-learning-v2).
+**Source of truth:** [`docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md`](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) §§ 0–2.
+Read before any structural change. Below is a navigation summary only.
 
-- **Read first**: Load `.claude/lessons/LESSONS.md` at session start — this is the shared knowledge base across all agents and sessions.
-- **Write back**: Append meaningful discoveries, patterns, and decisions to `.claude/lessons/LESSONS.md` before ending a session.
-- **Instinct path**: Repo instincts live at `.claude/homunculus/instincts/inherited/orama-system-instincts.yaml`.
+| Topic | Where |
+|-------|-------|
+| Banned terminology (coordinator → orchestrator, etc.) | [§ 1 / Terminology](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md#-1--governing-principles-non-negotiable) |
+| 8 governing principles | [§ 1](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md#-1--governing-principles-non-negotiable) |
+| Hardware routing invariants (Mac=Ollama, Win=LM Studio) | [§ 2 / Hardware](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) |
+| Shared types (all 5 live in PT's `orchestrator/contracts.py`) | [§ 2 / Types](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) |
+| Verifier gate (crystallization blocked without approved result) | [§ 2 / Gates](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) |
+| V1 scope boundary (MAESTRO/HITL deferred) | [§ 2 / V1](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) |
+| HITL accountability classes | [`docs/HUMAN-IN-LOOP-ACCOUNTABILITY.md`](docs/HUMAN-IN-LOOP-ACCOUNTABILITY.md) |
 
-## 2. ECC Post-Merge Workflow (Mandatory)
+**Quick invariants (full detail in doc above):**
+- `orchestrator` only — never `coordinator` in public APIs, schemas, config, or headings
+- PT is runtime/state authority; orama is **stateless** methodology
+- One heavy model at a time on Windows GPU
+- `@field_validator` (Pydantic V2) — never deprecated `@validator`
+- `depth=0` validated server-side; workers cannot spawn sub-workers in V1
 
-After **any** ECC Tools PR is merged into this repo, immediately run:
+---
+
+## § 1 — Continuous Learning
+
+Every session: read [`docs/LESSONS.md`](docs/LESSONS.md) at start; append discoveries before exit.
+Instinct path: `.claude/homunculus/instincts/inherited/orama-system-instincts.yaml`
+Full spec: [continuous-learning-v2](https://github.com/affaan-m/everything-claude-code/tree/main/skills/continuous-learning-v2)
+
+---
+
+## § 2 — ECC Post-Merge Workflow
+
+After any ECC Tools PR merges:
 
 ```bash
-# 1. Pull latest
 git pull origin main
-
-# 2. Import instincts (run in Claude Code)
+# Then in Claude Code:
 /instinct-import .claude/homunculus/instincts/inherited/orama-system-instincts.yaml
-
-# 3. Verify
 /instinct-status
-
-# 4. Commit any changes written by the import
-git add -A && git commit -m "chore(ecc): post-merge instinct import sync"
-git push origin main
+git add -A && git commit -m "chore(ecc): post-merge instinct import sync" && git push origin main
 ```
 
-Or use the `/ecc-sync` command (`.claude/commands/ecc-sync.md`).
+Or: `/ecc-sync` (`.claude/commands/ecc-sync.md`)
 
-## 3. Shared Lessons Path
+---
 
-The canonical lessons file is **`docs/LESSONS.md`** (previously `.claude/lessons/LESSONS.md`, which now redirects here).
+## § 3 — Agent Skills & Mother Skill
 
-- ECC agents: read + write
-- AutoResearcher agents: read + write
-- Claude sessions: read at start, append before exit
-- Auditable on GitHub at all times
-
-| Resource | Purpose |
-| --- | --- |
-| [`SKILL.md`](SKILL.md) | **Start here.** Agent behavioral rules — every "never" with commands |
-| [`docs/LESSONS.md`](docs/LESSONS.md) | Chronological session log — all agents, all dates |
-| [`docs/wiki/README.md`](docs/wiki/README.md) | Wiki index — links to all lesson deep-dives |
-| [`docs/wiki/06-multi-agent-collab.md`](docs/wiki/06-multi-agent-collab.md) | Version registry, scope claims, orphan branch recovery |
-
-## 4. AutoResearcher Integration
-
-Primary mode: **uditgoenka/autoresearch Claude Code plugin** (runs anywhere).
-Secondary mode: GPU runner via SSH for `ml-experiment` task types.
-
-### Plugin install (one-time, idempotent)
-
-```bash
-claude plugin marketplace add uditgoenka/autoresearch
-claude plugin install autoresearch@autoresearch
-```
-
-### Activation (per session)
-
-```claude
-/autoresearch          # research loop
-/autoresearch:debug    # verbose reasoning trace
-```
-
-### Hardware guard — Windows sequential load rule
-
-Never configure the system to load more than one model at a time on the
-Windows GPU. Check `swarm_state.md` for `GPU: BUSY` before dispatching any
-new experiment. This is enforced in the autoresearcher SOUL.md.
-
-When running AutoResearcher swarms:
-
-- Read `.claude/lessons/LESSONS.md` for prior experiment context
-- Record new findings in `.claude/lessons/LESSONS.md` under a dated session entry
-- Cross-reference Perpetua-Tools' `.claude/lessons/LESSONS.md` for joint context
-- `AUTORESEARCH_REMOTE` env var selects the fork (default: uditgoenka/autoresearch)
-- `AUTORESEARCH_BRANCH` env var selects the sync branch (default: main)
-
-## 5. Mother Skill — Always Load
-
-Before any significant change to this repo, load the mother skill:
+Before significant changes, load the mother skill:
 
 ```claude
 /skill bin/orama-system/SKILL.md
 ```
 
-- Run **AFRP gate** before generating non-trivial output
-- Apply **CIDF `decide()`** before any content insertion
-- Use **`@field_validator`** (Pydantic V2), never deprecated `@validator`
-- Keep orama API **stateless** (no Redis dependency)
+| Resource | Purpose |
+|----------|---------|
+| [`SKILL.md`](SKILL.md) | Agent behavioral rules — every "never" with commands |
+| [`bin/orama-system/SKILL.md`](bin/orama-system/SKILL.md) | Mother skill: AFRP gate, CIDF, gstack routing |
+| [`docs/LESSONS.md`](docs/LESSONS.md) | Chronological session log |
+| [`docs/wiki/README.md`](docs/wiki/README.md) | Wiki index — lesson deep-dives |
 
-## 6. Repository Identity And Git Hygiene
+---
 
-- **Package**: `@diazmelgarejo/orama-system@0.9.9.8`
-- **Role**: Application / Orchestration / Meta-Intelligence (Layer 3 of the three-repo architecture)
-- **Previous identity**: orama-system (ultrathink POST /ultrathink on port 8001)
-- **Companion repos**:
-  - [AlphaClaw](https://github.com/diazMelgarejo/AlphaClaw) (Layer 1 — infrastructure)
-  - [Perpetua-Tools](https://github.com/diazMelgarejo/Perpetua-Tools) (Layer 2 — adapters/middleware)
-- **Skill**: `.claude/skills/orama-system/SKILL.md` (renamed from: `ultrathink-system/SKILL.md`)
-- **Mother skill**: `bin/orama-system/SKILL.md` (v0.9.9.7 → 0.9.9.8 after migration)
-
-Git hygiene rules for clean-lineage work:
-
-- Commit identity must be `cyre <Lawrence@cyre.me> or Codex <codex@openai.com>`; verify with `bash scripts/git/check_identity.sh`.
-- Use dated branches: `yyyy-mm-dd-001-brief-summary`.
-- Before risky Git work, snapshot status and stash with untracked files.
-- Do not commit `.env`, `.env.local`, or generated `.paths`; update `.env.example` and `.paths.example` instead.
-- Do not replay polluted commits directly; manual-port reviewed intent into new commits with detailed conventional bodies.
-
-## 7. Three-Repo Architecture (read before any significant work)
-
-```ascii
-AlphaClaw (Layer 1 — infrastructure)
-    │  CLI + HTTP only
-    ▼
-Perpetua-Tools (Layer 2 — middleware/adapters)
-    │  typed adapter contracts → PT drives AlphaClaw
-    ▼
-orama-system (Layer 3 — THIS REPO — orchestration/meta-intelligence)
-```
-
-### What lives in orama (existing + new)
-
-| Path | Purpose |
-|------|---------|
-| `bin/mcp_servers/openclaw_bridge.py` | AlphaClaw bridge (foundation — extends to use PT adapter) |
-| `bin/mcp_servers/openclaw_mcp_server.py` | MCP server wrapping AlphaClaw operations |
-| `bin/mcp_servers/ultrathink_orchestration_server.py` | orama orchestration MCP server |
-| `bin/agents/orchestrator/` | Multi-agent orchestrator with SOUL.md |
-| `bin/agents/{architect,coder,crystallizer,executor,...}/` | Specialized agent definitions |
-| `bin/shared/bridge_contract.py` | Inter-agent messaging contract |
-| `bin/shared/message_bus.py` | Agent message bus |
-| `bin/orama-system/` | AFRP, CIDF, and other skill frameworks |
-| `observability/` | Gate 3: OTel emitter, Tempo, Grafana (see system-design §6) |
-
-### AlphaClaw integration (via Perpetua-Tools adapter)
-
-orama talks to AlphaClaw through PT's adapter, not directly:
+## § 4 — Three-Repo Architecture
 
 ```
-orama orchestrator → PT adapter APIs → AlphaClaw HTTP/CLI
+AlphaClaw (L1 — infra) → Perpetua-Tools (L2 — middleware) → orama-system (L3 — THIS REPO — orchestration)
 ```
 
-`bin/mcp_servers/openclaw_bridge.py` currently calls AlphaClaw directly. Gate 3 work: route through PT's typed adapter contract instead.
+Full architecture: [`docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md`](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md)
+Current as-built: [`docs/v2/`](docs/v2/)
+Path map (harness/skill locations): see `§ 8` of the archived full CLAUDE.md in [`docs/archive/`](docs/archive/)
 
-### Lifecycle delegation — Gate 1+ (CRITICAL)
+**Critical invariants:**
+- `start.sh` delegates gateway decisions to PT's `orchestrator/alphaclaw_manager.py` — never add routing logic to `start.sh`
+- orama API stays stateless (no Redis)
+- orama talks to AlphaClaw through PT's adapter, never directly
 
-`start.sh` now delegates ALL gateway/backend decisions to PT:
+---
 
-```bash
-eval "$(python -m orchestrator.alphaclaw_manager --resolve --env-only)"
-```
+## § 5 — AutoResearcher
 
-- `orchestrator/alphaclaw_manager.py` in PT owns: backend probe, mode determination, AlphaClaw bootstrap
-- orama's `start.sh` is a **pure process manager** — it reads PT's resolved payload and starts services
-- Never add gateway routing logic back to `start.sh` — that violates the PT-is-authoritative invariant
+Plugin: `uditgoenka/autoresearch`. Activate per-session: `/autoresearch`.
+Read + write [`docs/LESSONS.md`](docs/LESSONS.md) around experiment runs.
+Full setup: [`docs/wiki/06-multi-agent-collab.md`](docs/wiki/06-multi-agent-collab.md)
 
-**Files NOT to modify without understanding the invariant:**
+---
 
-- `start.sh` — thin delegator; any new gateway logic must go to PT's `alphaclaw_manager.py`
-- `openclaw_bootstrap.py` — scope-down to apply-config only is Gate 2; do not add probe logic here
+## § 6 — Repository Identity & Git Hygiene
 
-### Key invariants (carried over from orama-system)
+- Commit identity: `cyre <Lawrence@cyre.me>` or `Codex <codex@openai.com>` — verify with `bash scripts/git/check_identity.sh`
+- Dated branches: `yyyy-mm-dd-NNN-brief-summary`
+- Never commit `.env`, `.env.local`, generated `.paths`
+- Full rules: [`docs/wiki/08-git-hygiene-and-branching.md`](docs/wiki/08-git-hygiene-and-branching.md)
 
-- orama API stays **stateless** — no Redis dependency
-- Windows GPU: load ONE model at a time (check `GPU: BUSY` in swarm_state.md)
-- AFRP gate before any non-trivial output generation
-- CIDF `decide()` before any content insertion
-- `@field_validator` (Pydantic V2), never deprecated `@validator`
+---
 
-## 8. Harness Path Map
+## § 7 — gstack
 
-| Source | Runtime | Harness |
-|--------|---------|---------|
-| `bin/orama-system/SKILL.md` | `.claude/skills/orama-system/SKILL.md` | Claude Code (project) |
-| `bin/orama-system/SKILL.md` | `~/.claude/skills/orama-system/` | Claude Code (global) |
-| `bin/orama-system/SKILL.md` | `.agents/skills/orama-system/SKILL.md` | Codex/OpenCode |
-| `bin/agents/*/` | `.claude/agents/ultrathink-*.md` | Claude Code subagents |
+gstack v1.37.0.0 at `~/.claude/skills/gstack` (global-git).
 
-> CIDF content (`bin/orama-system/cidf/`) is the canonical source. Install scripts copy it to
-> `.claude/skills/orama-system/cidf/` and `.agents/skills/orama-system/cidf/`
-> at runtime; checked idempotently on each run.
+Safety rules:
+- ALWAYS use `/browse` for web — NEVER `mcp__claude-in-chrome__*` directly
+- `/investigate` for root-cause; `/ship` before any publish
 
-## 9. gstack
-
-gstack v1.12.2.0 is installed at `~/.claude/skills/gstack` (global-git).
-
-**Safety rules (always active):**
-- ALWAYS use `/browse` for all web browsing — NEVER use `mcp__claude-in-chrome__*` tools directly
-- Use `/investigate` for root-cause analysis of adapter or orchestration failures
-- Use `/ship` before any `npm publish`
-
-**Load full routing table, skill list, and GBrain config:**
+Load routing table + GBrain config:
 ```
 /skill bin/orama-system/gstack/SKILL.md
 ```
 
-**Create a new skill for this repo or for gstack:**
-```
-/skill bin/orama-system/skillify/SKILL.md
-```
+---
 
-**Install the MCP orchestration stack (gemini-mcp-tool + ai-cli-mcp + OpenClaw registry):**
-```
-/skill bin/orama-system/mcp-install/SKILL.md
-```
+## § 8 — Next Stage: Semantic Memory (bge-m3 / Ollama)
+
+gbrain is now fully indexed with **Ollama bge-m3** (local, free, 1024-dim vector).
+See [`../CLAUDE-instru.md § 5`](../CLAUDE-instru.md) for the full next-stage plan.
+
+**Current state (2026-05-15):**
+- Embedding: `ollama:bge-m3` (1024 dims) — `~/.gbrain/config.json`
+- Backend: Supabase PostgreSQL via Session Pooler (port 6543)
+- 9,510/9,510 chunks embedded across 1,153 pages
+- Default database backend decision: **pending** — do not assume PGLite or alternative until recorded in docs
+
+---
+
+## GBrain Search Guidance (configured by /sync-gbrain)
+<!-- gstack-gbrain-search-guidance:start -->
+
+GBrain is set up and synced on this machine. The agent should prefer gbrain
+over Grep when the question is semantic or when you don't know the exact
+identifier yet.
+
+**This worktree is pinned to a worktree-scoped code source** via the
+`.gbrain-source` file in the repo root (kubectl-style context). Any
+`gbrain code-def`, `code-refs`, `code-callers`, `code-callees`, or `query`
+call from anywhere under this worktree routes to that source by default —
+no `--source` flag needed.
+
+Two indexed corpora available via the `gbrain` CLI:
+- This worktree's code (auto-pinned via `.gbrain-source` → `orama-src`).
+- `~/.gstack/` curated memory (registered as `gstack-brain-lawrencecyremelgarejo` source).
+
+Prefer gbrain when:
+- "Where is X handled?" / semantic intent, no exact string yet:
+    `gbrain search "<terms>"` or `gbrain query "<question>"`
+- "Where is symbol Y defined?" / symbol-based code questions:
+    `gbrain code-def <symbol>` or `gbrain code-refs <symbol>`
+- "What calls Y?" / "What does Y depend on?":
+    `gbrain code-callers <symbol>` / `gbrain code-callees <symbol>`
+- "What did we decide last time?" / past plans, retros, learnings:
+    `gbrain search "<terms>" --source gstack-brain-lawrencecyremelgarejo`
+
+Grep is still right for known exact strings, regex, multiline patterns, and
+file globs. Run `/sync-gbrain` after meaningful code changes.
+
+<!-- gstack-gbrain-search-guidance:end -->

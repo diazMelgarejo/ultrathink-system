@@ -28,7 +28,7 @@ Read before any structural change. Below is a navigation summary only.
 |-------|-------|
 | Banned terminology (coordinator → orchestrator, etc.) | [§ 1 / Terminology](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md#-1--governing-principles-non-negotiable) |
 | 8 governing principles | [§ 1](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md#-1--governing-principles-non-negotiable) |
-| Hardware routing invariants (Mac=Ollama, Win=LM Studio) | [§ 2 / Hardware](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) |
+| **Hard requirements** (Mac: Ollama + qwen3.5:9b-nvfp4 + bge-m3; Win: LM Studio) | [§ 2 / Hardware](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) · [`../CLAUDE-instru.md § 6`](../CLAUDE-instru.md) |
 | Shared types (all 5 live in PT's `orchestrator/contracts.py`) | [§ 2 / Types](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) |
 | Verifier gate (crystallization blocked without approved result) | [§ 2 / Gates](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) |
 | V1 scope boundary (MAESTRO/HITL deferred) | [§ 2 / V1](docs/2026-05-14--UNIFIED-ABSORPTION-PLAN.md) |
@@ -37,6 +37,9 @@ Read before any structural change. Below is a navigation summary only.
 **Quick invariants (full detail in doc above):**
 - `orchestrator` only — never `coordinator` in public APIs, schemas, config, or headings
 - PT is runtime/state authority; orama is **stateless** methodology
+- **Mac hard requirements:** Ollama running (`localhost:11434`) with `qwen3.5:9b-nvfp4` (inference) + `bge-m3` (embeddings) — system does not start without these
+- **Win hard requirement:** LM Studio at `$LM_STUDIO_WIN_ENDPOINTS` — no fallback; fail loudly if unavailable
+- **Everything else optional:** LM Studio Mac, cloud APIs, other local models
 - One heavy model at a time on Windows GPU
 - `@field_validator` (Pydantic V2) — never deprecated `@validator`
 - `depth=0` validated server-side; workers cannot spawn sub-workers in V1

@@ -297,8 +297,8 @@ All candidates pass through `policy.validate_or_raise()` — fail closed on affi
 
 ### 5.3 Role-to-backend map (ROLE_BACKEND_MAP in PT)
 
-**Preferred default combo:** Ollama Mac (`qwen3.5:9b-nvfp4`) + LM Studio Win (Qwen3.5-27B).
-Mac roles use `ollama` as primary provider; `lmstudio-mac` is fallback only when Ollama is unavailable.
+**Hard requirements (2026-05-15):** Ollama Mac (`qwen3.5:9b-nvfp4` + `bge-m3`) + LM Studio Win (Qwen3.5-27B). System does not start without these. Everything else is optional. Full probe spec: [`CLAUDE-instru.md § 6`](../../../CLAUDE-instru.md).
+Mac roles use `ollama` as primary provider; `lmstudio-mac` is optional secondary only — never auto-routed over Ollama.
 
 | Role | Specialization | Provider (primary) | Model |
 |---|---|---|---|
@@ -309,7 +309,7 @@ Mac roles use `ollama` as primary provider; `lmstudio-mac` is fallback only when
 | `architect-agent` | default | `lmstudio-win` | Qwen3.5-27B-Claude-4.6-Opus |
 | `refiner-agent` | default | **`ollama`** | `qwen3.5:9b-nvfp4` |
 
-Mac fallback chain: `ollama` → `lmstudio-mac` (only when Ollama port 11434 unreachable).
+Mac: Ollama is **required**. `lmstudio-mac` is optional secondary — not a fallback in the automatic routing sense; only used when Ollama is explicitly stopped by the user.
 **lmstudio-mac** baseUrl is always `http://localhost:1234/v1`. LAN IP is docs/discovery metadata only. (commit `a82ab51`)
 
 ### 5.4 `LMStudioWinBackend` (PT — first-class, not hinted)

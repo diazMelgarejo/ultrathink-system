@@ -27,9 +27,11 @@ allowed-tools: bash, file-operations
 ## Purpose
 
 Installs the full MCP orchestration stack defined in the canonical `bin/orama-system/mcp-orchestration/SKILL.md`:
-Gemini CLI + gemini-mcp-tool (2M-token context reading), ai-cli-mcp (PID-tracked
-background workers), and both registered in Claude Code and the OpenClaw outbound
-registry. Safe to call multiple times — all steps are idempotent.
+Gemini CLI + gemini-mcp-tool for analyzer-only use-cases, ai-cli-mcp (PID-tracked
+background workers), and the registrations needed by Claude Code and the OpenClaw
+outbound registry. OpenRouter is the first-class default worker fallback and is
+configured separately through the OpenRouter policy docs/scripts. Safe to call
+multiple times — all steps are idempotent.
 
 ## When to Use
 

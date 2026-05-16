@@ -114,7 +114,7 @@ Coordinator (Claude / qwen3.5 orchestrator)
 | `mac-coder` | `lmstudio-mac/qwen3.5-9b-mlx` | Mac :1234 | Fast iteration, small files |
 | `win-reasoner` | `lmstudio-win/qwen3.5-27b-*` | Win :1234 | Complex reasoning, large context |
 | `mac-ollama` | `ollama/qwen3.5:9b-nvfp4` | Mac :11434 | Always available, no LM Studio needed |
-| `gemini-reader` | `gemini-2.5-pro` (via gemini-cli MCP) | Cloud | Large context reading, architecture review |
+| `gemini-reader` | `gemini-2.5-pro` (via gemini-cli MCP) | Cloud | Analyzer-only large context reading, architecture review |
 | `codex-impl` | Codex (via ai-cli MCP) | Cloud | Code implementation, mechanical tasks |
 
 ---

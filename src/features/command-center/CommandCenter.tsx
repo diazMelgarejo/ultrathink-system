@@ -5,7 +5,8 @@ import { fetchAppState } from "@/api/appState";
 import type { JobSummary } from "@/api/appState";
 import type { SwarmPreview } from "@/api/swarm";
 import type { Artifact } from "@/api/artifacts";
-import { mockArtifactList, mockState } from "@/data/mockState";
+import { listJobArtifacts } from "@/api/artifacts";
+import { mockArtifactList, mockState, mockSwarmPreview } from "@/data/mockState";
 import { ReadinessStrip } from "./ReadinessStrip";
 import { SwarmComposer } from "./SwarmComposer";
 import { WorkerAssignments } from "./WorkerAssignments";
@@ -30,7 +31,7 @@ type Page = "command" | "composer" | "runs" | "routing" | "artifacts" | "setting
  */
 export function CommandCenter() {
   const [page, setPage] = useState<Page>("command");
-  const [preview, setPreview] = useState<SwarmPreview | undefined>(undefined);
+  const [preview, setPreview] = useState<SwarmPreview | undefined>(mockSwarmPreview);
 
   const appStateQuery = useQuery({
     queryKey: ["appState"],
@@ -41,7 +42,16 @@ export function CommandCenter() {
 
   const state = appStateQuery.data ?? mockState;
   const jobs: JobSummary[] = (state?.jobs?.data?.jobs ?? mockState.jobs.data.jobs) as JobSummary[];
-  const artifacts: Artifact[] = mockArtifactList;
+  const latestJobId = jobs[0]?.job_id ?? jobs[0]?.id;
+
+  const artifactsQuery = useQuery({
+    queryKey: ["jobArtifacts", latestJobId],
+    queryFn: ({ signal }) => listJobArtifacts(String(latestJobId ?? ""), signal),
+    enabled: Boolean(latestJobId),
+    refetchInterval: 10_000,
+  });
+
+  const artifacts: Artifact[] = artifactsQuery.data?.artifacts ?? mockArtifactList;
 
   function renderPage() {
     switch (page) {

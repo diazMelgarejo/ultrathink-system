@@ -114,11 +114,19 @@ export function RunsTable({ jobs }: RunsTableProps) {
         <h2 className="text-2xs font-mono uppercase tracking-wider text-ink-subtle">
           Runs
         </h2>
-        <span className="text-2xs text-ink-subtle">
-          {jobs.length === 0
-            ? "0 jobs"
-            : `showing ${startNum}–${endNum} of ${jobs.length}`}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-2xs text-ink-subtle">
+            {jobs.length === 0
+              ? "0 jobs"
+              : `showing ${startNum}–${endNum} of ${jobs.length}`}
+          </span>
+          <button
+            type="button"
+            className="rounded border border-line bg-canvas-raised px-2 py-0.5 text-2xs text-ink-muted transition hover:text-ink"
+          >
+            View All Runs
+          </button>
+        </div>
       </header>
 
       <div className="overflow-auto rounded border border-line bg-canvas-surface">

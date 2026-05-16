@@ -78,6 +78,41 @@ else
     EXIT_CODE=1
   fi
 
+  fallbacks_json="[]"
+  if command -v jq >/dev/null 2>&1; then
+    fallbacks_json="$(jq -c '.agents.defaults.model.fallbacks // []' "$CONFIG" 2>/dev/null || echo "[]")"
+    first_nonlocal="$(jq -r '
+      map(select(type == "string"))
+      | map(select(((startswith("ollama/") | not) and (startswith("lmstudio/") | not) and (startswith("lmstudio-win/") | not))))
+      | .[0] // ""
+    ' <<<"$fallbacks_json")"
+    first_openrouter="$(jq -r 'map(select(type == "string")) | map(select(startswith("openrouter/")))[0] // ""' <<<"$fallbacks_json")"
+    first_gemini_index="$(jq -r '
+      map(select(type == "string"))
+      | to_entries
+      | map(select(.value | test("(^|/)gemini"; "i")))
+      | .[0].key // -1
+    ' <<<"$fallbacks_json")"
+    first_openrouter_index="$(jq -r '
+      map(select(type == "string"))
+      | to_entries
+      | map(select(.value | startswith("openrouter/")))
+      | .[0].key // -1
+    ' <<<"$fallbacks_json")"
+    if [[ "$first_nonlocal" == openrouter/* ]]; then
+      echo "  ✓ OpenRouter first-class fallback: $first_nonlocal"
+    else
+      echo "  ✗ OpenRouter must be the first non-local fallback (got: ${first_nonlocal:-<empty>})"
+      EXIT_CODE=1
+    fi
+    if [[ "$first_gemini_index" != "-1" && "$first_openrouter_index" != "-1" && "$first_gemini_index" -gt "$first_openrouter_index" ]]; then
+      echo "  ✓ Gemini relegated behind OpenRouter: index $first_gemini_index > $first_openrouter_index"
+    elif [[ "$first_gemini_index" != "-1" ]]; then
+      echo "  ✗ Gemini must remain behind OpenRouter in fallback order"
+      EXIT_CODE=1
+    fi
+  fi
+
   # Required: Nemotron primary present
   if grep -q "openrouter/nvidia/nemotron-3-super-120b-a12b:free" "$CONFIG"; then
     echo "  ✓ Nemotron primary present"

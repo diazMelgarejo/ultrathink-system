@@ -29,8 +29,8 @@ Use the right tool for the right layer. Use the cheapest agent that can succeed.
 | Layer | Tool | Job |
 |---|---|---|
 | Main reasoning + judgment | Claude Sonnet 4.6 medium + prompt caching | Decide, edit, review, synthesize, content insertion |
-| Default coding/text agent | OpenRouter free-model stack (Nemotron → MiniMax → DeepSeek → …) | Generic worker — long-context, coding, structured output |
-| Large-context reading (when specified) | `gemini-mcp-tool` | Gemini-Analyzer use-cases: architecture mapping, visual diff, screenshot comparison, multi-file audit |
+| Default coding/text agent | OpenRouter free-model stack (Nemotron → MiniMax → DeepSeek → …) | Generic worker, long-context, coding, structured output |
+| Large-context reading, when explicitly requested | `gemini-mcp-tool` | Gemini-Analyzer use-cases only, architecture mapping, visual diff, screenshot comparison, multi-file audit |
 | Parallel workers | `ai-cli-mcp` | Run background CLI agents (Codex, Gemini, ollama) with PID tracking |
 | Local-only workloads | ollama (Mac, `localhost:11434`) | Lint, format, bash scripts, local validation — free + private |
 | Runtime orchestration | OpenClaw | Route tools into agent workflows, gateway, auth |
@@ -154,7 +154,7 @@ import anthropic
 client = anthropic.Anthropic()
 
 response = client.messages.create(
-    model="claude-sonnet-4-5",  # or claude-sonnet-4-6 when available
+    model="claude-sonnet-4-6",
     max_tokens=1024,
     thinking={"type": "enabled", "budget_tokens": 8000},
     system=[

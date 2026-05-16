@@ -81,7 +81,9 @@ function SegmentedControl<T extends string>({
 }
 
 export function SwarmComposer({ onPreview, onLaunch }: SwarmComposerProps) {
-  const [objective, setObjective] = useState("");
+  const [objective, setObjective] = useState(
+    "Analyze the attached financial report and produce key risk factors, opportunities, and a 1-page executive summary.",
+  );
   const [taskType, setTaskType] = useState<TaskType>("reasoning");
   const [optimize, setOptimize] = useState<OptimizeFor>("quality");
   const [device, setDevice] = useState<PreferredDevice>("auto");

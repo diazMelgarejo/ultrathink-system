@@ -28,11 +28,11 @@ The policy is benchmark-informed and uses pinned `*:free` model IDs for determin
 | 6 | openrouter/z-ai/glm-4.5-air:free | 131K | Agentic backup |
 | 7 | openrouter/inclusionai/ling-2.6-flash:free | 262K | Speed-focused parsing |
 | 8 | openrouter/openrouter/free | varies | Auto-router, last resort |
-| 9 | gemini (Pro/Flash) | 2M | **Gemini-Analyzer use-cases ONLY** — visual diff, whole-repo audit |
+| 9 | gemini (Pro/Flash) | 2M | **Analyzer-only backstop** — visual diff, whole-repo audit, never first-class fallback |
 
 Models 2–8 are accessed via OpenRouter API (`OPENROUTER_API_KEY`).
 Model 1 is local-only (no API cost).
-Model 9 is access-constrained (GitHub auth issues per user note) — reserve for visual/large-context specialty.
+Model 9 is access-constrained (GitHub auth issues per user note) — reserve for visual/large-context specialty and keep it behind the OpenRouter fallback chain.
 
 ---
 

@@ -144,14 +144,14 @@ merge_policy_into() {
           then .env.OPENROUTER_API_KEY = $apiKey
           else . end
       # 2. agents.defaults.model — preserve primary, merge fallbacks
-      # Strategy: REMOVE any Gemini entries from existing fallbacks (they go to end
-      # per Gemini-Analyzer use-case routing), then concat policy fallbacks (which
-      # already has Gemini at the end), then dedup preserving first-occurrence order.
+      # Strategy: strip any Gemini entries from existing fallbacks, then concat
+      # the policy fallbacks (which keep OpenRouter ahead of Gemini), then dedup
+      # preserving first-occurrence order.
       | (.agents //= {}) | (.agents.defaults //= {}) | (.agents.defaults.model //= {})
       | .agents.defaults.model.fallbacks = (
           (
             ((.agents.defaults.model.fallbacks // [])
-             | map(select(. as $m | ($m | startswith("google/gemini") | not))))
+             | map(select(. as $m | ($m | test("(^|/)gemini"; "i") | not))))
             + ($policy.agents.defaults.model.fallbacks_to_merge // [])
           )
           | reduce .[] as $item ([]; if any(.[]; . == $item) then . else . + [$item] end)

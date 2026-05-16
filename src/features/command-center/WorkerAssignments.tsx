@@ -5,7 +5,14 @@ interface WorkerAssignmentsProps {
   preview: SwarmPreview | undefined;
 }
 
-// Generate a deterministic pastel color from a string
+const WORKER_LETTERS: Record<string, string> = {
+  "context-builder": "C",
+  architect: "A",
+  executor: "E",
+  verifier: "V",
+  crystallizer: "X",
+};
+
 function roleColor(role: string): string {
   const colors = [
     "bg-accent/20 text-accent",
@@ -18,12 +25,8 @@ function roleColor(role: string): string {
   return colors[idx];
 }
 
-function roleInitials(role: string): string {
-  return role
-    .split(/[-_\s]/)
-    .slice(0, 2)
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
+function workerLetter(role: string): string {
+  return WORKER_LETTERS[role] ?? role[0]?.toUpperCase() ?? "?";
 }
 
 function RoutingSourceBadge({ source }: { source: string }) {
@@ -40,21 +43,20 @@ function RoutingSourceBadge({ source }: { source: string }) {
 }
 
 function WorkerRow({ assignment }: { assignment: SwarmAssignment }) {
-  const initials = roleInitials(assignment.role);
+  const letter = workerLetter(assignment.role);
   const colorClass = roleColor(assignment.role);
 
   return (
     <tr className="border-b border-line last:border-b-0 hover:bg-canvas-raised/50">
-      {/* Avatar + role */}
       <td className="px-3 py-2">
-        <div className="flex items-center gap-2.5">
-          <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-2xs font-semibold ${colorClass}`}>
-            {initials}
-          </div>
-          <div>
-            <div className="text-xs font-medium text-ink">{assignment.role}</div>
-            <div className="text-2xs text-ink-subtle">{assignment.specialization}</div>
-          </div>
+        <div className={`flex h-8 w-8 items-center justify-center rounded-md text-xs font-semibold ${colorClass}`}>
+          {letter}
+        </div>
+      </td>
+      <td className="px-3 py-2">
+        <div>
+          <div className="text-xs font-medium text-ink">{assignment.role}</div>
+          <div className="text-2xs text-ink-subtle">{assignment.specialization}</div>
         </div>
       </td>
       {/* Backend hint */}
@@ -69,7 +71,7 @@ function WorkerRow({ assignment }: { assignment: SwarmAssignment }) {
       </td>
       {/* Status */}
       <td className="px-3 py-2">
-        <span className="inline-flex h-2 w-2 rounded-full bg-status-info" title="assigned" />
+        <StatusBadge tone="ok" dot={false}>Ready</StatusBadge>
       </td>
     </tr>
   );
@@ -86,16 +88,12 @@ export function WorkerAssignments({ preview }: WorkerAssignmentsProps) {
         <h2 className="text-2xs font-mono uppercase tracking-wider text-ink-subtle">
           Worker Assignments
         </h2>
-        {preview && (
-          <div className="flex items-center gap-2 text-2xs">
-            <span className="text-ink-subtle">{assignments.length} roles</span>
-            {policyOk ? (
-              <StatusBadge tone="ok" dot={false}>policy ok</StatusBadge>
-            ) : (
-              <StatusBadge tone="err" dot={false}>{violations.length} violations</StatusBadge>
-            )}
-          </div>
-        )}
+        <button
+          type="button"
+          className="rounded border border-line bg-canvas-raised px-2 py-0.5 text-2xs text-ink-muted transition hover:text-ink"
+        >
+          Edit Assignments
+        </button>
       </header>
 
       <div className="overflow-auto rounded border border-line bg-canvas-surface">
@@ -107,6 +105,9 @@ export function WorkerAssignments({ preview }: WorkerAssignmentsProps) {
           <table className="w-full border-collapse text-sm">
             <thead className="sticky top-0 bg-canvas-raised">
               <tr className="border-b border-line">
+                <th className="px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
+                  Worker
+                </th>
                 <th className="px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
                   Role
                 </th>

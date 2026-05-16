@@ -37,13 +37,21 @@ function CopyButton({ value }: { value: string }) {
 export function ArtifactsPanel({ artifacts }: ArtifactsPanelProps) {
   return (
     <section className="mb-4">
-      <header className="mb-2 flex items-baseline justify-between">
+      <header className="mb-2 flex items-center justify-between">
         <h2 className="text-2xs font-mono uppercase tracking-wider text-ink-subtle">
           Artifacts
         </h2>
-        <span className="text-2xs text-ink-subtle">
-          {artifacts.length} item{artifacts.length === 1 ? "" : "s"}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-2xs text-ink-subtle">
+            {artifacts.length} item{artifacts.length === 1 ? "" : "s"}
+          </span>
+          <button
+            type="button"
+            className="rounded border border-line bg-canvas-raised px-2 py-0.5 text-2xs text-ink-muted transition hover:text-ink"
+          >
+            View All Artifacts
+          </button>
+        </div>
       </header>
 
       {/* Redaction notice */}

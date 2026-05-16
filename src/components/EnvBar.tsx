@@ -6,11 +6,12 @@ interface EnvBarProps {
   isFetching?: boolean;
 }
 
-function IconSearch() {
+function IconBook() {
   return (
     <svg width="15" height="15" viewBox="0 0 16 16" fill="none" aria-hidden>
-      <circle cx="7" cy="7" r="4.5" stroke="currentColor" strokeWidth="1.4"/>
-      <path d="M10.5 10.5L14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+      <path d="M3 2.5h8.5A1.5 1.5 0 0 1 13 4v9.5" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+      <path d="M3 2.5A1.5 1.5 0 0 0 1.5 4v8.5A1.5 1.5 0 0 0 3 14h8.5" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
+      <path d="M4 5h5M4 8h5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
     </svg>
   );
 }
@@ -69,8 +70,8 @@ export function EnvBar({ state, isFetching = false }: EnvBarProps) {
 
       {/* Action icons + avatar */}
       <div className="flex items-center gap-2 text-ink-subtle">
-        <button type="button" className="rounded p-1 hover:bg-canvas-raised hover:text-ink transition-colors" aria-label="Search">
-          <IconSearch />
+        <button type="button" className="rounded p-1 hover:bg-canvas-raised hover:text-ink transition-colors" aria-label="Docs">
+          <IconBook />
         </button>
         <button type="button" className="rounded p-1 hover:bg-canvas-raised hover:text-ink transition-colors" aria-label="Notifications">
           <IconBell />
@@ -78,7 +79,7 @@ export function EnvBar({ state, isFetching = false }: EnvBarProps) {
         <div className="h-4 w-px bg-line mx-1" />
         {/* User avatar */}
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-accent/20 text-2xs font-semibold text-accent">
-          LC
+          OP
         </div>
       </div>
     </header>

@@ -46,6 +46,21 @@ def _portal_status(supervisor_jobs=None):
         "services": {"perplexity_tools": {"ok": True}},
         "routing": {"gateway_ready": True},
         "hardware_policy": {"ok": True, "violations": []},
+        "openrouter": {
+            "policy_active": True,
+            "api_key_present": True,
+            "default_fallback_chain": [
+                "ollama/qwen3.5:9b-nvfp4",
+                "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+                "openrouter/minimax/minimax-m2.5:free",
+                "openrouter/deepseek/deepseek-v4-flash:free",
+                "openrouter/openai/gpt-oss-120b:free",
+                "openrouter/z-ai/glm-4.5-air:free",
+                "openrouter/inclusionai/ling-2.6-flash:free",
+                "openrouter/openrouter/free",
+            ],
+            "gemini_policy": "analyzer-only",
+        },
         "tools": {"gemini-cli": {"ok": True}},
         "supervisor_jobs": supervisor_jobs or [],
     }
@@ -75,6 +90,10 @@ def test_app_state_contains_real_sections(monkeypatch):
     assert body["models"]["data"]["models"][0]["id"] == "qwen"
     assert body["activity"]["data"]["events"][0]["id"] == "evt-1"
     assert body["jobs"]["data"]["jobs"][0]["id"] == "job-1"
+    assert body["portal"]["data"]["openrouter"]["policy_active"] is True
+    assert body["portal"]["data"]["openrouter"]["default_fallback_chain"][0] == "ollama/qwen3.5:9b-nvfp4"
+    assert body["portal"]["data"]["openrouter"]["default_fallback_chain"][-1] == "openrouter/openrouter/free"
+    assert body["portal"]["data"]["openrouter"]["gemini_policy"] == "analyzer-only"
 
 
 def test_app_state_uses_supervisor_jobs_fallback(monkeypatch):

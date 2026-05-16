@@ -8,7 +8,7 @@ Routes:
   GET  /           HTML dashboard (meta-refresh every 10s)
   GET  /api/status JSON status of all services
   POST /api/user-input  proxy to PT /user-input (portal textbox handler)
-  GET  /health     {"status": "ok", "version": "0.9.9.7"}
+GET  /health     {"status": "ok", "version": "0.9.9.9"}
 """
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ except ImportError:
 log = logging.getLogger("ultrathink.portal")
 logging.basicConfig(level=logging.INFO)
 
-VERSION = "0.9.9.8"
+VERSION = "0.9.9.9"
 
 # ── IP Resolution (authoritative — reads openclaw.json, never stale hardcodes) ─
 # Import shared resolver so portal works correctly whether started via start.sh
@@ -80,6 +80,16 @@ LMS_API_TOKEN = os.getenv("LM_STUDIO_API_TOKEN", "")
 
 OLLAMA_WIN = os.getenv("OLLAMA_WINDOWS_ENDPOINT", _WIN_OLL_DEFAULT)
 OLLAMA_MAC = os.getenv("OLLAMA_MAC_ENDPOINT", "http://127.0.0.1:11434")
+OPENROUTER_FREE_FALLBACKS = [
+    "ollama/qwen3.5:9b-nvfp4",
+    "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+    "openrouter/minimax/minimax-m2.5:free",
+    "openrouter/deepseek/deepseek-v4-flash:free",
+    "openrouter/openai/gpt-oss-120b:free",
+    "openrouter/z-ai/glm-4.5-air:free",
+    "openrouter/inclusionai/ling-2.6-flash:free",
+    "openrouter/openrouter/free",
+]
 
 PROBE_TIMEOUT = 3.0
 
@@ -1896,6 +1906,12 @@ async def api_status():
         "agents": agents,
         "routing": routing,
         "hardware_policy": hardware_policy,
+        "openrouter": {
+            "policy_active": True,
+            "api_key_present": bool(os.getenv("OPENROUTER_API_KEY")),
+            "default_fallback_chain": OPENROUTER_FREE_FALLBACKS,
+            "gemini_policy": "analyzer-only",
+        },
         "queue_depth": queue_depth,
         "supervisor_jobs": supervisor_jobs,
         "tools": tools,

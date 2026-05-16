@@ -111,10 +111,11 @@ Coordinator (Claude / qwen3.5 orchestrator)
 **Model dispatch table:**
 | Worker | Model | Hardware | Best for |
 |---|---|---|---|
+| `mac-ollama` | `ollama/qwen3.5:9b-nvfp4` | Mac :11434 | Local orchestrator, always available |
 | `mac-coder` | `lmstudio-mac/qwen3.5-9b-mlx` | Mac :1234 | Fast iteration, small files |
-| `win-reasoner` | `lmstudio-win/qwen3.5-27b-*` | Win :1234 | Complex reasoning, large context |
-| `mac-ollama` | `ollama/qwen3.5:9b-nvfp4` | Mac :11434 | Always available, no LM Studio needed |
-| `gemini-reader` | `gemini-2.5-pro` (via gemini-cli MCP) | Cloud | Analyzer-only large context reading, architecture review |
+| `win-coder` | `lmstudio-win/qwen3.5-27b-*` | Win :1234 | Complex reasoning, large context |
+| `openrouter-fallback` | `openrouter/nvidia/nemotron-3-super-120b-a12b:free` | Cloud | First-class fallback worker pool |
+| `gemini-analyzer` | `gemini-2.5-pro` (via gemini-cli MCP) | Cloud | Explicit analyzer-only large context reading, architecture review |
 | `codex-impl` | Codex (via ai-cli MCP) | Cloud | Code implementation, mechanical tasks |
 
 ---

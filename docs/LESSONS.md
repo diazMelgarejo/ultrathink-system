@@ -1779,3 +1779,25 @@ When feature work spans multiple commits across a branch and partial work is alr
 - Merge foundation commits to main early (after a coherent milestone) so history stays linear
 - Use `git merge --ff-only` when the branch has only additive commits ahead of main — avoids a merge commit in the log
 - Do NOT squash multi-session work that has already been reviewed — preserves attribution per commit
+
+---
+
+## 2026-05-17 — Codex — Gemini is opt-in, gbrain sync comes from the gstack sync skill
+
+### What was learned
+
+- Gemini should not be treated as the default reader path. Keep it behind the explicit analyzer lane.
+- The default agent path is local ollama on Mac first, then OpenRouter free-model fallbacks, with Windows local coder lanes used when available.
+- From Codex, gbrain sync is driven by the gstack `sync-gbrain` skill and the `gstack-brain-sync` binary in the installed gstack toolchain.
+
+### Decisions made
+
+- Update orchestration docs so Gemini is analyzer-only by explicit request.
+- Use `~/.claude/skills/gstack/bin/gstack-brain-sync --discover-new` to refresh queued worktree changes, then `--once` to drain and push.
+
+### Runbook
+
+```bash
+~/.claude/skills/gstack/bin/gstack-brain-sync --discover-new
+~/.claude/skills/gstack/bin/gstack-brain-sync --once
+```

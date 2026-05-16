@@ -2,10 +2,10 @@
 name: mcp-install
 description: >-
   Use when setting up the MCP orchestration stack on a new machine or verifying
-  it is installed. Covers gemini-mcp-tool (Gemini 2M-context reader), ai-cli-mcp
-  (parallel background workers), and OpenClaw MCP registry. Activates for:
-  install mcp stack, setup gemini mcp, register ai-cli, openclaw mcp set,
-  mcp orchestration setup, install mcp tools, run install-mcp-stack.sh.
+  it is installed. Covers ai-cli-mcp (parallel background workers), the OpenClaw
+  MCP registry, and an optional Gemini analyzer lane when explicitly requested.
+  Activates for: install mcp stack, setup gemini mcp, register ai-cli, openclaw
+  mcp set, mcp orchestration setup, install mcp tools, run install-mcp-stack.sh.
 version: 1.1.0
 license: Apache 2.0
 compatibility: claude-code
@@ -27,11 +27,11 @@ allowed-tools: bash, file-operations
 ## Purpose
 
 Installs the full MCP orchestration stack defined in the canonical `bin/orama-system/mcp-orchestration/SKILL.md`:
-Gemini CLI + gemini-mcp-tool for analyzer-only use-cases, ai-cli-mcp (PID-tracked
-background workers), and the registrations needed by Claude Code and the OpenClaw
-outbound registry. OpenRouter is the first-class default worker fallback and is
-configured separately through the OpenRouter policy docs/scripts. Safe to call
-multiple times — all steps are idempotent.
+ai-cli-mcp (PID-tracked background workers), the registrations needed by Claude
+Code and the OpenClaw outbound registry, and Gemini only when the analyzer lane
+is explicitly requested. OpenRouter is the first-class default worker fallback
+and is configured separately through the OpenRouter policy docs/scripts. Safe to
+call multiple times — all steps are idempotent.
 
 ## When to Use
 
@@ -85,14 +85,14 @@ The script runs these steps in order — skipping any that are already complete:
 | Step | Action | Skip condition |
 |------|--------|----------------|
 | 1 | Node.js ≥20 hard gate | Node <20 → fatal error |
-| 2 | Install `@google/gemini-cli` globally | `gemini` already in PATH |
-| 2b | `gemini auth login` | `gemini auth check` passes |
-| 3 | Register `gemini-cli` in Claude Code | `claude mcp list \| grep gemini-cli` |
-| 4 | Accept Claude first-run prompts | marker file `~/.claude/.dangerously-skip-accepted` |
-| 5 | Install `ai-cli-mcp` globally | `ai-cli` already in PATH |
-| 5b | Register `ai-cli` in Claude Code | `claude mcp list \| grep ai-cli` |
-| 6 | Register both in OpenClaw registry | `openclaw mcp list \| grep` each name |
-| 7 | Verification summary | always runs |
+| 2 | Install `ai-cli-mcp` globally | `ai-cli` already in PATH |
+| 2b | Register `ai-cli` in Claude Code | `claude mcp list \| grep ai-cli` |
+| 3 | Accept Claude first-run prompts | marker file `~/.claude/.dangerously-skip-accepted` |
+| 4 | Optional Gemini analyzer lane | `--include-gemini` not passed |
+| 4b | `gemini auth login` | `gemini auth check` passes |
+| 4c | Register `gemini-cli` in Claude Code | `claude mcp list \| grep gemini-cli` |
+| 5 | Register OpenClaw registry entries | `openclaw mcp list \| grep` each name |
+| 6 | Verification summary | always runs |
 
 ### Step 4: Verify inside Claude Code
 
@@ -102,16 +102,21 @@ After the script completes, restart Claude Code, then run:
 /mcp
 ```
 
-Expected output: both `gemini-cli` and `ai-cli-mcp` listed as **active**.
+Expected output: `ai-cli-mcp` listed as **active**; `gemini-cli` appears only when
+`--include-gemini` was passed.
 
 **What success looks like at each stage:**
-- Step 2: `gemini --version` returns a version string
-- Step 2b: `gemini auth check` exits 0 silently
-- Step 3: `claude mcp list` shows `gemini-cli`
-- Step 5: `ai-cli doctor` shows installed CLIs detected
-- Step 5b: `claude mcp list` shows `ai-cli`
-- Step 6: `openclaw mcp list` shows both `gemini-cli` and `ai-cli-mcp`
-- Step 7: All five tools present in summary table
+- Step 2: `ai-cli doctor` shows installed CLIs detected
+- Step 2b: `claude mcp list` shows `ai-cli`
+- Step 4: `gemini --version` returns a version string only if `--include-gemini` was passed
+- Step 4b: `gemini auth check` exits 0 silently only if Gemini was installed
+- Step 4c: `claude mcp list` shows `gemini-cli` only when requested
+- Step 5: `openclaw mcp list` shows `ai-cli-mcp` and, optionally, `gemini-cli`
+- Step 6: configured tools present in summary table
+
+Gemini is intentionally opt-in. Use the analyzer lane only when a task explicitly
+requires large-context visual diff or whole-repo review. Do not treat Gemini as
+the default reader for generic orchestration.
 
 ### Step 5: Force re-install (if needed)
 

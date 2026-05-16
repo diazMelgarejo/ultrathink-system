@@ -52,7 +52,7 @@
 
 ## 2. Agent dispatch matrix (per OpenRouter.md new order)
 
-Per Organized-Goals.md Goal 4 + OpenRouter.md §5 (new priority order — Gemini pushed to 3rd):
+Per Organized-Goals.md Goal 4 + OpenRouter.md §5 (local ollama first, OpenRouter as first-class fallback, Gemini only for explicit analyzer tasks):
 
 | Agent | Where it runs | Strengths | Use for |
 |-------|---------------|-----------|---------|
@@ -62,7 +62,7 @@ Per Organized-Goals.md Goal 4 + OpenRouter.md §5 (new priority order — Gemini
 | **OpenRouter DeepSeek V4 Flash (1M, free)** | OpenRouter API | Fast, high-throughput | Triage, heartbeat-style checks, fast lookups |
 | **OpenRouter gpt-oss-120b (131K, free)** | OpenRouter API | Strong tool use, structured output | Structured-output tasks, second-opinion critique |
 | **Codex CLI** | Subprocess via ai-cli-mcp | Mechanical TypeScript/Python edits, file patching | Search-replace, JSON patching, boilerplate generation |
-| **Gemini CLI** | Subprocess via gemini-mcp-tool | 2M-token context window | **DOWNGRADED to 3rd-choice review (GitHub access issues per user note)** |
+| **Gemini CLI** | Subprocess via gemini-mcp-tool | 2M-token context window | **Analyzer-only, explicit opt-in** (visual diff, whole-repo audit) |
 | **Claude Sonnet 4.6 medium + prompt caching** | This session | Judgment, final synthesis, content insertion decisions | Reviews, taste calls, commit messages, conflict resolution |
 
 **Token economy rule:** the lowest-capability agent that can succeed gets the task. Save Sonnet 4.6 for judgment and synthesis ONLY.
@@ -115,14 +115,14 @@ Per Organized-Goals.md Goal 4 + OpenRouter.md §5 (new priority order — Gemini
 |------|------|-------|-----|
 | 2a | **Generate `scripts/apply-openrouter-free-defaults.sh`** — idempotent JSON patcher per OpenRouter.md §8 | **ollama qwen3.5** (local Mac) | Bash scripting, local, free |
 | 2b | **Generate `scripts/verify-openrouter-models.sh`** — endpoint smoke test per OpenRouter.md §9 | **ollama qwen3.5** (local) | Bash, local |
-| 2c | **Generate `deployments/macbook-pro-head/openclaw/openclaw.model-policy.jsonc`** — canonical patch (per OpenRouter.md §6, with reordered preferences: ollama 1st, OpenRouter 2nd, Gemini 3rd) | **Codex CLI** | Mechanical JSONC generation |
+| 2c | **Generate `deployments/macbook-pro-head/openclaw/openclaw.model-policy.jsonc`** — canonical patch (per OpenRouter.md §6, with reordered preferences: ollama 1st, OpenRouter 2nd, Gemini explicit-analyzer only) | **Codex CLI** | Mechanical JSONC generation |
 | 2d | **Patch `~/.openclaw/openclaw.json`** — apply OpenRouter defaults, preserve gateway/WhatsApp/sandbox | **Codex CLI** | Mechanical JSON patching with backups |
 | 2e | **Patch `alphaclaw-observability/config/openclaw.json`** | **Codex CLI** | Mechanical |
 | 2f | **Patch `AlphaClaw/lib/onboarding/defaults/openclaw.json.template`** | **Codex CLI** | Mechanical |
 | 2g | **Create `docs/OPENROUTER_FREE_MODELS.md`** — short reference doc per OpenRouter.md §13 (changelog entry) | **MiniMax M2.5** (OpenRouter) | Coding-doc writing |
 | 2h | **Verify** — run the verification script, confirm endpoint checks pass | **Local bash** (no agent) | Direct execution |
 
-**Critical OpenRouter.md adjustment per user instruction:** the default fallback ORDER changes from OpenRouter.md §5 to insert **local ollama** as primary and **Gemini** as 3rd-choice review (downgraded due to GitHub access issues):
+**Critical OpenRouter.md adjustment per user instruction:** the default fallback ORDER changes from OpenRouter.md §5 to insert **local ollama** as primary and **OpenRouter free models** as the first-class fallback chain. Gemini is kept outside the default chain and only used for explicit analyzer tasks:
 
 ```text
 NEW ORDER (this session):
@@ -134,7 +134,7 @@ NEW ORDER (this session):
 6. openrouter/z-ai/glm-4.5-air...
 7. openrouter/inclusionai/ling-2.6-flash...
 8. openrouter/openrouter/free
-9. gemini (3rd-choice review only)        ← was #1 reader before
+9. gemini (explicit analyzer only)        ← outside the default fallback chain
 ```
 
 ---
@@ -213,7 +213,7 @@ src/
 | Step | Task | Agent | Why |
 |------|------|-------|-----|
 | 6a | Start dev server (`npm run dev`) in background | **Local bash** | Direct |
-| 6b | Visual comparison against screenshot target | **Gemini CLI** (its #1 strength is large visual context) | EXCEPTION to "Gemini 3rd-choice" rule — visual sandbox is its specialty |
+| 6b | Visual comparison against screenshot target | **Gemini CLI** (its #1 strength is large visual context) | Explicit analyzer-only task — use only when the diff is too large for local/OpenRouter |
 | 6c | Capture any visual deltas, fix | **MiniMax M2.5** | Coding model |
 
 ---
@@ -238,7 +238,7 @@ Per "use the least amount of tokens like we did last time":
 | Local ollama qwen3.5 | 0 API tokens | Free, runs on Mac |
 | OpenRouter free models (Nemotron, MiniMax, etc.) | 0 API tokens | Free tier — 50 req/day per OpenRouter.md §2 |
 | Codex CLI | Bounded by Codex's own subscription | Use ai-cli-mcp PID tracking to monitor |
-| Gemini CLI | Minimal — only Stage 6b visual diff | Per user note: pushed to 3rd-choice |
+| Gemini CLI | Minimal — only Stage 6b visual diff or explicit analyzer task | Kept outside default fallback chain |
 
 **Budget guard:** if any agent exceeds expected work-size (e.g., a Codex worker hangs >5 min), kill its PID via `ai-cli-mcp kill_process` and re-dispatch with narrower scope.
 
@@ -252,7 +252,7 @@ Before this plan is declared done:
 - [ ] Stage 2 acceptance: `apply-openrouter-free-defaults.sh` runs idempotently; `~/.openclaw/openclaw.json` contains OpenRouter primary+fallbacks AND preserves gateway/WhatsApp/sandbox per OpenRouter.md §12 acceptance tests
 - [ ] Stage 4 acceptance: `npm run build` exits 0; bundle size <500KB gzipped
 - [ ] Stage 5 acceptance: all existing backend tests green; frontend lint clean
-- [ ] Stage 6 acceptance: dev server starts, Gemini visual diff returns <5 mismatches from screenshot target
+- [ ] Stage 6 acceptance: dev server starts, and the chosen analyzer path returns <5 mismatches from screenshot target
 - [ ] Version is STILL `0.9.9.8` (no premature bump)
 - [ ] All work on `web-app-orchestration-v2-implementation` branch
 
@@ -276,10 +276,10 @@ Before this plan is declared done:
 1. **OPENROUTER_API_KEY**: ✅ Set. Stage 2 proceeds with live patching.
 2. **Vite stack**: 🔒 **React + TanStack Query + Tailwind CSS**. Decided upfront — no Stage 4a stack debate.
 3. **Gemini routing policy (PERMANENT — to be encoded in canonical SKILL.md):**
-   > **Default routing:** OpenRouter free models + fallbacks (per §2 matrix).
+   > **Default routing:** local ollama on Mac first, then OpenRouter free models + fallbacks (per §2 matrix).
    > **Gemini-Analyzer use-case routing:** Use Gemini ONLY when caller explicitly specifies a "Gemini-Analyzer" task. These use-cases include: large-context document review, screenshot/visual diff, code review of large files, multi-file architecture audits.
-   > **Stage 6b (visual diff vs screenshot target):** Falls under Gemini-Analyzer use-case → use Gemini.
-   > **Why this matters:** OpenRouter.md §0 says "don't blanket-route via Gemini" due to GitHub access issues. But Gemini's 2M-context vision sandbox is unique. Reserve it for tasks where its specialty matters; default to OpenRouter for everything else.
+   > **Stage 6b (visual diff vs screenshot target):** Falls under Gemini-Analyzer use-case → use Gemini only when the diff cannot be handled locally.
+   > **Why this matters:** OpenRouter.md §0 says "don't blanket-route via Gemini" due to GitHub access issues. Reserve Gemini for explicit analyzer tasks; default to OpenRouter for everything else.
 4. **Branch merge timing**: 🔒 Merge `web-app-orchestration-v2-implementation` → main **after Stage 3 commit** (foundation done). Stage 4+ continues on the same branch and gets its own merge later.
 
 These decisions are durable — they will be reflected in the canonical `bin/orama-system/mcp-orchestration/SKILL.md` so future sessions inherit them.

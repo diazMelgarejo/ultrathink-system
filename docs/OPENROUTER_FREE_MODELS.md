@@ -10,7 +10,7 @@
 
 ## What this policy is
 
-OpenClaw and the orama-system agent network default to **OpenRouter free models** as the generic worker pool. This replaces blanket Gemini routing (which now serves "Gemini-Analyzer use-cases" only — visual diff, whole-repo, multi-file audits).
+OpenClaw and the orama-system agent network default to **OpenRouter free models** as the generic worker pool. Local ollama on Mac still orchestrates first when the task can stay local. Gemini is no longer a default reader path; use it only for explicit analyzer use-cases such as visual diff, whole-repo, or multi-file audits.
 
 The policy is benchmark-informed and uses pinned `*:free` model IDs for deterministic behavior, with `openrouter/openrouter/free` as the auto-router fallback.
 
@@ -28,7 +28,7 @@ The policy is benchmark-informed and uses pinned `*:free` model IDs for determin
 | 6 | openrouter/z-ai/glm-4.5-air:free | 131K | Agentic backup |
 | 7 | openrouter/inclusionai/ling-2.6-flash:free | 262K | Speed-focused parsing |
 | 8 | openrouter/openrouter/free | varies | Auto-router, last resort |
-| 9 | gemini (Pro/Flash) | 2M | **Analyzer-only backstop** — visual diff, whole-repo audit, never first-class fallback |
+| 9 | gemini (Pro/Flash) | 2M | **Analyzer-only, explicit opt-in** — visual diff, whole-repo audit, never first-class fallback |
 
 Models 2–8 are accessed via OpenRouter API (`OPENROUTER_API_KEY`).
 Model 1 is local-only (no API cost).
@@ -98,6 +98,6 @@ scripts/verify-openrouter-models.sh
 
 - Adopted OpenRouter free-model policy from `OpenClaw/v1/OpenRouter.md`
 - Added ollama qwen3.5:9b-nvfp4 as local-first priority (per Mac hard requirement in CLAUDE.md)
-- Pushed Gemini to "Gemini-Analyzer use-case" routing (visual diff + whole-repo only) due to GitHub access issues
+- Pushed Gemini to explicit analyzer-only routing (visual diff + whole-repo only) due to GitHub access issues
 - Canonical MCP orchestration skill at `bin/orama-system/mcp-orchestration/SKILL.md` references this policy as §2 Rule 1
 - Preserved LAN gateway, WhatsApp allowlist, sandbox, wrapper safety defaults

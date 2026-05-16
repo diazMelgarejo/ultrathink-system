@@ -325,6 +325,7 @@ def _restart_openclaw_if_running(patched_config: str, reason: str) -> None:
 # ─── Patch A: git auth shim destination ──────────────────────────────────────
 _P_GIT_DEST = {
     "name":   "git-shim-dest",
+    "skip_from_ver": "0.9.16",
     "detect": 'const gitShimDest = path.join(os.homedir(), ".local", "bin", "git");',
     "old":    '  const gitShimDest = "/usr/local/bin/git";',
     "new":    (
@@ -355,6 +356,7 @@ _P_GIT_SHIMPATH = {
 # ─── Patch D: gog install destination ────────────────────────────────────────
 _P_GOG = {
     "name":   "gog-install-dest",
+    "skip_from_ver": "0.9.16",
     "detect": 'const gogLocalBin = path.join(os.homedir(), ".local", "bin");',
     "old": (
         '    execSync(\n'
@@ -380,6 +382,7 @@ _P_GOG = {
 # new = the darwin/else block in the current patched file
 _P_CRON = {
     "name":   "cron-macos",
+    "skip_from_ver": "0.9.16",
     "detect": "// macOS: /etc/cron.d/ doesn't exist; use user crontab instead",
     "old": (
         '    const cronFilePath = "/etc/cron.d/openclaw-hourly-sync";\n'
@@ -442,6 +445,7 @@ _P_CRON = {
 # new = the platform-guarded block in the current patched file
 _P_SYSTEMCTL = {
     "name":   "systemctl-skip-macos",
+    "skip_from_ver": "0.9.16",
     "detect": "// systemctl shim is only needed on Linux (Docker); macOS uses launchd",
     "old": (
         "// ---------------------------------------------------------------------------\n"
@@ -564,11 +568,22 @@ def step_patch_gateway() -> None:
 
 
 def _alphaclaw_version() -> str:
-    pkg = ALPHACLAW_JS.parent.parent.parent / "package.json"
+    pkg = ALPHACLAW_JS.parent.parent / "package.json"
     try:
         return json.loads(pkg.read_text()).get("version", "unknown")
     except Exception:
         return "unknown"
+
+
+def _semver_tuple(v: str) -> tuple:
+    try:
+        return tuple(int(x) for x in v.split("."))
+    except Exception:
+        return (0,)
+
+
+def _version_gte(installed: str, threshold: str) -> bool:
+    return _semver_tuple(installed) >= _semver_tuple(threshold)
 
 
 def step_patch_alphaclaw() -> None:
@@ -589,7 +604,9 @@ def step_patch_alphaclaw() -> None:
     patch_results: dict[str, str] = {}
 
     for p in ALL_PATCHES:
-        name, detect, old, new = p["name"], p["detect"], p["old"], p["new"]
+        name = p["name"]
+        detect, old, new = p["detect"], p["old"], p["new"]
+        skip_from = p.get("skip_from_ver")
         if detect in content:
             _skip(f"alphaclaw.js/{name}")
             patch_results[name] = "skip"
@@ -597,6 +614,9 @@ def step_patch_alphaclaw() -> None:
             content = content.replace(old, new, 1)
             _applied(f"alphaclaw.js/{name}")
             patch_results[name] = "fixed"
+        elif skip_from and version != "unknown" and _version_gte(version, skip_from):
+            _skip(f"alphaclaw.js/{name}", f"upstream absorbed in v{skip_from}+")
+            patch_results[name] = "skip"
         else:
             _warn(
                 f"alphaclaw.js/{name}",

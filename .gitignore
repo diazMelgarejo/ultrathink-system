@@ -51,3 +51,10 @@ config/.policy_cache_refreshed
 # lib/ — agentic_stack and other generated/vendored shared libraries
 # (content is managed externally; never commit here)
 lib/
+
+# Vite operator console (Goal 3, RC-1)
+node_modules/
+.vite/
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js

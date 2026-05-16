@@ -50,8 +50,9 @@ MARKER_FILE   = HOME / ".alphaclaw" / ".macos_patches.json"
 
 # alphaclaw package version this script was written for.
 # If the installed version differs, patches are re-checked regardless of marker.
-# Known working versions: 0.9.3 through 0.9.11 (all OpenClaw versions work).
-KNOWN_ALPHACLAW_VERSION = "0.9.3"
+# Known working versions: 0.9.3 through 0.9.16.9 (upstream 0.9.16 absorbed git-shim-dest,
+# gog-install-dest, cron-macos, systemctl-skip-macos natively via getBinPath/installBinDir).
+KNOWN_ALPHACLAW_VERSION = "0.9.16"
 
 DRY_RUN = "--dry-run" in sys.argv
 QUIET   = "--quiet"   in sys.argv

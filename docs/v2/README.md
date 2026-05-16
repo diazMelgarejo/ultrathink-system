@@ -156,7 +156,8 @@ orama-system/docs/v2/
 ├── 12-xai-model-migration-2026-05.md   ← xAI retirements 2026-05-15; grok-4.3 + grok-4.20-non-reasoning defaults
 ├── 13-local-model-catalog-strategy.md  ← Codex model_catalog_json pattern; qwen3.5-local→qwen3.5:9b-nvfp4 rename; gen script
 ├── 14-supervisor-and-anthropic-patterns.md
-└── 15-phase1-as-built.md              ← canonical oramasys/* v2.0-alpha.1 (2026-05-01); OQ resolutions
+├── 15-phase1-as-built.md              ← canonical oramasys/* v2.0-alpha.1 (2026-05-01); OQ resolutions
+└── 16-web-app-orchestration-plan.md   ← chosen FastAPI + React/Vite web-app path for portal/dashboard + PT swarm primitives
 ```
 
 ---

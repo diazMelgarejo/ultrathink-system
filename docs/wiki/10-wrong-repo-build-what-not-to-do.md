@@ -1,3 +1,132 @@
+# ⚠️ WHAT NOT TO DO — Wrong Repo Build (2026-05-14) — ARCHIVED TO WIKI
+
+> **ARTIFACT STATUS: THIS FILE DOCUMENTS A MONUMENTAL MISTAKE.**
+> It has been moved from `docs/v2/15-phase1-as-built.md` → `docs/wiki/10-wrong-repo-build-what-not-to-do.md`
+> and is preserved here as a cautionary reference only.
+>
+> **DO NOT use any of the build facts, deltas, or OQ references below as canonical.**
+> The canonical v2 build is at `oramasys/perpetua-core` (commit `2f717f5`, 2026-05-01).
+>
+> Full post-mortem: `docs/LESSONS.md` §"2026-05-14: Monumental Error — Wrong Repo Build"
+> Repo registry (which org owns what): `../CLAUDE-instru.md` §1 / memory `project_repo_registry.md`
+
+---
+
+## What went wrong — Complete Agent-Readable Post-Mortem
+
+### The incident (2026-05-14)
+
+An AI agent (Claude Sonnet 4.5) was asked to enrich `docs/v2/` with post-Phase-1
+reconciliation notes. Instead, it performed the following sequence of mistakes:
+
+1. **Built a second v2 kernel from scratch** in `OpenClaw/perpetua-core` — a local
+   directory inside the wrong parent project (`OpenClaw`, not `Documents/oramasys`).
+2. **Pushed to the wrong GitHub remote:** `diazMelgarejo/perpetua-core` — a v1-legacy
+   namespace. The agreed org for all v2 code is `oramasys/*`.
+3. **Wrote `docs/v2/15-phase1-as-built.md`** treating the wrong build as if it were
+   the real Phase 1 implementation, including detailed spec-vs-reality deltas.
+4. **Modified 4 other `docs/v2/` files** to reference this wrong build as authoritative,
+   corrupting the canonical documentation that had been correct since 2026-05-01.
+
+The canonical v2 build had been shipped **13 days earlier** (2026-05-01) at
+`oramasys/perpetua-core` (commit `2f717f5`), with 32 tests, 65-line engine +
+`graph/plugins/`, Pydantic `BaseModel` state, and Python 3.11+.
+
+The agent never checked whether the build it was "recording" already existed.
+It never ran `git remote -v` before pushing. It skipped all `AskUserQuestion` gates
+that the plan document required before touching `docs/v2/`.
+
+### Why this is uniquely dangerous for AI agents
+
+AI agents working across multiple local clones of related repos face a specific
+failure mode that humans rarely encounter: the **phantom build problem**.
+
+The agent had full access to:
+- `OpenClaw/perpetua-core` (wrong clone, non-canonical)
+- `Documents/oramasys/perpetua-core` (correct canonical repo)
+- `OpenClaw/orama-system/docs/v2/` (canonical docs pointing to the canonical build)
+
+Because it started from a plausible-looking directory, ran tests that passed, and
+saw a `git push` succeed, it concluded the task was done. It never cross-checked
+the remote URL against the agreed canonical home. The docs it wrote were internally
+consistent — they just described the wrong artifact.
+
+This is the AI equivalent of a surgeon operating on the wrong patient. The work
+was technically competent. The target was wrong.
+
+### The spec violations in the wrong build
+
+| Spec decision | Canonical (`oramasys/perpetua-core`) | Wrong (`diazMelgarejo/perpetua-core`) |
+|---------------|--------------------------------------|---------------------------------------|
+| D8 revision: 65-line + plugins | ✅ 65-line + `graph/plugins/` dir | ❌ ~130-line integrated, no plugins/ |
+| D7: Pydantic v2 `BaseModel` | ✅ `class PerpetuaState(BaseModel)` | ❌ `pydantic.dataclasses.dataclass` |
+| `scratchpad: dict[str, Any]` | ✅ typed dict field | ❌ `scratchpad: str = ""` |
+| D2: `oramasys` org | ✅ `oramasys/perpetua-core` | ❌ `diazMelgarejo/perpetua-core` |
+| Python 3.11+ | ✅ `requires-python = ">=3.11"` | ❌ Python 3.9.6 |
+| `@tool` decorator | ✅ `graph/plugins/tool.py` shipped | ❌ absent |
+| Async `GossipBus` | ✅ `aiosqlite` | ❌ `sqlite3` (sync) |
+| Test count | ✅ 32 tests | ❌ 13 smoke tests |
+
+### Root causes (4 independent failures, all required)
+
+**Failure 1 — No remote verification before push.**
+`git remote -v` was not run before `git push`. The remote URL was assumed from
+context. Rule: always verify remote URL before any push to a new repo.
+
+**Failure 2 — No canonical existence check.**
+The agent assumed Phase 1 had not been built. The correct check is:
+`ls ~/Documents/oramasys/perpetua-core/` — if it exists, stop and read it.
+Rule: before building anything in a v2 module, check `oramasys/` first.
+
+**Failure 3 — Skipped planning gates.**
+The plan required `AskUserQuestion` approval before modifying `docs/v2/`. These
+gates exist precisely for actions that are hard to reverse. Skipping them is how
+a recoverable mistake becomes a documented one.
+
+**Failure 4 — No cross-reference against repo registry.**
+The agreed repo-to-org mapping is documented in `CLAUDE-instru.md §1` and the
+`project_repo_registry.md` memory entry. The agent did not consult either before
+pushing. Rule: when pushing to any repo, match against the registry first.
+
+### Recovery steps taken (commit `07581d6`)
+
+1. `docs/v2/15-phase1-as-built.md` → moved to `docs/wiki/10-wrong-repo-build-what-not-to-do.md` (this file) as a cautionary artifact
+2. `docs/v2/00-context-and-decisions.md`, `04-build-order.md`, `06-open-questions.md`, `README.md` → reverted to commit `935ce54` (the last known-good state)
+3. LESSONS.md entry written (2026-05-14) with the full comparison table and "never again" rules
+4. Warning header added to this file (2026-05-16) for future agent discoverability
+
+### What future agents MUST do before any v2 work
+
+```bash
+# 1. Verify you are in the right repo
+git remote -v   # must show github.com/oramasys/*, not diazMelgarejo/*
+
+# 2. Confirm canonical build exists before building
+ls ~/Documents/oramasys/perpetua-core/  # if present, use it — do not rebuild
+
+# 3. Check the repo registry
+# CLAUDE-instru.md §1 / memory: project_repo_registry.md
+# v1-legacy = diazMelgarejo/*  |  v2-canonical = oramasys/*  |  NEVER MIX
+
+# 4. Do not skip AskUserQuestion gates in any plan that modifies docs/v2/
+```
+
+### Cross-references
+
+| Resource | What it contains |
+|----------|-----------------|
+| `docs/LESSONS.md` §"2026-05-14: Monumental Error" | Full post-mortem with spec comparison table and "never again" rules |
+| `../CLAUDE-instru.md §1` | Canonical repo-to-org registry (source of truth for which org owns what) |
+| Memory `project_repo_registry.md` | Agent-readable repo registry: v1-legacy vs v2-canonical org split |
+| `orama-system/SKILL.md` | Behavioral rules: §"Repo identity" covers git remote verification |
+| `Perpetua-Tools/SKILL.md` | §"Three-repo Architecture" — PT is L2, orama is L3, AlphaClaw is L1 |
+| `orama-system/docs/v2/00-context-and-decisions.md` | Canonical decisions (D1–D9) that the wrong build violated |
+| `orama-system/docs/v2/01-kernel-spec.md` | Kernel spec the canonical build correctly implements |
+
+---
+
+## ~~Phase 1 As-Built Notes (WRONG BUILD — for reference only)~~
+
 # 15 — Phase 1 As-Built Notes (2026-05-14)
 
 > Records the delta between the v2.0 kernel spec and what actually shipped.

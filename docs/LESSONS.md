@@ -1632,4 +1632,19 @@ correct before the wrong commit (`5f21e83`).
 3. **Never skip `AskUserQuestion` gates** in a plan — they exist precisely to prevent this
 4. **`oramasys/*` is the ONLY valid home for v2 code.** `diazMelgarejo/*` is v1-legacy only.
 5. **The shipped canonical scaffold (`oramasys/*`) takes precedence** over any in-session build
+
+**Full agent-readable post-mortem:** `docs/wiki/10-wrong-repo-build-what-not-to-do.md` — enriched 2026-05-16 with complete incident timeline, failure mode analysis, spec violation table, and "what future agents MUST do" checklist. Read this before any v2 docs/ or oramasys/ work.
+
+---
+
+## 2026-05-16: `.gbrain-source` is machine-local — never commit it
+
+`.gbrain-source` is a kubectl-style worktree pin written by `/sync-gbrain`. It contains
+the name of the indexed gbrain source for this worktree on this machine (e.g. `orama-src`).
+Different machines register different source names; committing it would break gbrain routing
+on every other machine that clones the repo.
+
+**Fix:** Added `.gbrain-source` to `.gitignore` (2026-05-16).
+**Rule:** If you see `.gbrain-source` untracked in any repo, add it to `.gitignore` immediately. Do not `git add` it.
+
 - Linux `ip route get 8.8.8.8` — validate on Ubuntu 22.04 + Debian 12 + Alpine 3.19

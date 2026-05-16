@@ -193,6 +193,24 @@ Companion repo:
 - [Perplexity-Tools/SKILL.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/SKILL.md)
 - [Perplexity-Tools/docs/LESSONS.md](https://github.com/diazMelgarejo/Perplexity-Tools/blob/main/docs/LESSONS.md)
 
+### Critical cautionary reference: Wrong Repo Build (2026-05-14)
+
+**[docs/wiki/10-wrong-repo-build-what-not-to-do.md](docs/wiki/10-wrong-repo-build-what-not-to-do.md)**
+
+An AI agent built the v2 kernel in the wrong local directory, pushed to the wrong GitHub org,
+and documented it as canonical. Read this before any `docs/v2/` or `oramasys/*` work.
+
+**The 4 checks that would have prevented it:**
+1. `git remote -v` — verify remote matches `oramasys/*` before any v2 push
+2. `ls ~/Documents/oramasys/<repo>/` — confirm canonical build doesn't already exist
+3. Consult `CLAUDE-instru.md §1` or `project_repo_registry.md` — v1=`diazMelgarejo/*`, v2=`oramasys/*`
+4. Never skip `AskUserQuestion` gates in a plan that modifies `docs/v2/`
+
+### .gbrain-source is machine-local — never commit it
+
+`.gbrain-source` is written by `/sync-gbrain` to pin this worktree to a gbrain indexed source.
+It is machine-specific. Add it to `.gitignore` if you see it untracked. See LESSONS.md §"2026-05-16: `.gbrain-source` is machine-local".
+
 ---
 
 ## Skill 10 — External Agent Integration (Gemini · Codex · OpenClaw)

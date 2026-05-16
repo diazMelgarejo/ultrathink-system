@@ -1,0 +1,95 @@
+// OpenClaw model-policy patch — RC-1 fallback chain
+//
+// Generated 2026-05-14 from:
+//   - OpenClaw/v1/OpenRouter.md §6 (free-model fallback chain)
+//   - User decision 2026-05-14: insert local ollama as PRIMARY (CLAUDE.md hard
+//     requirement), OpenRouter free models as FALLBACKS, Gemini pushed to
+//     end of fallback chain ("Gemini-Analyzer use-cases only")
+//
+// IMPORTANT: This policy DOES NOT override the agents.defaults.model.primary.
+// The primary is set per-host based on CLAUDE.md hard requirements:
+//   - Mac: ollama/qwen3.5:9b-nvfp4 (local-first; CLAUDE.md § 0 hard requirement)
+//   - Win: lmstudio-win/<distilled> (local-first; CLAUDE.md § 0 hard requirement)
+// This policy ADDS the OpenRouter free models to the fallback chain and the
+// models allowlist. Apply via: scripts/apply-openrouter-free-defaults.sh
+//
+// To force-set primary (rare, only when no local model exists), pass
+// --force-primary to the apply script.
+//
+// Preserves: gateway, WhatsApp allowlist, sandbox defaults, wrapper safety,
+// existing per-agent primary models.
+{
+  "env": {
+    "OPENROUTER_API_KEY": "${OPENROUTER_API_KEY}"
+  },
+
+  "agents": {
+    "defaults": {
+      // Fallback chain to MERGE into existing .agents.defaults.model.fallbacks.
+      // Existing fallbacks are PRESERVED at the front of the list; these are
+      // appended after them (so user's manual overrides win).
+      "model": {
+        "fallbacks_to_merge": [
+          "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+          "openrouter/minimax/minimax-m2.5:free",
+          "openrouter/deepseek/deepseek-v4-flash:free",
+          "openrouter/openai/gpt-oss-120b:free",
+          "openrouter/z-ai/glm-4.5-air:free",
+          "openrouter/inclusionai/ling-2.6-flash:free",
+          "openrouter/openrouter/free",
+          // Gemini at end — Gemini-Analyzer use-cases only (3rd-choice)
+          "google/gemini-2.5-pro",
+          "google/gemini-2.5-flash"
+        ]
+      },
+
+      // Models allowlist additions to MERGE into existing .agents.defaults.models.
+      "models_to_merge": {
+        "openrouter/nvidia/nemotron-3-super-120b-a12b:free": {
+          "alias": "Free-Nemotron3-Super"
+        },
+        "openrouter/minimax/minimax-m2.5:free": {
+          "alias": "Free-MiniMax-M25"
+        },
+        "openrouter/deepseek/deepseek-v4-flash:free": {
+          "alias": "Free-DeepSeek-V4-Flash"
+        },
+        "openrouter/openai/gpt-oss-120b:free": {
+          "alias": "Free-GPT-OSS-120B"
+        },
+        "openrouter/z-ai/glm-4.5-air:free": {
+          "alias": "Free-GLM45-Air"
+        },
+        "openrouter/inclusionai/ling-2.6-flash:free": {
+          "alias": "Free-Ling26-Flash"
+        },
+        "openrouter/openrouter/free": {
+          "alias": "Free-Router"
+        }
+      }
+    }
+  },
+
+  // ─── Reference (informational) ──────────────────────────────────────────────
+  // The full fallback chain order intended by this policy is:
+  //
+  //   1. <existing primary>                           (ollama/lmstudio per host)
+  //   2. <existing fallbacks>                         (user's manual overrides)
+  //   3. openrouter/nvidia/nemotron-3-super-...:free  (agent-strong, 1M ctx)
+  //   4. openrouter/minimax/minimax-m2.5:free         (coding, 80.2% SWE-Bench)
+  //   5. openrouter/deepseek/deepseek-v4-flash:free   (fast long-context)
+  //   6. openrouter/openai/gpt-oss-120b:free          (tool use, structured)
+  //   7. openrouter/z-ai/glm-4.5-air:free             (agentic backup)
+  //   8. openrouter/inclusionai/ling-2.6-flash:free   (lightweight, 262K)
+  //   9. openrouter/openrouter/free                   (auto-router last resort)
+  //  10. google/gemini-2.5-pro                        (Gemini-Analyzer use-cases)
+  //  11. google/gemini-2.5-flash                      (Gemini-Analyzer use-cases)
+  //
+  // To verify the chain is in effect:
+  //   scripts/verify-openrouter-models.sh
+  "_doc": {
+    "version": "2026-05-14",
+    "source": "OpenClaw/v1/OpenRouter.md §6 + user decision 2026-05-14",
+    "canonical_skill": "orama-system/bin/orama-system/mcp-orchestration/SKILL.md"
+  }
+}

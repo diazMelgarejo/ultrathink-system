@@ -29,8 +29,7 @@ export function CommandCenter() {
     refetchIntervalInBackground: false,
   });
 
-  // Use API response when available; fall back to mock state for empty/error states
-  const state = appStateQuery.data ?? (appStateQuery.isError ? mockState : appStateQuery.data);
+  const state = appStateQuery.data ?? mockState;
 
   const jobs: JobSummary[] = (state?.jobs?.data?.jobs ?? mockState.jobs.data.jobs) as JobSummary[];
 

@@ -463,6 +463,133 @@ Runs `validate_graph()` on the engine's internal state before first execution. C
 
 ---
 
+## Phase 2 engine additions — `set_entry()` + `compile()` — IMPLEMENTATION DEFERRED
+
+> **SPEC ADDITIONS ONLY.** No code is written here. Actual implementation goes to a dedicated Phase 2 brainstorm session, opened after the manual review gate below clears. This pattern matches the "Deferred items" table above and the `04-build-order.md` Phase 2 "Still needed" list.
+
+### Rationale
+
+The four Phase 1 plugins above deliver most of their value without any engine changes. Two engine-level methods unlock a cleaner and safer graph construction API for all of them — and for every oramasys graph that ships in Phase 3 and beyond.
+
+**Why `set_entry()` matters for the plugins above:**
+- Currently, the caller wires the entry node by calling `graph.add_edge(START, "first_node")`. The START sentinel is an implementation detail that leaks into every graph construction site. `set_entry()` hides it behind an explicit method and makes the intent readable.
+- `InterruptGuard.apply()` wraps nodes before they are added to the engine. Today the caller must manually ensure the wrapped node for the entry position is also the START-edge target. `set_entry()` decouples node registration from entry assignment, making the pattern less brittle.
+- `ToolNode` graphs constructed in `tool_node_ext.py` currently require the caller to know which node name was passed to `add_edge(START, ...)`. An explicit `set_entry()` call recorded on the engine removes that implicit coupling.
+
+**Why `compile()` matters for the plugins above:**
+- `validator.py` ships as an opt-in, standalone check. A caller who forgets to call `validate_graph()` before `ainvoke()` gets no safety net. `compile()` on the engine makes validation automatic and impossible to skip.
+- `routing.py` edges that reference undefined node names are currently detectable only at runtime (when the engine tries to route to a missing key). `compile()` runs `validate_graph()` at graph-freeze time, surfacing the error at construction instead of mid-pipeline.
+- `interrupt_guard.py` validates that named nodes exist when `apply()` is called. `compile()` adds a second, engine-level check that the interrupt-wrapped nodes are correctly wired into the graph structure (edges reach them, entry does not bypass them).
+
+---
+
+### `MiniGraph.set_entry(node_name: str)` — Phase 2 engine task
+
+**Target file:** `perpetua_core/graph/engine.py` (Phase 2 addition)
+
+**Signature:**
+```python
+def set_entry(self, node_name: str) -> None
+```
+
+**Semantics:**
+- Records `node_name` as the designated entry point for the graph.
+- Internally equivalent to `self.add_edge(START, node_name)` — writes the START-keyed edge into `self._edges`.
+- Calling `set_entry()` a second time overwrites the previous entry; raises `ValueError` if `node_name` is not yet in `self._nodes` (fail-fast at construction time).
+- `add_edge(START, ...)` continues to work in Phase 1 and Phase 2 — both paths are supported. `set_entry()` is additive, not a replacement.
+
+**What it replaces:**
+
+In Phase 1, entry is set implicitly via:
+```python
+graph.add_edge(START, "route")   # current pattern — still valid in Phase 2
+```
+
+In Phase 2, the following is also valid:
+```python
+graph.set_entry("route")         # Phase 2 explicit API
+```
+
+The existing 32 tests in perpetua-core use `add_edge(START, ...)` and remain untouched. Neither path changes in Phase 1.
+
+**Position in MiniGraph:** added as a method alongside `add_node` and `add_edge`, not inside the `ainvoke` loop. Engine line count grows by approximately 5 lines (method definition + docstring + validation guard).
+
+---
+
+### `MiniGraph.compile()` — Phase 2 engine task
+
+**Target file:** `perpetua_core/graph/engine.py` (Phase 2 addition)
+
+**Signature:**
+```python
+def compile(self) -> MiniGraph
+```
+
+**Semantics:**
+- Freezes the graph: after `compile()` is called, `add_node`, `add_edge`, and `set_entry` raise `RuntimeError("graph is already compiled")`.
+- Runs `validate_graph(self._nodes, self._edges, entry=self._entry, ...)` internally, raising `ValueError` on any structural error (missing entry node, dangling edge source, static edge target not in nodes and not END).
+- Returns `self` to allow chaining: `graph = MiniGraph().add_node(...).add_edge(...).compile()`.
+- Sets a `_compiled: bool` flag on the instance.
+
+**Interaction with `ainvoke()`:** `ainvoke()` is updated to call `compile()` lazily on first invocation if `_compiled` is False. This means graphs that never explicitly call `compile()` still get validated before the first node executes. Explicit `compile()` calls at construction time are the preferred pattern (eager validation, fail-fast).
+
+**Interaction with `validator.py` plugin:**
+- `compile()` imports and calls `validate_graph()` from `perpetua_core.graph.plugins.validator` — the Phase 1 plugin. The validation logic is not duplicated into the engine; the engine delegates to the plugin.
+- This preserves the plugin boundary: the engine grows by approximately 10 lines (compile method + lazy-compile guard in ainvoke); the validation logic stays in `validator.py`.
+- Callers who prefer the standalone `validate_graph()` external check continue to use it as before — there is no regression.
+
+**Interaction with `interrupt_guard.py` plugin:**
+- `InterruptGuard.apply()` must be called before `compile()`. The guard wraps nodes in-place; `compile()` freezes the node dict. If a caller calls `compile()` then tries to call `guard.apply()`, the subsequent `add_node` inside apply raises `RuntimeError`. This ordering requirement must be documented clearly in the Phase 2 implementation.
+- Recommended construction order in Phase 2:
+  1. Register nodes via `add_node`
+  2. Apply `InterruptGuard` (if used)
+  3. Register edges via `add_edge`
+  4. Call `set_entry()` (or use `add_edge(START, ...)`)
+  5. Call `compile()` — or let `ainvoke()` trigger it lazily
+
+---
+
+### Effect on existing Phase 1 deliverables
+
+| Item | Phase 1 behavior | Phase 2 with additions |
+|------|-----------------|------------------------|
+| `engine.py` | 65 lines, Phase 1 core loop unchanged | Grows by ~15 lines — `set_entry`, `compile`, lazy guard in `ainvoke` |
+| Existing 32 perpetua-core tests | All pass | All still pass — both new methods are additive |
+| Existing 4 oramasys tests | All pass | All still pass |
+| `validator.py` plugin | Opt-in external check | Also called internally by `compile()`; standalone use still supported |
+| `interrupt_guard.py` plugin | Call before `add_node` or after | Must be called before `compile()`; ordering documented |
+| `tool_node.py` + `routing.py` | No engine dependency | Unaffected |
+| `MiniGraph.name` attribute | Shipped Phase 1 (1-line addition) | Unchanged |
+
+---
+
+### Backward compatibility with canonical `oramasys/perpetua-core@2f717f5`
+
+The canonical shipped build (commit `2f717f5`, 2026-05-01) has zero references to `set_entry()` or `compile()`. Adding these methods in Phase 2 is a strictly additive change:
+
+- No existing method signatures change.
+- No existing behavior changes unless `compile()` is explicitly called or `ainvoke()` triggers the lazy-compile path — which only runs `validate_graph()`, a pure read over existing internal state.
+- The `_compiled` flag defaults to `False`; existing callsites that never call `compile()` see no difference until `ainvoke()` is invoked, at which point the lazy guard runs silently and sets the flag.
+- A graph that passes all 32 existing tests today continues to pass them after Phase 2 ships.
+- The D8 constraint ("engine size bounded") is respected: the engine grows from 65 lines to approximately 80 lines — within the D8 Tier 3 intent, not a structural violation.
+
+---
+
+### Phase 2 implementation checklist (for the Phase 2 brainstorm session — NOT this spec)
+
+- [ ] Add `set_entry(node_name: str) -> None` to `MiniGraph`
+- [ ] Add `compile() -> MiniGraph` to `MiniGraph`
+- [ ] Update `ainvoke()` with lazy-compile guard (`if not self._compiled: self.compile()`)
+- [ ] Add `_compiled: bool = False` instance variable
+- [ ] Document ordering requirement: `InterruptGuard.apply()` before `compile()`
+- [ ] Write tests: `set_entry` records entry, duplicate call overwrites, unknown node raises `ValueError`
+- [ ] Write tests: `compile()` returns self, freezes graph, raises `RuntimeError` on post-compile mutation
+- [ ] Write tests: `ainvoke()` lazy-compile path triggers `validate_graph()` before first node executes
+- [ ] Confirm all 32 existing perpetua-core tests still pass after changes
+- [ ] Confirm engine.py line count growth is bounded (target: 65 + ~15 = ~80 lines)
+
+---
+
 ## Manual review gate (before any code work)
 
 This spec is docs-only. Before any of the above is implemented:

@@ -23,7 +23,8 @@ interface FetchOptions {
 }
 
 export async function apiFetch<T>(path: string, opts: FetchOptions = {}): Promise<T> {
-  const url = path.startsWith("http") ? path : path;
+  // No base URL prefix: Vite proxy handles /api/* in dev; production assumes same-origin.
+  const url = path;
   const init: RequestInit = {
     method: opts.method ?? "GET",
     headers: {

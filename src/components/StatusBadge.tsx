@@ -24,8 +24,13 @@ export function StatusBadge({
   dot = true,
   className = "",
 }: StatusBadgeProps) {
+  const ariaLabel = typeof children === "string" || typeof children === "number"
+    ? String(children)
+    : undefined;
   return (
     <span
+      role="status"
+      aria-label={ariaLabel}
       className={`inline-flex items-center gap-1.5 rounded-sm px-2 py-0.5 text-2xs font-mono uppercase tracking-wider ring-1 ring-inset ${TONE_CLASSES[tone]} ${className}`}
     >
       {dot && (

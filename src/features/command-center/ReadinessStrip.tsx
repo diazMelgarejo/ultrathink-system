@@ -11,6 +11,13 @@ interface ReadinessTile {
   status: string;
 }
 
+/**
+ * Build the readiness tiles from the aggregated app state.
+ *
+ * Note: `runtime.perpetua_tools` / `runtime.perpetua_tools_endpoint` may not be
+ * populated by portal_server.py yet — the Perplexity-Tools tile will show
+ * "unknown" until the backend wires those fields.
+ */
 function readinessFromState(state: AppState | undefined): ReadinessTile[] {
   const runtime = (state?.runtime?.data ?? {}) as Record<string, string>;
   const models = (state?.models?.data ?? {}) as Record<string, string>;
@@ -30,6 +37,11 @@ function readinessFromState(state: AppState | undefined): ReadinessTile[] {
       label: "OpenRouter",
       value: models.openrouter_primary ?? "—",
       status: runtime.openrouter ?? "unknown",
+    },
+    {
+      label: "Perplexity-Tools",
+      value: runtime.perpetua_tools_endpoint ?? "—",
+      status: runtime.perpetua_tools ?? "unknown",
     },
     {
       label: "Gateway",
@@ -52,7 +64,7 @@ export function ReadinessStrip({ state }: ReadinessStripProps) {
           {tiles.filter((t) => statusToTone(t.status) === "ok").length} / {tiles.length} ready
         </span>
       </div>
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-5">
         {tiles.map((tile) => (
           <div
             key={tile.label}

@@ -84,9 +84,11 @@ fi
 # ─── Helpers ──────────────────────────────────────────────────────────────────
 strip_jsonc() {
   # Strip // line comments from a JSONC file to make it valid JSON for jq.
-  # Conservative: only strips lines whose first non-whitespace token is //.
-  # Inline comments after data are not stripped (we don't use them in policy).
-  sed -E 's://[[:space:]]*$::' "$1" | sed -E '/^[[:space:]]*\/\//d'
+  # - Full-line comments (whitespace + //...) → removed entirely
+  # - Inline comments (// after data) → stripped, but URL schemes like
+  #   `https://` are preserved (the `[^:]` lookbehind prevents stripping
+  #   `//` that follows a colon).
+  sed -E 's|([^:])//[^\n]*$|\1|; s|^[[:space:]]*//.*$||' "$1"
 }
 
 backup_file() {
@@ -124,7 +126,10 @@ merge_policy_into() {
   # Win primary is lmstudio-win/<distilled>. This script preserves whatever
   # the host already chose. To force a specific primary, pass --force-primary
   # (and set the policy's primary explicitly).
-  local tmp; tmp="$(mktemp)"
+  local tmp tmp2
+  tmp="$(mktemp)"
+  tmp2=""
+  trap 'rm -f "${tmp:-}" "${tmp2:-}"' EXIT
   jq -n \
     --slurpfile target "$target" \
     --argjson policy "$policy_json" \
@@ -160,6 +165,21 @@ merge_policy_into() {
       | .agents.defaults.models =
           (.agents.defaults.models * ($policy.agents.defaults.models_to_merge // {}))
     ' > "$tmp"
+
+  # Secret-leak guard: if the target is a tracked template (not the live
+  # config under ~/.openclaw/), re-write the OPENROUTER_API_KEY field back
+  # to the literal placeholder so we never commit a resolved key to a repo.
+  case "$target" in
+    *"/.openclaw/openclaw.json")
+      : # live config — keep the resolved key
+      ;;
+    *)
+      tmp2="$(mktemp)"
+      jq --arg ph '${OPENROUTER_API_KEY}' \
+        '.env.OPENROUTER_API_KEY = $ph' "$tmp" > "$tmp2" && mv "$tmp2" "$tmp"
+      tmp2=""
+      ;;
+  esac
 
   # Validate result parses
   if ! jq empty "$tmp" 2>/dev/null; then

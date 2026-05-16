@@ -27,7 +27,6 @@ export interface JobSummary {
   created_at?: string;
   updated_at?: string;
   metadata?: Record<string, unknown>;
-  [key: string]: unknown;
 }
 
 export const fetchAppState = (signal?: AbortSignal) =>

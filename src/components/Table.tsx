@@ -12,7 +12,7 @@ export interface TableColumn<T> {
 interface TableProps<T> {
   columns: TableColumn<T>[];
   rows: T[];
-  rowKey: (row: T) => string;
+  rowKey: (row: T, index: number) => string | number;
   empty?: ReactNode;
   className?: string;
   dense?: boolean;
@@ -53,9 +53,9 @@ export function Table<T>({
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <tr
-              key={rowKey(row)}
+              key={rowKey(row, index)}
               className="border-b border-line last:border-b-0 hover:bg-canvas-raised/60"
             >
               {columns.map((col) => (

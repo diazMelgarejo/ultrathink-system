@@ -126,7 +126,7 @@ export function RunsTable({ jobs }: RunsTableProps) {
       <Table
         columns={COLUMNS}
         rows={jobs}
-        rowKey={(j) => j.job_id ?? j.id ?? Math.random().toString(36)}
+        rowKey={(j, i) => j.job_id ?? j.id ?? `row-${i}`}
         empty="No jobs yet. Compose a swarm to launch one."
       />
     </section>

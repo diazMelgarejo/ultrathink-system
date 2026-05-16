@@ -61,6 +61,23 @@ echo "== Config acceptance tests =="
 if [[ ! -f "$CONFIG" ]]; then
   echo "SKIP: config file does not exist: $CONFIG"
 else
+  # Hard gate: primary MUST be a local-first backend (ollama/* or lmstudio/*).
+  # If apply-openrouter-free-defaults.sh ever overrode primary to an
+  # OpenRouter model, this catches it. Uses jq when available for accuracy;
+  # falls back to grep on the raw JSON otherwise.
+  primary=""
+  if command -v jq >/dev/null 2>&1; then
+    primary="$(jq -r '.agents.defaults.model.primary // ""' "$CONFIG" 2>/dev/null || echo "")"
+  else
+    primary="$(grep -oE '"primary"[[:space:]]*:[[:space:]]*"[^"]*"' "$CONFIG" | head -1 | sed -E 's/.*"primary"[[:space:]]*:[[:space:]]*"([^"]*)".*/\1/')"
+  fi
+  if [[ "$primary" == ollama/* || "$primary" == lmstudio/* || "$primary" == lmstudio-win/* ]]; then
+    echo "  ✓ primary preserved local-first: $primary"
+  else
+    echo "  ✗ Acceptance gate FAILED: primary was overridden — expected local-first primary, got: ${primary:-<empty>}"
+    EXIT_CODE=1
+  fi
+
   # Required: Nemotron primary present
   if grep -q "openrouter/nvidia/nemotron-3-super-120b-a12b:free" "$CONFIG"; then
     echo "  ✓ Nemotron primary present"

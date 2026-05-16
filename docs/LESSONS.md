@@ -1682,3 +1682,100 @@ on every other machine that clones the repo.
 **Rule:** If you see `.gbrain-source` untracked in any repo, add it to `.gitignore` immediately. Do not `git add` it.
 
 - Linux `ip route get 8.8.8.8` — validate on Ubuntu 22.04 + Debian 12 + Alpine 3.19
+
+---
+
+## 2026-05-16: RC-1 Orchestration Session — Gemini routing, OpenRouter smart-merge, Vite pitfalls
+
+### 1. Gemini is NOT the default reader — "Gemini-Analyzer use-case only"
+
+**Decision (locked in RC-1 master plan):** Gemini is routed ONLY for:
+- Visual diff / screenshot comparison
+- Whole-repo architecture mapping (>5000-line diffs, multi-file cross-cutting)
+- Multi-file stale-doc detection
+- Second-opinion code review when explicitly requested
+
+**The default reading/coding agent is the OpenRouter free-model stack** (Nemotron 3 Super → MiniMax M2.5 → DeepSeek V4 Flash → gpt-oss-120b → GLM 4.5 Air → Ling 2.6 Flash → Free Router).
+
+**Why this matters:** Previous practice had Gemini mentioned generically as "the reader" — this caused agents to default to Gemini for every file read, wasting quota and adding latency. Gemini is a specialized instrument, not the default hammer.
+
+**Canonical policy:** `bin/orama-system/mcp-orchestration/SKILL.md` §2 "Routing strategy".
+
+---
+
+### 2. Smart-merge pattern for OpenClaw config patching
+
+**Problem:** Naively patching `openclaw.json` with a model policy risks overriding the user's local `primary` (which must remain `ollama/qwen3.5:9b-nvfp4` on Mac per CLAUDE.md hard requirement).
+
+**Pattern established:**
+- Policy file uses `fallbacks_to_merge` and `models_to_merge` keys (NOT `primary`/`fallbacks`)
+- Apply script PRESERVES existing `agents.defaults.model.primary` unless `--force-primary` flag is passed
+- Removes Gemini from the front of any existing fallbacks list before appending the OpenRouter chain
+- Gemini is pushed to END of fallbacks as 3rd-choice (not 1st)
+- Script lives at: `scripts/apply-openrouter-free-defaults.sh`
+- Verify with: `scripts/verify-openrouter-models.sh`
+
+**Rule:** Any script that patches live config must read the existing primary first and only append/merge fallbacks. Never clobber local primary.
+
+---
+
+### 3. jq dedup-preserve-order — avoid `unique_by(.)`
+
+**Problem:** `unique_by(.)` in jq sorts alphabetically as a side effect. When deduping a fallbacks array after merging, this silently promoted Gemini to the top of the list (alphabetically first `google/*`), defeating the entire "Gemini as last resort" policy.
+
+**Correct pattern:**
+```bash
+| reduce .[] as $item (
+    [];
+    if any(.[]; . == $item) then . else . + [$item] end
+  )
+```
+This deduplicates while preserving insertion order — first occurrence wins. Use this whenever you need dedup-without-sort in jq.
+
+**Why `unique_by(.)` is wrong:** It's documented to sort, but in practice you expect it to just dedupe. The combination of merge + unique_by produces a sorted array, not a priority-ordered one.
+
+---
+
+### 4. Vite + TypeScript composite-project pitfalls
+
+Two distinct issues that both caused build/typecheck failures:
+
+**Issue A: tsconfig composite conflict**
+- Problem: `tsconfig.json` had `"include": ["src", "vite.config.ts"]`. The `tsconfig.node.json` used `composite: true` and also covered `vite.config.ts`. TypeScript expected pre-built `.d.ts`/`.js` output for the composite sub-project and errored with TS6305.
+- Fix: Remove `vite.config.ts` from `tsconfig.json` include. The file is already handled by the node sub-project.
+- Canonical: `"include": ["src"]` in `tsconfig.json`
+
+**Issue B: Path aliases must be declared in BOTH places**
+- Problem: `@/*` alias declared in `tsconfig.json` paths works for TypeScript type resolution but Vite's Rollup bundler doesn't read tsconfig. Build failed with "Rollup failed to resolve import `@/components/Shell`".
+- Fix: Add `resolve.alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) }` to `vite.config.ts` in addition to the tsconfig paths entry.
+- Rule: Every `@/*`-style alias needs two registrations: one in tsconfig (for tsc/IDE) and one in vite.config.ts (for Rollup/bundler).
+
+---
+
+### 5. MCP orchestration canonical SKILL.md location
+
+**Before:** Two drift-prone root files (`OpenClaw/MCP_ORCHESTRATION_SKILL.md`, `OpenClaw/MCP_ORCHESTRATION_SKILL_v2.md`) each evolving independently.
+
+**After:** Single canonical skill at `bin/orama-system/mcp-orchestration/SKILL.md`. The old root files are redirect stubs pointing to it.
+
+**Rule:** If you see multiple files claiming to be "the MCP orchestration policy", the canonical one is in `bin/orama-system/mcp-orchestration/SKILL.md`. The others are stubs — do not edit them.
+
+---
+
+### 6. Vite operator console — build-verified RC-1 baseline
+
+- Stack: React 18 + Vite 5 + TanStack Query 5 + Tailwind 3
+- Source: `src/` (16 files, 0 TypeScript errors, build output ~68KB gzip)
+- Backend proxy: `/api/*` → `http://localhost:8001` (portal_server.py)
+- Key files: `src/features/command-center/CommandCenter.tsx` polls `/api/app/state` every 5s; falls back to `mockState` on error
+- `src/data/mockState.ts` provides offline-capable fixtures so the console always renders
+- Commit: `1cfb31e` on `web-app-orchestration-v2-implementation`
+
+---
+
+### 7. Branch hygiene — FF-merge timing
+
+When feature work spans multiple commits across a branch and partial work is already on main:
+- Merge foundation commits to main early (after a coherent milestone) so history stays linear
+- Use `git merge --ff-only` when the branch has only additive commits ahead of main — avoids a merge commit in the log
+- Do NOT squash multi-session work that has already been reviewed — preserves attribution per commit

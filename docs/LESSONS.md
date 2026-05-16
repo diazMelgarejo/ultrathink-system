@@ -1801,3 +1801,55 @@ When feature work spans multiple commits across a branch and partial work is alr
 ~/.claude/skills/gstack/bin/gstack-brain-sync --discover-new
 ~/.claude/skills/gstack/bin/gstack-brain-sync --once
 ```
+
+---
+
+## 2026-05-17 — Operator console mockup: inspirational, not binding
+
+The generated 1440×1000 mockup of the orama Command Center captures the
+**aesthetic direction** (dark charcoal/slate panels, accent cyan, dense
+typography, segmented controls, table-heavy layouts) — it is **not a
+pixel-binding contract**. The shipped Vite operator console (commit `047ec27`)
+faithfully captures the direction without pixel-matching: layout positions,
+copy, icon glyphs, exact colors may diverge from the mockup as long as the
+aesthetic holds. Future visual upgrades should reference the mockup as a
+tone-setter, not a spec.
+
+This explicit "non-binding mockup" framing keeps the operator console
+**fluid**: the backend routes shipped first; the UI tracks the routes; the
+mockup tracks the UI's vibe. None of the three is a contract for the others.
+
+## 2026-05-17 — `install-mcp-stack.sh --mirror-skills` ships orama SKILL.md cross-platform
+
+Added `--mirror-skills` flag to `bin/orama-system/scripts/install-mcp-stack.sh`.
+Copies the 7 orama-system SKILL.md files (mother + afrp + cidf + gstack +
+mcp-install + mcp-orchestration + skillify) to:
+
+- `~/.claude/skills/<name>/SKILL.md` (Claude Code)
+- `~/.codex/skills/<name>/SKILL.md` (Codex CLI)
+- `~/.gemini/skills/<name>/SKILL.md` (Gemini CLI, if dir exists)
+- OpenClaw skill registry (via `openclaw skill set` if CLI present)
+
+Idempotent (sha256-compares before copy), dry-run-safe, silently skips
+absent platform directories. Hermes/ECC will adopt by adding their own
+target line to `_PLATFORMS` array — one-line extension per new platform.
+
+## 2026-05-17 — Salvage code translation spec written
+
+Spec at `docs/superpowers/specs/2026-05-17-salvage-translation-design.md`
+covers the *how* of porting wrong-repo
+(`diazMelgarejo/perpetua-core@9cb153a`) valuable assets into canonical
+(`oramasys/perpetua-core@2f717f5`) plugin structure. Companion to the
+existing selection spec (`2026-05-14-salvage-plugins-design.md`).
+
+Key decisions:
+- Multi-agent labor split: Gemini reads, Codex writes, Sonnet reviews,
+  Opus orchestrates
+- Branch model: local `feat/salvage-plugins-rc1` in canonical clone with
+  `PROGRESS.md` as living tasklist + git-native distributed locking
+- TDD: unit + integration + Hypothesis property-based, against canonical's
+  32 tests + new plugin tests
+- Waved ordering: Wave 0 parallel reads → Wave 1 engine foundation
+  (AFRP gate) → Waves 2+3 parallel ports → Wave 4 integrative decisions
+- Architectural revision protocol: kernel reshape permitted during port if
+  bounded and AFRP-gated

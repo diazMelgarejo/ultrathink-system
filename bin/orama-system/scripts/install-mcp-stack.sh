@@ -3,17 +3,24 @@
 # Installs: ai-cli-mcp + OpenClaw MCP registry entries, and Gemini only when
 # explicitly requested via --include-gemini
 # Safe to run multiple times. Skips any step that is already complete.
-# Usage: bash install-mcp-stack.sh [--dry-run] [--force] [--include-gemini]
+# Usage: bash install-mcp-stack.sh [--dry-run] [--force] [--include-gemini] [--mirror-skills]
+#
+# --mirror-skills: copy SKILL.md files from bin/orama-system/*/SKILL.md to
+#   ~/.claude/skills/<name>/SKILL.md, ~/.codex/skills/<name>/SKILL.md,
+#   ~/.gemini/skills/<name>/SKILL.md (silently skipped if dir absent), and
+#   openclaw skill registry (if openclaw CLI present). Idempotent (sha-compares).
 
 set -euo pipefail
 
 DRY_RUN=false
 FORCE=false
 INCLUDE_GEMINI=false
+MIRROR_SKILLS=false
 for arg in "$@"; do
   [ "$arg" = "--dry-run" ] && DRY_RUN=true
   [ "$arg" = "--force" ] && FORCE=true
   [ "$arg" = "--include-gemini" ] && INCLUDE_GEMINI=true
+  [ "$arg" = "--mirror-skills" ] && MIRROR_SKILLS=true
 done
 
 _log()  { echo "[mcp-install] $*"; }
@@ -128,6 +135,63 @@ fi
 
 # ── Step 6: Final verification ───────────────────────────────────────────────
 echo ""
+# ── Step 5b: Mirror orama SKILL.md to platform skill directories ─────────────
+if $MIRROR_SKILLS; then
+  _log "Step 5b: Mirroring orama SKILL.md files to platform skill dirs"
+  # Resolve the bin/orama-system root relative to this script.
+  _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  _SKILLS_ROOT="$(cd "$_SCRIPT_DIR/.." && pwd)"
+  # Target platform skill dirs — silently skipped if absent (and tool absent).
+  _PLATFORMS=(
+    "$HOME/.claude/skills:claude"
+    "$HOME/.codex/skills:codex"
+    "$HOME/.gemini/skills:gemini"
+  )
+  # Each subdir of $_SKILLS_ROOT that has a SKILL.md is a mirrorable skill.
+  for _src_skill in "$_SKILLS_ROOT"/*/SKILL.md "$_SKILLS_ROOT/SKILL.md"; do
+    [ -f "$_src_skill" ] || continue
+    if [ "$_src_skill" = "$_SKILLS_ROOT/SKILL.md" ]; then
+      _skill_name="orama-system"
+    else
+      _skill_name="$(basename "$(dirname "$_src_skill")")"
+    fi
+    for _plat in "${_PLATFORMS[@]}"; do
+      _dst_root="${_plat%%:*}"
+      _tool="${_plat##*:}"
+      _dst_dir="$_dst_root/$_skill_name"
+      _dst="$_dst_dir/SKILL.md"
+      # Only mirror if root exists OR force is set
+      if [ ! -d "$_dst_root" ] && ! $FORCE; then
+        _skip "$_tool (no $_dst_root)"
+        continue
+      fi
+      # Sha-compare for idempotency
+      if [ -f "$_dst" ] && command -v shasum >/dev/null 2>&1; then
+        _src_hash=$(shasum -a 256 "$_src_skill" | awk '{print $1}')
+        _dst_hash=$(shasum -a 256 "$_dst" | awk '{print $1}')
+        if [ "$_src_hash" = "$_dst_hash" ]; then
+          _skip "$_tool/$_skill_name (identical)"
+          continue
+        fi
+      fi
+      _run "mkdir -p \"$_dst_dir\" && install -m 0644 \"$_src_skill\" \"$_dst\""
+      _ok "mirror $_skill_name → $_tool"
+    done
+  done
+  # OpenClaw skill registry (if openclaw CLI present)
+  if command -v openclaw >/dev/null 2>&1; then
+    for _src_skill in "$_SKILLS_ROOT"/*/SKILL.md; do
+      [ -f "$_src_skill" ] || continue
+      _skill_name="$(basename "$(dirname "$_src_skill")")"
+      _run "openclaw skill set \"$_skill_name\" \"$_src_skill\""
+      _ok "openclaw skill set $_skill_name"
+    done
+  else
+    _skip "openclaw skill registry (openclaw CLI not installed)"
+  fi
+  echo ""
+fi
+
 _log "Step 6: Verification summary"
 echo ""
 echo "  node:    $(node -v 2>/dev/null || echo 'missing')"

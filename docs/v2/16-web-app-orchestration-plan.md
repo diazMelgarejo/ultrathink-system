@@ -1,11 +1,11 @@
 # 16 — Web-App Orchestration Plan
 
-> **Status:** Implementation started; backend app-state and swarm-preview routes shipped on 2026-05-16.
+> **Status:** Backend API facade shipped on 2026-05-16; React/Vite frontend remains.
 > **Branch:** `web-app-orchestration-v2-plan`  
 > **Date:** 2026-05-16  
 > **Decision:** Target **FastAPI API + React/Vite frontend**. No progressive-HTML or hybrid extraction path.
 > **Implementation branch:** `web-app-orchestration-v2-implementation`
-> **Eng review update:** launch, jobs, artifacts, and PT contract handling remain first-pass scope before frontend build-out.
+> **Eng review update:** launch, jobs, artifacts, and PT contract handling shipped before frontend build-out.
 
 ---
 
@@ -254,18 +254,20 @@ Design concept pass before implementation:
 - `POST /api/swarm/preview` returns the five-role stateless swarm preview with
   backend hints from PT `/models/route` when available and deterministic local
   fallback routing otherwise.
-- Added mocked-network backend tests for app-state aggregation and swarm preview.
-- Verification: `python3 -m pytest tests -q` → `170 passed`.
+- `POST /api/swarm/launch` requires `approved: true`, regenerates preview server-side,
+  fails closed on hardware policy violations, and submits PT `/v1/jobs` requests with
+  worker fields encoded in `metadata`.
+- `/api/jobs` list/detail/cancel/replay proxy routes keep PT as durable state owner.
+- `/api/jobs/{job_id}/artifacts` returns summaries, ArtifactRefs, verification data,
+  replay instructions, and redaction notices without raw transcripts or prompts.
+- Added mocked-network backend tests for app-state, preview, launch, jobs, and artifacts.
+- Verification: `python3 -m pytest tests -q` → `183 passed`.
 
 ### Next Backend Work
 
-1. Add `POST /api/swarm/launch`; require `approved: true`, regenerate preview
-   server-side, fail closed on hardware/policy violations, and submit one PT
-   `/v1/jobs` request per worker with worker fields encoded in `metadata`.
-2. Add `/api/jobs` list/detail/cancel/replay proxy routes.
-3. Add `/api/jobs/{job_id}/artifacts` with transcript/prompt/tool-trace redaction.
-4. Keep React/Vite work blocked until the launch/jobs/artifact API contracts have
-   focused tests.
+No backend blocker remains for first-pass frontend work. The next implementation step is
+the React/Vite shell and typed clients. Future backend hardening can replace portal-side
+fan-out with a PT-native swarm endpoint, but that is not required for the first UI.
 
 ### Phase 0 — Plan Lock
 
@@ -279,11 +281,10 @@ Design concept pass before implementation:
   App-state and preview are shipped; launch/jobs/artifacts remain.
 - [x] Add `GET /api/app/state` using real current portal/PT payloads.
 - [x] Add `POST /api/swarm/preview` with routing-aware backend hints.
-- [ ] Add `POST /api/swarm/launch` with explicit approval and fail-closed policy checks.
-- [ ] Add job proxy routes for list/detail/cancel/replay.
-- [ ] Add safe artifact index route that redacts raw transcripts and model internals.
-- [~] Add tests with mocked PT/orama responses. App-state and preview are covered;
-  launch/jobs/artifacts remain.
+- [x] Add `POST /api/swarm/launch` with explicit approval and fail-closed policy checks.
+- [x] Add job proxy routes for list/detail/cancel/replay.
+- [x] Add safe artifact index route that redacts raw transcripts and model internals.
+- [x] Add tests with mocked PT/orama responses.
 
 ### Phase 2 — React/Vite Shell
 
@@ -328,13 +329,11 @@ Design concept pass before implementation:
 
 ## 12. Open Questions
 
-1. Should first-pass launch use the metadata-compatible PT shim, or should we create a
-   lockstep PT branch to extend `_JobSubmitRequest` with top-level worker fields?
-2. Is `/api/swarm/launch` allowed to submit one PT job per worker from orama-system, or
-   should it wait for a future PT fan-out endpoint?
-3. What minimum approval gate is required for launch: visual confirmation only, or
+1. Should the future hardened version replace portal-side fan-out with a PT-native
+   swarm endpoint?
+2. What minimum approval gate is required for launch: visual confirmation only, or
    token-backed HITL?
-4. Should design review approve static concepts before React implementation?
+3. Should design review approve static concepts before React implementation?
 
 ---
 

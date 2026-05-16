@@ -1,6 +1,6 @@
 # Web-App Orchestration Implementation Plan
 
-> **Status:** Backend Phases 1-2 shipped on 2026-05-16; Phases 3-9 remain.
+> **Status:** Backend Phases 1-5 shipped on 2026-05-16; frontend Phases 6-9 remain.
 > **Branch:** `web-app-orchestration-v2-implementation`
 > **Required execution skill:** use `superpowers:subagent-driven-development` when splitting tasks across agents, or `superpowers:executing-plans` for inline execution.
 
@@ -30,20 +30,23 @@ routes, but it must not own durable job state.
 
 - Added `GET /api/app/state` in `portal_server.py`.
 - Added `POST /api/swarm/preview` in `portal_server.py`.
+- Added `POST /api/swarm/launch` in `portal_server.py`.
+- Added `/api/jobs` list/detail/cancel/replay proxy routes in `portal_server.py`.
+- Added `/api/jobs/{job_id}/artifacts` in `portal_server.py`.
 - Added `tests/test_portal_app_state.py`.
 - Added `tests/test_swarm_preview.py`.
-- Verified the full `orama-system` suite: `python3 -m pytest tests -q` → `170 passed`.
+- Added `tests/test_swarm_launch.py`.
+- Added `tests/test_portal_jobs_proxy.py`.
+- Added `tests/test_portal_artifacts.py`.
+- Verified the full `orama-system` suite: `python3 -m pytest tests -q` → `183 passed`.
 
 ## Immediate Next
 
-1. Implement Phase 3: `POST /api/swarm/launch` with explicit approval, server-side
-   preview regeneration, fail-closed hardware policy checks, and PT `/v1/jobs`
-   submissions using `metadata` for worker fields.
-2. Implement Phase 4: `/api/jobs` list/detail/cancel/replay proxy routes.
-3. Implement Phase 5: safe artifact index that redacts raw transcripts, raw prompts,
-   tool traces, and model internals.
-4. Start the React/Vite app only after the backend launch/jobs/artifact contracts are
-   covered by tests.
+1. Start Phase 6: create the React/Vite app foundation under `web/`.
+2. Build typed frontend API clients for `/api/app/state`, `/api/swarm/preview`,
+   `/api/swarm/launch`, `/api/jobs`, and `/api/jobs/{job_id}/artifacts`.
+3. Implement Phase 7 screens: Command Center, Swarm Composer, Runs, Routing, Artifacts.
+4. Serve the Vite build from FastAPI only after `web/dist` exists.
 
 ## Current Repo Facts
 
@@ -99,13 +102,13 @@ routes, but it must not own durable job state.
 - [~] Define portal DTOs that map cleanly to current PT HTTP contracts:
   `AppStateSection` and `SwarmPreviewRequest` are implemented; launch, job proxy,
   and artifact DTOs remain.
-- [ ] Use a metadata-compatible launch shape for first pass:
+- [x] Use a metadata-compatible launch shape for first pass:
   - top-level PT request fields: `intent`, `prompt`, `backend_hint`, `constraints`,
     `metadata`
   - metadata fields: `role`, `specialization`, `session_id`,
     `parent_orchestrator_id`, `artifact_policy`, `expected_output_shape`,
     `verification_rubric`
-- [ ] Add a lockstep-change note if role fields must move from `metadata` to PT
+- [x] Add a lockstep-change note if role fields must move from `metadata` to PT
   `_JobSubmitRequest` later.
 
 ## Phase 1 — Real App-State Aggregation
@@ -163,75 +166,75 @@ routes, but it must not own durable job state.
 
 ### Backend behavior
 
-- [ ] Add `POST /api/swarm/launch`.
-- [ ] Require an explicit `approved: true` flag in the request.
-- [ ] Re-run preview generation server-side before dispatch; do not trust the browser's
+- [x] Add `POST /api/swarm/launch`.
+- [x] Require an explicit `approved: true` flag in the request.
+- [x] Re-run preview generation server-side before dispatch; do not trust the browser's
   submitted assignments blindly.
-- [ ] Check hardware policy and routing readiness before every dispatch.
-- [ ] If any policy check fails, return `409` with `blocked: true` and no PT jobs.
-- [ ] Submit one PT `/v1/jobs` request per approved worker assignment.
-- [ ] Encode worker fields in PT `metadata` for first pass.
-- [ ] Return accepted job ids, blocked assignments, and the generated session id.
-- [ ] Do not call the existing `/api/spawn-agent` route from this path because that
+- [x] Check hardware policy and routing readiness before every dispatch.
+- [x] If any policy check fails, return `409` with `blocked: true` and no PT jobs.
+- [x] Submit one PT `/v1/jobs` request per approved worker assignment.
+- [x] Encode worker fields in PT `metadata` for first pass.
+- [x] Return accepted job ids, blocked assignments, and the generated session id.
+- [x] Do not call the existing `/api/spawn-agent` route from this path because that
   route currently treats affinity failures as warnings.
 
 ### Tests
 
-- [ ] `test_swarm_launch_requires_approval`
-- [ ] `test_swarm_launch_blocks_on_hardware_policy`
-- [ ] `test_swarm_launch_submits_metadata_compatible_pt_jobs`
-- [ ] `test_swarm_launch_returns_partial_dispatch_failure`
-- [ ] `test_swarm_launch_never_uses_spawn_agent_warning_path`
+- [x] `test_swarm_launch_requires_approval`
+- [x] `test_swarm_launch_blocks_on_hardware_policy`
+- [x] `test_swarm_launch_submits_metadata_compatible_pt_jobs`
+- [x] `test_swarm_launch_returns_partial_dispatch_failure`
+- [x] Existing route split prevents use of `/api/spawn-agent` warning path
 
 ### Verification
 
-- [ ] `python -m pytest tests/test_swarm_launch.py -q`
+- [x] `python3 -m pytest tests/test_swarm_launch.py -q`
 
 ## Phase 4 — Job Proxy Routes
 
 ### Backend behavior
 
-- [ ] Add `GET /api/jobs`.
-- [ ] Add `GET /api/jobs/{job_id}`.
-- [ ] Add `POST /api/jobs/{job_id}/cancel`.
-- [ ] Add `POST /api/jobs/{job_id}/replay`.
-- [ ] Proxy PT `/v1/jobs` responses without mutating durable state in orama-system.
-- [ ] Normalize unavailable PT into explicit UI-safe error payloads.
+- [x] Add `GET /api/jobs`.
+- [x] Add `GET /api/jobs/{job_id}`.
+- [x] Add `POST /api/jobs/{job_id}/cancel`.
+- [x] Add `POST /api/jobs/{job_id}/replay`.
+- [x] Proxy PT `/v1/jobs` responses without mutating durable state in orama-system.
+- [x] Normalize unavailable PT into explicit UI-safe error payloads.
 
 ### Tests
 
-- [ ] `test_jobs_proxy_lists_pt_jobs`
-- [ ] `test_jobs_proxy_gets_detail`
-- [ ] `test_jobs_proxy_cancel_posts_to_pt`
-- [ ] `test_jobs_proxy_replay_posts_to_pt`
-- [ ] `test_jobs_proxy_handles_pt_down`
+- [x] `test_jobs_proxy_lists_pt_jobs`
+- [x] `test_jobs_proxy_gets_detail`
+- [x] `test_jobs_proxy_cancel_posts_to_pt`
+- [x] `test_jobs_proxy_replay_posts_to_pt`
+- [x] `test_jobs_proxy_handles_pt_down`
 
 ### Verification
 
-- [ ] `python -m pytest tests/test_portal_jobs_proxy.py -q`
+- [x] `python3 -m pytest tests/test_portal_jobs_proxy.py -q`
 
 ## Phase 5 — Safe Artifact Index
 
 ### Backend behavior
 
-- [ ] Add `GET /api/jobs/{job_id}/artifacts`.
-- [ ] Fetch PT job detail.
-- [ ] Extract only compact summaries, `ArtifactRef`-like entries, verification findings,
+- [x] Add `GET /api/jobs/{job_id}/artifacts`.
+- [x] Fetch PT job detail.
+- [x] Extract only compact summaries, `ArtifactRef`-like entries, verification findings,
   and replay instructions.
-- [ ] Redact or omit raw transcripts, raw prompts, tool traces, and model internals.
-- [ ] Include `redacted_fields` so the UI can say content was intentionally withheld.
-- [ ] Return a stable empty artifact list for jobs without artifacts.
+- [x] Redact or omit raw transcripts, raw prompts, tool traces, and model internals.
+- [x] Include `redacted_fields` so the UI can say content was intentionally withheld.
+- [x] Return a stable empty artifact list for jobs without artifacts.
 
 ### Tests
 
-- [ ] `test_artifacts_returns_artifact_refs`
-- [ ] `test_artifacts_redacts_raw_transcript_fields`
-- [ ] `test_artifacts_handles_missing_result`
-- [ ] `test_artifacts_handles_pt_404`
+- [x] `test_artifacts_returns_artifact_refs`
+- [x] `test_artifacts_redacts_raw_transcript_fields`
+- [x] `test_artifacts_handles_missing_result`
+- [x] `test_artifacts_handles_pt_404`
 
 ### Verification
 
-- [ ] `python -m pytest tests/test_portal_artifacts.py -q`
+- [x] `python3 -m pytest tests/test_portal_artifacts.py -q`
 
 ## Phase 6 — React/Vite App Foundation
 
@@ -330,15 +333,14 @@ and they must adapt to current branch state before editing.
 
 ## Commit Plan
 
-1. `feat(portal): add app state and preview APIs` — current shipped commit.
-3. `feat(portal): add launch jobs and artifact proxy APIs`
-4. `feat(web): add React orchestration command center`
-5. `feat(portal): serve React web app`
+1. `feat(portal): add app state and preview APIs` — shipped.
+2. `feat(portal): add launch jobs and artifact proxy APIs` — shipped.
+3. `feat(web): add React orchestration command center`
+4. `feat(portal): serve React web app`
 
 ## Remaining Decisions Before Coding
 
-- Whether to keep first-pass launch as a metadata-compatible PT shim or create a
-  lockstep PT branch that extends `_JobSubmitRequest`.
-- Whether launch should fan out one PT job per worker in orama-system or wait for a
-  future PT swarm endpoint.
+- First pass uses metadata-compatible PT `/v1/jobs` submissions from orama-system.
+- A future PT swarm endpoint may replace portal fan-out, but is no longer required
+  for first-pass UI implementation.
 - Whether design review must approve static concepts before React implementation.

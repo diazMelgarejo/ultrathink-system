@@ -21,6 +21,7 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -1275,6 +1276,10 @@ class SwarmPreviewRequest(BaseModel):
     preferred_device: str = "auto"
 
 
+class SwarmLaunchRequest(SwarmPreviewRequest):
+    approved: bool = False
+
+
 _SWARM_PREVIEW_ROLES = [
     {
         "role": "context-agent",
@@ -1355,6 +1360,125 @@ def _fallback_backend_hint(role: str, hardware_policy: Dict[str, Any]) -> str:
     return "auto"
 
 
+async def _build_swarm_preview(req: SwarmPreviewRequest) -> Dict[str, Any]:
+    objective = req.objective.strip()
+    if not objective:
+        raise HTTPException(status_code=422, detail="objective is required")
+    if len(objective) > 4000:
+        raise HTTPException(status_code=422, detail="objective is too long")
+
+    portal_status = await api_status()
+    hardware_policy = portal_status.get("hardware_policy", {})
+
+    async with httpx.AsyncClient(timeout=PROBE_TIMEOUT) as client:
+        routed = await asyncio.gather(
+            *[
+                _route_preview_assignment(
+                    client,
+                    objective=objective,
+                    task_type=req.task_type,
+                    role=item["role"],
+                    preferred_device=req.preferred_device,
+                )
+                for item in _SWARM_PREVIEW_ROLES
+            ]
+        )
+
+    assignments = []
+    for base, route in zip(_SWARM_PREVIEW_ROLES, routed):
+        backend_hint = route.get("backend_hint") or _fallback_backend_hint(base["role"], hardware_policy)
+        assignments.append({
+            **base,
+            "backend_hint": backend_hint,
+            "model_hint": route.get("model_hint"),
+            "routing_source": route.get("routing_source") or "portal:fallback",
+            "dispatch_allowed": False,
+        })
+
+    return {
+        "objective": objective,
+        "task_type": req.task_type,
+        "optimize_for": req.optimize_for,
+        "preferred_device": req.preferred_device,
+        "dispatch_allowed": False,
+        "routing_source": (
+            "pt:/models/route"
+            if any(item["routing_source"] == "pt:/models/route" for item in assignments)
+            else "portal:fallback"
+        ),
+        "hardware_policy": hardware_policy,
+        "assignments": assignments,
+    }
+
+
+def _extract_pt_job_id(payload: Any) -> Optional[str]:
+    if isinstance(payload, dict):
+        for key in ("job_id", "id"):
+            value = payload.get(key)
+            if value:
+                return str(value)
+        job = payload.get("job")
+        if isinstance(job, dict):
+            return _extract_pt_job_id(job)
+    return None
+
+
+_RAW_ARTIFACT_FIELDS = {
+    "raw_transcript",
+    "transcript",
+    "raw_prompt",
+    "prompt",
+    "tool_trace",
+    "tool_traces",
+    "messages",
+    "model_internals",
+    "chain_of_thought",
+}
+
+
+def _collect_redacted_fields(value: Any, prefix: str = "") -> List[str]:
+    redacted: List[str] = []
+    if isinstance(value, dict):
+        for key, nested in value.items():
+            path = f"{prefix}.{key}" if prefix else key
+            if key in _RAW_ARTIFACT_FIELDS:
+                redacted.append(path)
+            else:
+                redacted.extend(_collect_redacted_fields(nested, path))
+    elif isinstance(value, list):
+        for idx, nested in enumerate(value):
+            redacted.extend(_collect_redacted_fields(nested, f"{prefix}[{idx}]"))
+    return redacted
+
+
+def _safe_artifact_index(job_detail: Any) -> Dict[str, Any]:
+    payload = job_detail if isinstance(job_detail, dict) else {}
+    result = payload.get("result") if isinstance(payload.get("result"), dict) else {}
+    artifacts = []
+    for key in ("artifacts", "artifact_refs", "artifactRefs"):
+        candidate = result.get(key) or payload.get(key)
+        if isinstance(candidate, list):
+            artifacts = [item for item in candidate if isinstance(item, dict)]
+            break
+
+    summaries = []
+    for key in ("summary", "compact_summary", "worker_summary"):
+        value = result.get(key) or payload.get(key)
+        if isinstance(value, str) and value:
+            summaries.append({"field": key, "text": value})
+
+    verification = result.get("verification") or result.get("verification_result") or payload.get("verification")
+    replay = result.get("replay") or result.get("replay_instructions") or payload.get("replay")
+
+    return {
+        "artifacts": artifacts,
+        "summaries": summaries,
+        "verification": verification if isinstance(verification, (dict, list, str)) else None,
+        "replay": replay if isinstance(replay, (dict, list, str)) else None,
+        "redacted_fields": sorted(set(_collect_redacted_fields(payload))),
+    }
+
+
 @app.post("/api/user-input")
 async def api_user_input(req: UserInputRequest):
     """Proxy user task from portal textbox to PT's /user-input queue."""
@@ -1408,54 +1532,149 @@ async def api_app_state():
 @app.post("/api/swarm/preview")
 async def api_swarm_preview(req: SwarmPreviewRequest):
     """Create a stateless five-role swarm preview; this route never dispatches."""
-    objective = req.objective.strip()
-    if not objective:
-        raise HTTPException(status_code=422, detail="objective is required")
-    if len(objective) > 4000:
-        raise HTTPException(status_code=422, detail="objective is too long")
+    return await _build_swarm_preview(req)
 
-    portal_status = await api_status()
-    hardware_policy = portal_status.get("hardware_policy", {})
 
-    async with httpx.AsyncClient(timeout=PROBE_TIMEOUT) as client:
-        routed = await asyncio.gather(
-            *[
-                _route_preview_assignment(
-                    client,
-                    objective=objective,
-                    task_type=req.task_type,
-                    role=item["role"],
-                    preferred_device=req.preferred_device,
-                )
-                for item in _SWARM_PREVIEW_ROLES
-            ]
+@app.post("/api/swarm/launch")
+async def api_swarm_launch(req: SwarmLaunchRequest):
+    """Launch approved preview assignments as PT-owned jobs; orama stores no job state."""
+    if not req.approved:
+        raise HTTPException(status_code=422, detail="approved=true is required")
+
+    preview = await _build_swarm_preview(req)
+    hardware_policy = preview.get("hardware_policy", {})
+    if not hardware_policy.get("ok", False):
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "blocked": True,
+                "reason": "hardware_policy",
+                "violations": hardware_policy.get("violations", []),
+                "accepted_jobs": [],
+            },
         )
 
-    assignments = []
-    for base, route in zip(_SWARM_PREVIEW_ROLES, routed):
-        backend_hint = route.get("backend_hint") or _fallback_backend_hint(base["role"], hardware_policy)
-        assignments.append({
-            **base,
-            "backend_hint": backend_hint,
-            "model_hint": route.get("model_hint"),
-            "routing_source": route.get("routing_source") or "portal:fallback",
-            "dispatch_allowed": False,
-        })
+    session_id = f"swarm-{uuid.uuid4().hex}"
+    accepted_jobs: List[Dict[str, Any]] = []
+    failed_jobs: List[Dict[str, Any]] = []
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        for assignment in preview["assignments"]:
+            metadata = {
+                "role": assignment["role"],
+                "specialization": assignment["specialization"],
+                "session_id": session_id,
+                "parent_orchestrator_id": "orama-portal",
+                "artifact_policy": "summary_and_refs_only",
+                "expected_output_shape": assignment["expected_output_shape"],
+                "verification_rubric": assignment["verification_rubric"],
+                "routing_source": assignment["routing_source"],
+            }
+            payload = {
+                "intent": assignment["intent"],
+                "prompt": preview["objective"],
+                "backend_hint": assignment["backend_hint"],
+                "constraints": {
+                    "task_type": preview["task_type"],
+                    "optimize_for": preview["optimize_for"],
+                    "preferred_device": preview["preferred_device"],
+                },
+                "metadata": metadata,
+            }
+            try:
+                r = await client.post(f"{PT_URL}/v1/jobs", json=payload)
+                r.raise_for_status()
+                data = r.json()
+                accepted_jobs.append({
+                    "role": assignment["role"],
+                    "job_id": _extract_pt_job_id(data),
+                    "response": data,
+                })
+            except Exception as exc:
+                failed_jobs.append({
+                    "role": assignment["role"],
+                    "error": str(exc),
+                    "request": payload,
+                })
 
     return {
-        "objective": objective,
-        "task_type": req.task_type,
-        "optimize_for": req.optimize_for,
-        "preferred_device": req.preferred_device,
-        "dispatch_allowed": False,
-        "routing_source": (
-            "pt:/models/route"
-            if any(item["routing_source"] == "pt:/models/route" for item in assignments)
-            else "portal:fallback"
-        ),
-        "hardware_policy": hardware_policy,
-        "assignments": assignments,
+        "accepted": not failed_jobs,
+        "blocked": False,
+        "session_id": session_id,
+        "accepted_jobs": accepted_jobs,
+        "failed_jobs": failed_jobs,
+        "preview": preview,
     }
+
+
+@app.get("/api/jobs")
+async def api_jobs_proxy(status: Optional[str] = None):
+    params = {"status": status} if status else {}
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            r = await client.get(f"{PT_URL}/v1/jobs", params=params)
+            r.raise_for_status()
+            return {"available": True, "source": "pt:/v1/jobs", "jobs": _normalize_jobs_payload(r.json())}
+        except Exception as exc:
+            return {"available": False, "source": "pt:/v1/jobs", "jobs": [], "error": str(exc)}
+
+
+@app.get("/api/jobs/{job_id}")
+async def api_job_detail_proxy(job_id: str):
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            r = await client.get(f"{PT_URL}/v1/jobs/{job_id}")
+            r.raise_for_status()
+            return {"available": True, "source": "pt:/v1/jobs/{job_id}", "job": r.json()}
+        except Exception as exc:
+            return {"available": False, "source": "pt:/v1/jobs/{job_id}", "job": None, "error": str(exc)}
+
+
+@app.post("/api/jobs/{job_id}/cancel")
+async def api_job_cancel_proxy(job_id: str):
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            r = await client.post(f"{PT_URL}/cancel", json={"job_id": job_id})
+            r.raise_for_status()
+            return {"available": True, "source": "pt:/cancel", "result": r.json()}
+        except Exception as exc:
+            return {"available": False, "source": "pt:/cancel", "result": None, "error": str(exc)}
+
+
+@app.post("/api/jobs/{job_id}/replay")
+async def api_job_replay_proxy(job_id: str):
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            r = await client.post(f"{PT_URL}/replay", json={"job_id": job_id})
+            r.raise_for_status()
+            return {"available": True, "source": "pt:/replay", "result": r.json()}
+        except Exception as exc:
+            return {"available": False, "source": "pt:/replay", "result": None, "error": str(exc)}
+
+
+@app.get("/api/jobs/{job_id}/artifacts")
+async def api_job_artifacts_proxy(job_id: str):
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        try:
+            r = await client.get(f"{PT_URL}/v1/jobs/{job_id}")
+            r.raise_for_status()
+            return {
+                "available": True,
+                "source": "pt:/v1/jobs/{job_id}",
+                "job_id": job_id,
+                **_safe_artifact_index(r.json()),
+            }
+        except Exception as exc:
+            return {
+                "available": False,
+                "source": "pt:/v1/jobs/{job_id}",
+                "job_id": job_id,
+                "artifacts": [],
+                "summaries": [],
+                "verification": None,
+                "replay": None,
+                "redacted_fields": [],
+                "error": str(exc),
+            }
 
 
 def _parse_env_file(path: "Path") -> Dict[str, str]:

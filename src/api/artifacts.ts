@@ -9,6 +9,7 @@ export interface Artifact {
   url?: string;
   created_at?: string;
   job_id?: string;
+  summary?: string;
   [k: string]: unknown;
 }
 

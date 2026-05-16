@@ -11,15 +11,25 @@ import { SwarmComposer } from "./SwarmComposer";
 import { WorkerAssignments } from "./WorkerAssignments";
 import { RunsTable } from "./RunsTable";
 import { ArtifactsPanel } from "./ArtifactsPanel";
+import { RoutingView } from "@/features/routing/RoutingView";
+
+type Page = "command" | "composer" | "runs" | "routing" | "artifacts" | "settings" | "docs";
 
 /**
- * Command Center — operator console main view.
+ * Command Center — operator console root.
  *
- * Polls /api/app/state every 5 seconds while the tab is focused. Falls back
- * to mockState before first response and on error so the UI always renders.
- * Local SwarmComposer state drives WorkerAssignments via the preview prop.
+ * Layout (mockup-matched):
+ *   ┌──────────────────────────────────────────────────┐
+ *   │  ReadinessStrip (full width, 4 tiles)            │
+ *   ├──────────────────────┬───────────────────────────┤
+ *   │  SwarmComposer ~60%  │  WorkerAssignments ~40%   │
+ *   ├──────────────────────┴───────────────────────────┤
+ *   │  RunsTable (full width)                          │
+ *   │  ArtifactsPanel (full width)                     │
+ *   └──────────────────────────────────────────────────┘
  */
 export function CommandCenter() {
+  const [page, setPage] = useState<Page>("command");
   const [preview, setPreview] = useState<SwarmPreview | undefined>(undefined);
 
   const appStateQuery = useQuery({
@@ -30,30 +40,73 @@ export function CommandCenter() {
   });
 
   const state = appStateQuery.data ?? mockState;
-
   const jobs: JobSummary[] = (state?.jobs?.data?.jobs ?? mockState.jobs.data.jobs) as JobSummary[];
-
-  // Artifacts: in this prototype we use mockArtifactList; live wiring is a Phase 5
-  // follow-up (would aggregate /api/jobs/{id}/artifacts for recent completed jobs).
   const artifacts: Artifact[] = mockArtifactList;
 
+  function renderPage() {
+    switch (page) {
+      case "routing":
+        return <RoutingView state={state} />;
+
+      case "runs":
+        return <RunsTable jobs={jobs} />;
+
+      case "artifacts":
+        return <ArtifactsPanel artifacts={artifacts} />;
+
+      case "composer":
+        return (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+            <div className="lg:col-span-3">
+              <SwarmComposer
+                onPreview={(p) => setPreview(p)}
+                onLaunch={() => { /* jobs poll picks up within 5s */ }}
+              />
+            </div>
+            <div className="lg:col-span-2">
+              <WorkerAssignments preview={preview} />
+            </div>
+          </div>
+        );
+
+      case "command":
+      default:
+        return (
+          <>
+            {/* Readiness row */}
+            <ReadinessStrip state={state} />
+
+            {/* Main 2-column region: Composer + Workers */}
+            <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
+              <div className="lg:col-span-3">
+                <SwarmComposer
+                  onPreview={(p) => setPreview(p)}
+                  onLaunch={() => { /* jobs poll picks up within 5s */ }}
+                />
+              </div>
+              <div className="lg:col-span-2">
+                <WorkerAssignments preview={preview} />
+              </div>
+            </div>
+
+            {/* Runs table */}
+            <RunsTable jobs={jobs} />
+
+            {/* Artifacts */}
+            <ArtifactsPanel artifacts={artifacts} />
+          </>
+        );
+    }
+  }
+
   return (
-    <Shell state={state} isFetching={appStateQuery.isFetching}>
-      <ReadinessStrip state={state} />
-
-      <SwarmComposer
-        onPreview={(p) => setPreview(p)}
-        onLaunch={() => {
-          // After launch, the jobs poll picks up the new job within 5s.
-          // No-op here; the RunsTable will refresh from /api/app/state.
-        }}
-      />
-
-      <WorkerAssignments preview={preview} />
-
-      <RunsTable jobs={jobs} />
-
-      <ArtifactsPanel artifacts={artifacts} />
+    <Shell
+      state={state}
+      isFetching={appStateQuery.isFetching}
+      activePage={page}
+      onNavigate={(p) => setPage(p as Page)}
+    >
+      {renderPage()}
 
       {appStateQuery.isError && (
         <div className="mt-2 rounded border border-status-err/40 bg-status-err/5 px-3 py-2 text-2xs text-status-err">

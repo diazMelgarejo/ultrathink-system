@@ -11,6 +11,7 @@
 ## 1. Situational snapshot (as-found 2026-05-14)
 
 ### Source files for MCP consolidation
+
 | File | Bytes | Role |
 |------|-------|------|
 | `~/.claude/skills/mcp-orchestration/SKILL.md` | 16,874 | Live canonical skill (likely best content) |
@@ -22,6 +23,7 @@
 **Canonical target:** `orama-system/bin/orama-system/mcp-orchestration/SKILL.md` (directory MUST be created)
 
 ### openclaw.json files to patch with OpenRouter defaults
+
 1. `~/.openclaw/openclaw.json` (live config — patch with `--apply-live` flag)
 2. `OpenClaw/alphaclaw-observability/config/openclaw.json` (lab config)
 3. `OpenClaw/AlphaClaw/lib/onboarding/defaults/openclaw.json.template` (default for new installs)
@@ -29,6 +31,7 @@
 **SKIP:** `AlphaClaw/lib/plugin/usage-tracker/openclaw.plugin.json` (plugin config, different schema), `wrong/AlphaClaw-corrupted/*` (quarantined).
 
 ### Backend / frontend state
+
 - Backend FastAPI routes already exist in `portal_server.py`:
   - `GET /api/app/state` (line 1497)
   - `POST /api/swarm/preview` (line 1532)
@@ -38,13 +41,15 @@
 - **Vite React app does NOT exist** — no `package.json`, `vite.config.*`, or `src/` at repo root. Must scaffold fresh.
 
 ### Branch state (important)
+
 - Current branch: `web-app-orchestration-v2-implementation`
 - 4 commits ahead of main (salvage spec, claude auth lesson, swarm preview APIs, app state APIs)
 - 0 commits behind main
 - **Decision:** Continue all RC-1 work on this branch. Final merge to main happens at end of Stage 7 (or via PR).
 
 ### Version constraint
-- Current version: `0.9.9.8` (in CLAUDE.md `@diazmelgarejo/orama-system@0.9.9.8`)
+
+- Current version: `0.9.9.9` (in CLAUDE.md `@diazmelgarejo/orama-system@0.9.9.9`)
 - Target: `v1.0.0.0 RC-1`
 - **Hard rule: do NOT bump version in any intermediate commit.** Final version bump happens only at Stage 7 close.
 
@@ -62,7 +67,7 @@ Per Organized-Goals.md Goal 4 + OpenRouter.md §5 (local ollama first, OpenRoute
 | **OpenRouter DeepSeek V4 Flash (1M, free)** | OpenRouter API | Fast, high-throughput | Triage, heartbeat-style checks, fast lookups |
 | **OpenRouter gpt-oss-120b (131K, free)** | OpenRouter API | Strong tool use, structured output | Structured-output tasks, second-opinion critique |
 | **Codex CLI** | Subprocess via ai-cli-mcp | Mechanical TypeScript/Python edits, file patching | Search-replace, JSON patching, boilerplate generation |
-| **Gemini CLI** | Subprocess via gemini-mcp-tool | 2M-token context window | **Analyzer-only, explicit opt-in** (visual diff, whole-repo audit) |
+| **Gemini CLI** | Subprocess via gemini-mcp-tool | 2M-token context window | **Analyzer-only, explicit opt-in to use** (visual diff, whole-repo audit) **DOWNGRADED to 3rd-choice review-only (intermittent GitHub access issues)** |
 | **Claude Sonnet 4.6 medium + prompt caching** | This session | Judgment, final synthesis, content insertion decisions | Reviews, taste calls, commit messages, conflict resolution |
 
 **Token economy rule:** the lowest-capability agent that can succeed gets the task. Save Sonnet 4.6 for judgment and synthesis ONLY.
@@ -74,6 +79,7 @@ Per Organized-Goals.md Goal 4 + OpenRouter.md §5 (local ollama first, OpenRoute
 ## 3. The 7-stage execution plan
 
 ### Stage 0 — Pre-flight verification (no agents, this session, 2 min)
+
 - [ ] Confirm branch is `web-app-orchestration-v2-implementation`
 - [ ] Confirm 4 commits ahead of main
 - [ ] Confirm OPENROUTER_API_KEY env var is set (or fail loud)
@@ -82,9 +88,11 @@ Per Organized-Goals.md Goal 4 + OpenRouter.md §5 (local ollama first, OpenRoute
 ---
 
 ### Stage 1 — MCP Orchestration Consolidation (Goal 1 + Goal 2)
+
 **Sequential within stage; Stage 1 + Stage 2 run in PARALLEL across the two parallel groups below.**
 
 **Inputs:**
+
 - `~/.claude/skills/mcp-orchestration/SKILL.md` (16.8KB — likely best content)
 - `OpenClaw/MCP_ORCHESTRATION_SKILL.md` (v1)
 - `OpenClaw/MCP_ORCHESTRATION_SKILL_v2.md` (v2 — preserve as primary)
@@ -107,6 +115,7 @@ Per Organized-Goals.md Goal 4 + OpenRouter.md §5 (local ollama first, OpenRoute
 ---
 
 ### Stage 2 — OpenRouter merge (parallel with Stage 1)
+
 **Independent files; can run concurrently with Stage 1 entirely.**
 
 **Tasks:**
@@ -140,6 +149,7 @@ NEW ORDER (this session):
 ---
 
 ### Stage 3 — Commit foundation (after Stages 1 + 2 done)
+
 - [ ] Stage all created/modified files
 - [ ] Single commit: "feat(rc1): consolidate MCP orchestration + OpenRouter free-model defaults"
 - [ ] Push to `web-app-orchestration-v2-implementation`
@@ -149,9 +159,11 @@ NEW ORDER (this session):
 ---
 
 ### Stage 4 — Vite React Operator Console (Goal 3)
+
 **Depends on Stage 3 commit.**
 
 **Layout (per Organized-Goals.md visual target):**
+
 ```
 src/
 ├── api/                          ← backend clients
@@ -192,11 +204,13 @@ src/
 | 4f | **Create `src/data/mockState.ts`** — fallback seed data matching backend shapes | **Codex CLI** | Mechanical from backend types |
 
 **Parallel groups within Stage 4:**
+
 - After 4a: 4b, 4c, 4d, 4e, 4f all touch DIFFERENT directories — **all run in parallel**.
 
 ---
 
 ### Stage 5 — Tests + Build
+
 **Depends on Stage 4.**
 
 | Step | Task | Agent | Why |
@@ -210,6 +224,7 @@ src/
 ---
 
 ### Stage 6 — Dev server + browser verification
+
 | Step | Task | Agent | Why |
 |------|------|-------|-----|
 | 6a | Start dev server (`npm run dev`) in background | **Local bash** | Direct |
@@ -219,6 +234,7 @@ src/
 ---
 
 ### Stage 7 — Final commit + close (Execution Order 10)
+
 - [ ] Commit frontend implementation
 - [ ] Update CHANGELOG (do NOT bump version — leave at 0.9.9.8)
 - [ ] Push to `web-app-orchestration-v2-implementation`
@@ -273,14 +289,14 @@ Before this plan is declared done:
 
 ## 7. Locked decisions (user-approved 2026-05-14)
 
-1. **OPENROUTER_API_KEY**: ✅ Set. Stage 2 proceeds with live patching.
-2. **Vite stack**: 🔒 **React + TanStack Query + Tailwind CSS**. Decided upfront — no Stage 4a stack debate.
+1. ✅ **OPENROUTER_API_KEY**: Set. Stage 2 proceeds with live patching.
+2. 🔒 **Vite stack**: **React + TanStack Query + Tailwind CSS**. Decided upfront — no Stage 4a stack debate.
 3. **Gemini routing policy (PERMANENT — to be encoded in canonical SKILL.md):**
    > **Default routing:** local ollama on Mac first, then OpenRouter free models + fallbacks (per §2 matrix).
    > **Gemini-Analyzer use-case routing:** Use Gemini ONLY when caller explicitly specifies a "Gemini-Analyzer" task. These use-cases include: large-context document review, screenshot/visual diff, code review of large files, multi-file architecture audits.
    > **Stage 6b (visual diff vs screenshot target):** Falls under Gemini-Analyzer use-case → use Gemini only when the diff cannot be handled locally.
    > **Why this matters:** OpenRouter.md §0 says "don't blanket-route via Gemini" due to GitHub access issues. Reserve Gemini for explicit analyzer tasks; default to OpenRouter for everything else.
-4. **Branch merge timing**: 🔒 Merge `web-app-orchestration-v2-implementation` → main **after Stage 3 commit** (foundation done). Stage 4+ continues on the same branch and gets its own merge later.
+4. 🔒 **Branch merge timing**: Merge `web-app-orchestration-v2-implementation` → main **after Stage 3 commit** (foundation done). Stage 4+ continues on the same branch and gets its own merge later.
 
 These decisions are durable — they will be reflected in the canonical `bin/orama-system/mcp-orchestration/SKILL.md` so future sessions inherit them.
 

@@ -35,10 +35,23 @@ function RoutingSourceBadge({ source }: { source: string }) {
     scope === "session" ? "info" :
     scope === "run" ? "ok" :
     scope === "policy" ? "neutral" : "neutral";
+  const label =
+    scope === "session" ? "Session" :
+    scope === "run" ? "Run" :
+    scope === "policy" ? "Policy" : source;
   return (
-    <StatusBadge tone={tone} dot={false}>
-      {source}
-    </StatusBadge>
+    <span
+      title={source}
+      className={`inline-flex max-w-full items-center rounded-sm px-2 py-0.5 text-[10px] font-mono normal-case tracking-normal ring-1 ring-inset ${
+        tone === "info"
+          ? "bg-status-info/15 text-status-info ring-status-info/30"
+          : tone === "ok"
+            ? "bg-status-ok/15 text-status-ok ring-status-ok/30"
+            : "bg-canvas-raised text-ink-muted ring-line"
+      }`}
+    >
+      <span className="truncate">{label}</span>
+    </span>
   );
 }
 
@@ -102,22 +115,22 @@ export function WorkerAssignments({ preview }: WorkerAssignmentsProps) {
             Run a preview to see the role-by-role assignment plan.
           </div>
         ) : (
-          <table className="w-full border-collapse text-sm">
+          <table className="w-full table-fixed border-collapse text-sm">
             <thead className="sticky top-0 bg-canvas-raised">
               <tr className="border-b border-line">
-                <th className="px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
+                <th className="w-12 px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
                   Worker
                 </th>
-                <th className="px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
+                <th className="w-40 px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
                   Role
                 </th>
-                <th className="px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
+                <th className="w-44 px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
                   Backend (HINT)
                 </th>
-                <th className="px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
+                <th className="w-36 px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
                   Routing Source
                 </th>
-                <th className="px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
+                <th className="w-20 px-3 py-1.5 text-left text-2xs font-mono uppercase tracking-wider text-ink-subtle">
                   Status
                 </th>
               </tr>

@@ -13,6 +13,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 interface SwarmComposerProps {
   onPreview?: (preview: SwarmPreview) => void;
   onLaunch?: (result: SwarmLaunchResult) => void;
+  previewData?: SwarmPreview;
 }
 
 const TASK_TYPES: { value: TaskType; label: string }[] = [
@@ -80,7 +81,7 @@ function SegmentedControl<T extends string>({
   );
 }
 
-export function SwarmComposer({ onPreview, onLaunch }: SwarmComposerProps) {
+export function SwarmComposer({ onPreview, onLaunch, previewData }: SwarmComposerProps) {
   const [objective, setObjective] = useState(
     "Analyze the attached financial report and produce key risk factors, opportunities, and a 1-page executive summary.",
   );
@@ -90,7 +91,7 @@ export function SwarmComposer({ onPreview, onLaunch }: SwarmComposerProps) {
   const [contextProfile, setContextProfile] = useState("Default");
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  const preview = useMutation({
+  const previewMutation = useMutation({
     mutationFn: () =>
       previewSwarm({
         objective,
@@ -101,7 +102,7 @@ export function SwarmComposer({ onPreview, onLaunch }: SwarmComposerProps) {
     onSuccess: (data) => onPreview?.(data),
   });
 
-  const launch = useMutation({
+  const launchMutation = useMutation({
     mutationFn: () =>
       launchSwarm({
         objective,
@@ -115,7 +116,7 @@ export function SwarmComposer({ onPreview, onLaunch }: SwarmComposerProps) {
 
   const charCount = objective.length;
   const canPreview = charCount >= 6;
-  const canLaunch = preview.isSuccess && preview.data?.hardware_policy?.ok;
+  const canLaunch = charCount >= 6 && (previewData?.hardware_policy?.ok ?? true);
 
   return (
     <section className="mb-4 rounded border border-line bg-canvas-surface">
@@ -124,10 +125,10 @@ export function SwarmComposer({ onPreview, onLaunch }: SwarmComposerProps) {
           Swarm Composer
         </h2>
         <div className="flex items-center gap-2">
-          {preview.isPending && <StatusBadge tone="info" dot>previewing…</StatusBadge>}
-          {launch.isPending && <StatusBadge tone="info" dot>launching…</StatusBadge>}
-          {launch.isSuccess && (
-            <StatusBadge tone="ok" dot={false}>session {launch.data.session_id}</StatusBadge>
+          {previewMutation.isPending && <StatusBadge tone="info" dot>previewing…</StatusBadge>}
+          {launchMutation.isPending && <StatusBadge tone="info" dot>launching…</StatusBadge>}
+          {launchMutation.isSuccess && (
+            <StatusBadge tone="ok" dot={false}>session {launchMutation.data.session_id}</StatusBadge>
           )}
         </div>
       </header>
@@ -217,27 +218,27 @@ export function SwarmComposer({ onPreview, onLaunch }: SwarmComposerProps) {
         <div className="flex items-center gap-2 pt-1">
           <button
             type="button"
-            disabled={!canPreview || preview.isPending}
-            onClick={() => preview.mutate()}
+            disabled={!canPreview || previewMutation.isPending}
+            onClick={() => previewMutation.mutate()}
             className="rounded border border-line bg-canvas-raised px-3 py-1.5 text-xs text-ink transition hover:border-accent hover:text-accent disabled:opacity-40"
           >
             Preview Plan
           </button>
           <button
             type="button"
-            disabled={!canLaunch || launch.isPending}
-            onClick={() => launch.mutate()}
+            disabled={!canLaunch || launchMutation.isPending}
+            onClick={() => launchMutation.mutate()}
             className="rounded border border-accent bg-accent/10 px-4 py-1.5 text-xs font-semibold text-accent transition hover:bg-accent/20 disabled:opacity-40"
           >
             Launch Swarm
           </button>
 
-          {preview.isError && (
+          {previewMutation.isError && (
             <span className="ml-auto text-2xs text-status-err">
               preview failed
             </span>
           )}
-          {launch.isError && (
+          {launchMutation.isError && (
             <span className="ml-auto text-2xs text-status-err">
               launch failed
             </span>

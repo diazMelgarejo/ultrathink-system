@@ -69,6 +69,7 @@ export function CommandCenter() {
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
             <div className="lg:col-span-3">
               <SwarmComposer
+                previewData={preview}
                 onPreview={(p) => setPreview(p)}
                 onLaunch={() => { /* jobs poll picks up within 5s */ }}
               />
@@ -90,6 +91,7 @@ export function CommandCenter() {
             <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-5">
               <div className="lg:col-span-3">
                 <SwarmComposer
+                  previewData={preview}
                   onPreview={(p) => setPreview(p)}
                   onLaunch={() => { /* jobs poll picks up within 5s */ }}
                 />

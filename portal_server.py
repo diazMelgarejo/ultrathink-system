@@ -26,7 +26,7 @@ from typing import Any, Dict, List, Optional
 
 import httpx
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -1222,6 +1222,139 @@ class UserInputRequest(BaseModel):
     source: str = "portal"
 
 
+class AppStateSection(BaseModel):
+    """Portal DTO only; Perpetua-Tools remains the durable runtime/job owner."""
+
+    available: bool
+    data: Any = None
+    error: Optional[str] = None
+    source: str
+
+
+async def _fetch_pt_section(
+    client: httpx.AsyncClient,
+    path: str,
+    *,
+    source: str,
+    default: Any,
+) -> AppStateSection:
+    try:
+        r = await client.get(f"{PT_URL}{path}", timeout=PROBE_TIMEOUT)
+        r.raise_for_status()
+        return AppStateSection(available=True, data=r.json(), source=source)
+    except Exception as exc:
+        return AppStateSection(
+            available=False,
+            data=default,
+            error=str(exc),
+            source=source,
+        )
+
+
+def _normalize_jobs_payload(payload: Any) -> List[Dict[str, Any]]:
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        jobs = payload.get("jobs", [])
+        if isinstance(jobs, list):
+            return [item for item in jobs if isinstance(item, dict)]
+    return []
+
+
+def _dump_model(model: BaseModel) -> Dict[str, Any]:
+    dump = getattr(model, "model_dump", None)
+    if callable(dump):
+        return dump()
+    return model.dict()
+
+
+class SwarmPreviewRequest(BaseModel):
+    objective: str
+    task_type: str = "implementation"
+    optimize_for: str = "reliability"
+    preferred_device: str = "auto"
+
+
+_SWARM_PREVIEW_ROLES = [
+    {
+        "role": "context-agent",
+        "specialization": "codebase-map",
+        "intent": "Map relevant files, contracts, risks, and existing patterns.",
+        "expected_output_shape": "compact_context_brief",
+        "verification_rubric": "Cites concrete files and distinguishes facts from assumptions.",
+    },
+    {
+        "role": "architect-agent",
+        "specialization": "implementation-design",
+        "intent": "Turn the objective into a bounded implementation plan.",
+        "expected_output_shape": "implementation_plan",
+        "verification_rubric": "Plan preserves repo boundaries and identifies contract risks.",
+    },
+    {
+        "role": "executor-agent",
+        "specialization": "code-change",
+        "intent": "Apply the approved implementation in the smallest safe patch.",
+        "expected_output_shape": "patch_summary",
+        "verification_rubric": "Patch is scoped, tested, and avoids durable state drift.",
+    },
+    {
+        "role": "verifier-agent",
+        "specialization": "test-and-review",
+        "intent": "Run focused tests and inspect behavioral regressions.",
+        "expected_output_shape": "verification_report",
+        "verification_rubric": "Reports exact commands, pass/fail state, and remaining risk.",
+    },
+    {
+        "role": "crystallizer-agent",
+        "specialization": "artifact-summary",
+        "intent": "Summarize outcomes, decisions, and follow-up artifacts.",
+        "expected_output_shape": "operator_brief",
+        "verification_rubric": "Contains no raw transcripts and links only safe artifacts.",
+    },
+]
+
+
+async def _route_preview_assignment(
+    client: httpx.AsyncClient,
+    *,
+    objective: str,
+    task_type: str,
+    role: str,
+    preferred_device: str,
+) -> Dict[str, Any]:
+    try:
+        r = await client.post(
+            f"{PT_URL}/models/route",
+            json={
+                "objective": objective,
+                "task_type": task_type,
+                "role": role,
+                "preferred_device": preferred_device,
+            },
+            timeout=PROBE_TIMEOUT,
+        )
+        r.raise_for_status()
+        data = r.json()
+        return {
+            "backend_hint": data.get("backend_hint") or data.get("backend") or data.get("provider") or "auto",
+            "model_hint": data.get("model_hint") or data.get("model") or data.get("model_id"),
+            "routing_source": "pt:/models/route",
+        }
+    except Exception:
+        return {}
+
+
+def _fallback_backend_hint(role: str, hardware_policy: Dict[str, Any]) -> str:
+    safe_defaults = hardware_policy.get("safe_defaults", {}) if isinstance(hardware_policy, dict) else {}
+    if role in {"context-agent", "architect-agent"} and safe_defaults.get("win"):
+        return "lmstudio-win"
+    if safe_defaults.get("mac"):
+        return "lmstudio-mac"
+    if safe_defaults.get("win"):
+        return "lmstudio-win"
+    return "auto"
+
+
 @app.post("/api/user-input")
 async def api_user_input(req: UserInputRequest):
     """Proxy user task from portal textbox to PT's /user-input queue."""
@@ -1235,6 +1368,94 @@ async def api_user_input(req: UserInputRequest):
             return r.json()
         except Exception as exc:
             return {"status": "error", "message": str(exc)}
+
+
+@app.get("/api/app/state")
+async def api_app_state():
+    """Aggregate portal status and PT runtime sections for the operator app."""
+    portal_status = await api_status()
+
+    async with httpx.AsyncClient(timeout=PROBE_TIMEOUT) as client:
+        runtime, models, activity, jobs = await asyncio.gather(
+            _fetch_pt_section(client, "/runtime", source="pt:/runtime", default={}),
+            _fetch_pt_section(client, "/models", source="pt:/models", default={}),
+            _fetch_pt_section(client, "/activity?limit=25", source="pt:/activity", default={"events": []}),
+            _fetch_pt_section(client, "/v1/jobs", source="pt:/v1/jobs", default={"jobs": []}),
+        )
+
+    if not jobs.available:
+        fallback_jobs = _normalize_jobs_payload(portal_status.get("supervisor_jobs", []))
+        jobs = AppStateSection(
+            available=bool(fallback_jobs),
+            data={"jobs": fallback_jobs},
+            error=jobs.error,
+            source="portal:supervisor_jobs_fallback",
+        )
+
+    return {
+        "portal": {
+            "available": True,
+            "source": "portal:/api/status",
+            "data": portal_status,
+        },
+        "runtime": _dump_model(runtime),
+        "models": _dump_model(models),
+        "activity": _dump_model(activity),
+        "jobs": _dump_model(jobs),
+    }
+
+
+@app.post("/api/swarm/preview")
+async def api_swarm_preview(req: SwarmPreviewRequest):
+    """Create a stateless five-role swarm preview; this route never dispatches."""
+    objective = req.objective.strip()
+    if not objective:
+        raise HTTPException(status_code=422, detail="objective is required")
+    if len(objective) > 4000:
+        raise HTTPException(status_code=422, detail="objective is too long")
+
+    portal_status = await api_status()
+    hardware_policy = portal_status.get("hardware_policy", {})
+
+    async with httpx.AsyncClient(timeout=PROBE_TIMEOUT) as client:
+        routed = await asyncio.gather(
+            *[
+                _route_preview_assignment(
+                    client,
+                    objective=objective,
+                    task_type=req.task_type,
+                    role=item["role"],
+                    preferred_device=req.preferred_device,
+                )
+                for item in _SWARM_PREVIEW_ROLES
+            ]
+        )
+
+    assignments = []
+    for base, route in zip(_SWARM_PREVIEW_ROLES, routed):
+        backend_hint = route.get("backend_hint") or _fallback_backend_hint(base["role"], hardware_policy)
+        assignments.append({
+            **base,
+            "backend_hint": backend_hint,
+            "model_hint": route.get("model_hint"),
+            "routing_source": route.get("routing_source") or "portal:fallback",
+            "dispatch_allowed": False,
+        })
+
+    return {
+        "objective": objective,
+        "task_type": req.task_type,
+        "optimize_for": req.optimize_for,
+        "preferred_device": req.preferred_device,
+        "dispatch_allowed": False,
+        "routing_source": (
+            "pt:/models/route"
+            if any(item["routing_source"] == "pt:/models/route" for item in assignments)
+            else "portal:fallback"
+        ),
+        "hardware_policy": hardware_policy,
+        "assignments": assignments,
+    }
 
 
 def _parse_env_file(path: "Path") -> Dict[str, str]:

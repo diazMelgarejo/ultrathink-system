@@ -1,9 +1,11 @@
 # 16 — Web-App Orchestration Plan
 
-> **Status:** Draft for review  
+> **Status:** Implementation started; backend app-state and swarm-preview routes shipped on 2026-05-16.
 > **Branch:** `web-app-orchestration-v2-plan`  
 > **Date:** 2026-05-16  
 > **Decision:** Target **FastAPI API + React/Vite frontend**. No progressive-HTML or hybrid extraction path.
+> **Implementation branch:** `web-app-orchestration-v2-implementation`
+> **Eng review update:** launch, jobs, artifacts, and PT contract handling remain first-pass scope before frontend build-out.
 
 ---
 
@@ -180,6 +182,21 @@ New portal routes should be aggregation or planning routes only:
 - `POST /api/swarm/launch` — submit accepted plan to PT supervisor.
 - `GET /api/jobs/{id}/artifacts` — safe ArtifactRef index, no raw transcript content.
 
+### 7.1 Contract Lock From Eng Review
+
+The implementation plan must account for current PT HTTP reality:
+
+- PT `JobSpec` already has worker fields such as `role`, `specialization`, `session_id`,
+  `parent_orchestrator_id`, `artifact_policy`, and `depth`.
+- PT FastAPI `_JobSubmitRequest` currently exposes only `intent`, `prompt`, `backend_hint`,
+  `constraints`, and `metadata`.
+- First-pass orama launch may submit one PT `/v1/jobs` request per worker and encode worker
+  fields in `metadata`.
+- If role fields must become top-level PT HTTP fields, stop and create a lockstep PT change
+  instead of silently drifting the portal contract.
+- `/api/swarm/launch` must not call the old `/api/spawn-agent` path, because launch needs
+  fail-closed policy behavior.
+
 ---
 
 ## 8. Hybrid MCP + DSL + Skills Mapping
@@ -230,18 +247,43 @@ Design concept pass before implementation:
 
 ## 10. Implementation Phases
 
+### Shipped — 2026-05-16
+
+- `GET /api/app/state` aggregates portal status plus PT `/runtime`, `/models`,
+  `/activity`, and `/v1/jobs` with per-section availability/error metadata.
+- `POST /api/swarm/preview` returns the five-role stateless swarm preview with
+  backend hints from PT `/models/route` when available and deterministic local
+  fallback routing otherwise.
+- Added mocked-network backend tests for app-state aggregation and swarm preview.
+- Verification: `python3 -m pytest tests -q` → `170 passed`.
+
+### Next Backend Work
+
+1. Add `POST /api/swarm/launch`; require `approved: true`, regenerate preview
+   server-side, fail closed on hardware/policy violations, and submit one PT
+   `/v1/jobs` request per worker with worker fields encoded in `metadata`.
+2. Add `/api/jobs` list/detail/cancel/replay proxy routes.
+3. Add `/api/jobs/{job_id}/artifacts` with transcript/prompt/tool-trace redaction.
+4. Keep React/Vite work blocked until the launch/jobs/artifact API contracts have
+   focused tests.
+
 ### Phase 0 — Plan Lock
 
-- Review this doc.
-- Confirm `web/` as the React/Vite path.
-- Confirm browser calls portal aggregation routes, not PT directly.
+- [x] Review this doc.
+- [x] Confirm `web/` as the React/Vite path.
+- [x] Confirm browser calls portal aggregation routes, not PT directly.
 
 ### Phase 1 — API Facade
 
-- Add typed Pydantic models for app-state and swarm preview.
-- Add `GET /api/app/state`.
-- Add `POST /api/swarm/preview`.
-- Add tests with mocked PT/orama responses.
+- [~] Add typed Pydantic models for app-state, preview, launch, jobs, and artifacts.
+  App-state and preview are shipped; launch/jobs/artifacts remain.
+- [x] Add `GET /api/app/state` using real current portal/PT payloads.
+- [x] Add `POST /api/swarm/preview` with routing-aware backend hints.
+- [ ] Add `POST /api/swarm/launch` with explicit approval and fail-closed policy checks.
+- [ ] Add job proxy routes for list/detail/cancel/replay.
+- [ ] Add safe artifact index route that redacts raw transcripts and model internals.
+- [~] Add tests with mocked PT/orama responses. App-state and preview are covered;
+  launch/jobs/artifacts remain.
 
 ### Phase 2 — React/Vite Shell
 
@@ -286,11 +328,13 @@ Design concept pass before implementation:
 
 ## 12. Open Questions
 
-1. Should `SwarmPlan` DSL live in orama-system initially, with PT receiving only `JobSpec`s?
-2. Is `/api/swarm/launch` allowed to submit multiple PT jobs in one request, or should it call a new PT fan-out endpoint later?
-3. Should the first launch path target PT `/orchestrate` or PT `/v1/jobs`?
-4. What minimum approval gate is required for launch: visual confirmation only, or token-backed HITL?
-5. Should this branch remain documentation-only until the design concepts are approved?
+1. Should first-pass launch use the metadata-compatible PT shim, or should we create a
+   lockstep PT branch to extend `_JobSubmitRequest` with top-level worker fields?
+2. Is `/api/swarm/launch` allowed to submit one PT job per worker from orama-system, or
+   should it wait for a future PT fan-out endpoint?
+3. What minimum approval gate is required for launch: visual confirmation only, or
+   token-backed HITL?
+4. Should design review approve static concepts before React implementation?
 
 ---
 

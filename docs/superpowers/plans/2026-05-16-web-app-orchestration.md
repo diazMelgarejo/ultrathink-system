@@ -1,524 +1,344 @@
 # Web-App Orchestration Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status:** Backend Phases 1-2 shipped on 2026-05-16; Phases 3-9 remain.
+> **Branch:** `web-app-orchestration-v2-implementation`
+> **Required execution skill:** use `superpowers:subagent-driven-development` when splitting tasks across agents, or `superpowers:executing-plans` for inline execution.
+
+## Goal
+
+Build a FastAPI + React/Vite operator web app for previewing, launching, and inspecting
+Perpetua-backed orama multi-agent swarms.
+
+`portal_server.py` remains the LAN entry point and web host. Perpetua-Tools remains the
+runtime/state authority. orama-system may add thin aggregation, preview, and safe proxy
+routes, but it must not own durable job state.
+
+## Eng Review Decisions
+
+- **Do not implement the old minimal scaffold as-is.** It omitted launch, job detail,
+  cancel, replay, artifact review, and contract-safe PT dispatch.
+- **First implementation pass may modify orama-system only.** PT contract gaps must be
+  handled through metadata-compatible requests or captured as a lockstep PT change.
+- **Launch must fail closed.** Hardware or policy failures block launch, not warn and
+  continue.
+- **UI must not render raw transcripts.** Artifact screens show compact summaries and
+  ArtifactRefs only.
+- **The app-state route must aggregate real current payloads.** Do not return fake
+  `jobs: []` or a nonexistent top-level `runtime`.
+
+## Shipped In This Pass
+
+- Added `GET /api/app/state` in `portal_server.py`.
+- Added `POST /api/swarm/preview` in `portal_server.py`.
+- Added `tests/test_portal_app_state.py`.
+- Added `tests/test_swarm_preview.py`.
+- Verified the full `orama-system` suite: `python3 -m pytest tests -q` → `170 passed`.
+
+## Immediate Next
+
+1. Implement Phase 3: `POST /api/swarm/launch` with explicit approval, server-side
+   preview regeneration, fail-closed hardware policy checks, and PT `/v1/jobs`
+   submissions using `metadata` for worker fields.
+2. Implement Phase 4: `/api/jobs` list/detail/cancel/replay proxy routes.
+3. Implement Phase 5: safe artifact index that redacts raw transcripts, raw prompts,
+   tool traces, and model internals.
+4. Start the React/Vite app only after the backend launch/jobs/artifact contracts are
+   covered by tests.
+
+## Current Repo Facts
+
+### orama-system
+
+- `portal_server.py` already exposes `/health`, `/api/status`, `/api/hardware-policy`,
+  `/api/tools`, `/api/v1/jobs`, `/api/spawn-agent`, `/dashboard`, and `/`.
+- `api_status()` currently returns `services`, `routing`, `hardware_policy`,
+  `supervisor_jobs`, `tools`, and related probe data.
+- `docs/dashboard/routing-dashboard.html` is useful vocabulary and visual reference,
+  but should not remain the primary UI.
+- `pyproject.toml` is Python-only today; Node/Vite tooling belongs under `web/`.
+
+### Perpetua-Tools
+
+- PT exposes `/runtime`, `/models`, `/models/route`, `/orchestrate`, `/activity`,
+  `/user-input`, `/v1/jobs`, `/v1/jobs/{id}`, `/cancel`, and `/replay`.
+- PT `JobSpec` already contains role fields such as `role`, `specialization`,
+  `session_id`, `parent_orchestrator_id`, `artifact_policy`, and `depth`.
+- PT FastAPI `_JobSubmitRequest` currently accepts only `intent`, `prompt`,
+  `backend_hint`, `constraints`, and `metadata`. Therefore orama-system launch must
+  either encode worker fields in `metadata` or stop and propose a PT API change.
+
+## File Plan
 
-**Goal:** Build a FastAPI + React/Vite operator web app for previewing, launching, and inspecting Perpetua-backed orama multi-agent swarms.
-
-**Architecture:** `portal_server.py` remains the Python LAN entry point and serves a Vite-built React app. Perpetua-Tools remains the runtime/state authority; orama-system adds only thin aggregation and stateless swarm-preview routes. The frontend calls portal aggregation APIs, not PT directly.
-
-**Tech Stack:** Python 3, FastAPI, Pydantic v2, httpx, pytest, React, Vite, TypeScript, CSS modules or plain CSS tokens.
-
----
-
-## File Structure
-
-Create or modify these files:
-
-- Modify: `portal_server.py` — add app-state, swarm-preview, swarm-launch, artifact routes; mount Vite build.
-- Create: `web/package.json` — Vite React scripts.
-- Create: `web/index.html` — Vite entry HTML.
-- Create: `web/src/main.tsx` — React bootstrap.
-- Create: `web/src/App.tsx` — app shell and tab routing.
-- Create: `web/src/api/client.ts` — typed fetch helpers for portal aggregation routes.
-- Create: `web/src/api/types.ts` — UI-side DTOs matching portal responses.
-- Create: `web/src/features/command-center/CommandCenter.tsx` — stack health and readiness.
-- Create: `web/src/features/swarm-composer/SwarmComposer.tsx` — preview and launch flow.
-- Create: `web/src/features/runs/RunTimeline.tsx` — PT job list/detail/cancel/replay.
-- Create: `web/src/features/routing/RoutingHardware.tsx` — model routing and backend status.
-- Create: `web/src/features/artifacts/ArtifactsReview.tsx` — WorkerResult and ArtifactRef view.
-- Create: `web/src/styles/global.css` — design tokens and base layout.
-- Create: `tests/test_portal_app_state.py` — backend aggregation tests.
-- Create: `tests/test_swarm_preview.py` — preview/launch contract tests.
-- Modify: `pyproject.toml` — include web build assets in package only after the Vite build path exists.
-- Modify: `docs/v2/16-web-app-orchestration-plan.md` — keep architecture decisions synced.
-
-Do not modify Perpetua-Tools in the first implementation pass. If a PT contract gap appears, stop and record a lockstep-change proposal.
-
----
-
-### Task 1: Add Portal App-State Aggregation Models
-
-**Files:**
-- Modify: `portal_server.py`
-- Test: `tests/test_portal_app_state.py`
-
-- [ ] **Step 1: Write failing tests for `/api/app/state`**
-
-Create `tests/test_portal_app_state.py`:
-
-```python
-from fastapi.testclient import TestClient
-
-import portal_server
-
-
-def test_app_state_contains_top_level_sections(monkeypatch):
-    async def fake_status():
-        return {
-            "services": {
-                "perplexity_tools": {"ok": True, "url": "http://localhost:8000"},
-                "ultrathink": {"ok": True, "url": "http://localhost:8001"},
-            },
-            "routing": {"distributed": True},
-            "activity": [{"event": "worker.dispatched"}],
-        }
-
-    monkeypatch.setattr(portal_server, "api_status", fake_status)
-    client = TestClient(portal_server.app)
-
-    resp = client.get("/api/app/state")
-
-    assert resp.status_code == 200
-    payload = resp.json()
-    assert payload["services"]["perplexity_tools"]["ok"] is True
-    assert payload["routing"]["distributed"] is True
-    assert payload["activity"][0]["event"] == "worker.dispatched"
-    assert "jobs" in payload
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `python -m pytest tests/test_portal_app_state.py -q`
-
-Expected: FAIL with 404 for `/api/app/state`.
-
-- [ ] **Step 3: Add minimal endpoint**
-
-In `portal_server.py`, add near the other API routes:
-
-```python
-@app.get("/api/app/state")
-async def api_app_state():
-    """Aggregate portal-facing state for the React command center."""
-    status = await api_status()
-    return {
-        "services": status.get("services", {}),
-        "routing": status.get("routing", {}),
-        "activity": status.get("activity", []),
-        "jobs": [],
-        "runtime": status.get("runtime", {}),
-    }
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `python -m pytest tests/test_portal_app_state.py -q`
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add portal_server.py tests/test_portal_app_state.py
-git commit -m "feat(portal): add app state aggregation route"
-```
-
----
-
-### Task 2: Add Stateless Swarm Preview Route
-
-**Files:**
-- Modify: `portal_server.py`
-- Test: `tests/test_swarm_preview.py`
-
-- [ ] **Step 1: Write failing preview test**
-
-Create `tests/test_swarm_preview.py`:
-
-```python
-from fastapi.testclient import TestClient
-
-import portal_server
-
-
-def test_swarm_preview_returns_worker_assignments():
-    client = TestClient(portal_server.app)
-
-    resp = client.post(
-        "/api/swarm/preview",
-        json={
-            "objective": "Refactor portal API boundary",
-            "task_type": "code",
-            "optimize_for": "reliability",
-            "preferred_device": "windows",
-        },
-    )
-
-    assert resp.status_code == 200
-    payload = resp.json()
-    assert payload["objective"] == "Refactor portal API boundary"
-    assert payload["dispatch_allowed"] is False
-    assert [a["role"] for a in payload["assignments"]] == [
-        "context-agent",
-        "architect-agent",
-        "executor-agent",
-        "verifier-agent",
-        "crystallizer-agent",
-    ]
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-Run: `python -m pytest tests/test_swarm_preview.py -q`
-
-Expected: FAIL with 404 for `/api/swarm/preview`.
-
-- [ ] **Step 3: Add request models and route**
-
-Add to `portal_server.py`:
-
-```python
-class SwarmPreviewRequest(BaseModel):
-    objective: str
-    task_type: str = "code"
-    optimize_for: str = "reliability"
-    preferred_device: Optional[str] = None
-
-
-def _build_preview_assignments(req: SwarmPreviewRequest) -> list[dict]:
-    return [
-        {
-            "role": "context-agent",
-            "specialization": "codebase-map",
-            "intent": "context",
-            "expected_output_shape": "compact repository map and risk list",
-            "verification_rubric": "names exact files and current constraints",
-        },
-        {
-            "role": "architect-agent",
-            "specialization": "web-app-boundary",
-            "intent": "architecture",
-            "expected_output_shape": "component and API boundary proposal",
-            "verification_rubric": "preserves PT as runtime/state authority",
-        },
-        {
-            "role": "executor-agent",
-            "specialization": "python-coding",
-            "intent": "implementation",
-            "expected_output_shape": "patch artifacts and test summary",
-            "verification_rubric": "tests pass and existing routes remain compatible",
-        },
-        {
-            "role": "verifier-agent",
-            "specialization": "contract-tests",
-            "intent": "verification",
-            "expected_output_shape": "findings and approval verdict",
-            "verification_rubric": "no raw transcript leakage and no fail-open launch",
-        },
-        {
-            "role": "crystallizer-agent",
-            "specialization": "lesson-authoring",
-            "intent": "crystallization",
-            "expected_output_shape": "summary and docs updates",
-            "verification_rubric": "lessons are concise and linked",
-        },
-    ]
-
-
-@app.post("/api/swarm/preview")
-async def api_swarm_preview(req: SwarmPreviewRequest):
-    """Return a stateless swarm plan preview. This route does not dispatch jobs."""
-    return {
-        "objective": req.objective,
-        "task_type": req.task_type,
-        "optimize_for": req.optimize_for,
-        "preferred_device": req.preferred_device,
-        "dispatch_allowed": False,
-        "approval_required": True,
-        "assignments": _build_preview_assignments(req),
-    }
-```
-
-- [ ] **Step 4: Run test to verify it passes**
-
-Run: `python -m pytest tests/test_swarm_preview.py -q`
-
-Expected: PASS.
-
-- [ ] **Step 5: Commit**
-
-```bash
-git add portal_server.py tests/test_swarm_preview.py
-git commit -m "feat(portal): preview swarm assignments"
-```
-
----
-
-### Task 3: Create React/Vite App Shell
-
-**Files:**
-- Create: `web/package.json`, `web/index.html`, `web/src/main.tsx`, `web/src/App.tsx`, `web/src/styles/global.css`
-
-- [ ] **Step 1: Add Vite package manifest**
-
-Create `web/package.json`:
-
-```json
-{
-  "scripts": {
-    "dev": "vite --host 127.0.0.1 --port 5173",
-    "build": "vite build",
-    "preview": "vite preview --host 127.0.0.1 --port 4173"
-  },
-  "dependencies": {
-    "@vitejs/plugin-react": "^5.0.0",
-    "vite": "^7.0.0",
-    "typescript": "^5.6.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "lucide-react": "^0.468.0"
-  },
-  "devDependencies": {}
-}
-```
-
-- [ ] **Step 2: Add HTML entry**
-
-Create `web/index.html`:
-
-```html
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>orama Command Center</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-```
-
-- [ ] **Step 3: Add React bootstrap**
-
-Create `web/src/main.tsx`:
-
-```tsx
-import React from "react";
-import { createRoot } from "react-dom/client";
-import { App } from "./App";
-import "./styles/global.css";
-
-createRoot(document.getElementById("root")!).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>,
-);
-```
-
-- [ ] **Step 4: Add app shell**
-
-Create `web/src/App.tsx`:
-
-```tsx
-import { Activity, Boxes, GitBranch, HardDrive, Layers } from "lucide-react";
-
-const tabs = [
-  { id: "command", label: "Command Center", icon: Activity },
-  { id: "composer", label: "Swarm Composer", icon: Boxes },
-  { id: "runs", label: "Runs", icon: GitBranch },
-  { id: "routing", label: "Routing", icon: HardDrive },
-  { id: "artifacts", label: "Artifacts", icon: Layers },
-];
-
-export function App() {
-  return (
-    <main className="app-shell">
-      <header className="topbar">
-        <div>
-          <h1>orama Command Center</h1>
-          <p>FastAPI + React control surface for Perpetua-backed swarm orchestration.</p>
-        </div>
-        <span className="status-pill">draft</span>
-      </header>
-      <nav className="tabs" aria-label="Primary">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button key={tab.id} className="tab-button" type="button">
-              <Icon size={16} />
-              {tab.label}
-            </button>
-          );
-        })}
-      </nav>
-      <section className="panel">
-        <h2>Command Center</h2>
-        <p>Wire app-state, swarm preview, runs, routing, and artifacts in the next tasks.</p>
-      </section>
-    </main>
-  );
-}
-```
-
-- [ ] **Step 5: Add global CSS**
-
-Create `web/src/styles/global.css`:
-
-```css
-:root {
-  color-scheme: dark;
-  --bg: #0f1117;
-  --panel: #181c25;
-  --panel-2: #222838;
-  --border: #30384a;
-  --text: #eef2f7;
-  --muted: #93a0b4;
-  --accent: #7aa2ff;
-  --ok: #34d399;
-}
-
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  min-width: 320px;
-  background: var(--bg);
-  color: var(--text);
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-.app-shell { max-width: 1440px; margin: 0 auto; padding: 24px; }
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 18px;
-}
-h1 { margin: 0; font-size: 22px; letter-spacing: 0; }
-p { color: var(--muted); }
-.status-pill {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--ok);
-  padding: 6px 10px;
-  font-size: 12px;
-}
-.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 18px 0; }
-.tab-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  color: var(--text);
-  padding: 9px 12px;
-  font-size: 13px;
-}
-.panel {
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--panel);
-  padding: 18px;
-}
-```
-
-- [ ] **Step 6: Run frontend build**
-
-Run: `cd web && npm install && npm run build`
-
-Expected: Vite writes `web/dist`.
-
-- [ ] **Step 7: Commit**
-
-```bash
-git add web/package.json web/package-lock.json web/index.html web/src
-git commit -m "feat(web): add React command center shell"
-```
-
----
-
-### Task 4: Serve React Build From FastAPI
-
-**Files:**
 - Modify: `portal_server.py`
 - Modify: `pyproject.toml`
+- Modify: `docs/v2/16-web-app-orchestration-plan.md`
+- Create: `tests/test_portal_app_state.py`
+- Create: `tests/test_swarm_preview.py`
+- Create: `tests/test_swarm_launch.py`
+- Create: `tests/test_portal_jobs_proxy.py`
+- Create: `tests/test_portal_artifacts.py`
+- Create: `web/package.json`
+- Create: `web/index.html`
+- Create: `web/src/main.tsx`
+- Create: `web/src/App.tsx`
+- Create: `web/src/api/client.ts`
+- Create: `web/src/api/types.ts`
+- Create: `web/src/features/command-center/CommandCenter.tsx`
+- Create: `web/src/features/swarm-composer/SwarmComposer.tsx`
+- Create: `web/src/features/runs/RunTimeline.tsx`
+- Create: `web/src/features/routing/RoutingHardware.tsx`
+- Create: `web/src/features/artifacts/ArtifactsReview.tsx`
+- Create: `web/src/styles/global.css`
 
-- [ ] **Step 1: Add static mount code**
+## Phase 0 — Contract Lock
 
-In `portal_server.py`, import static/file responses:
+- [x] Confirm PT base URL resolution uses existing environment/config patterns in
+  `portal_server.py`.
+- [x] Add a comment near the new portal models stating PT remains the durable state
+  owner.
+- [~] Define portal DTOs that map cleanly to current PT HTTP contracts:
+  `AppStateSection` and `SwarmPreviewRequest` are implemented; launch, job proxy,
+  and artifact DTOs remain.
+- [ ] Use a metadata-compatible launch shape for first pass:
+  - top-level PT request fields: `intent`, `prompt`, `backend_hint`, `constraints`,
+    `metadata`
+  - metadata fields: `role`, `specialization`, `session_id`,
+    `parent_orchestrator_id`, `artifact_policy`, `expected_output_shape`,
+    `verification_rubric`
+- [ ] Add a lockstep-change note if role fields must move from `metadata` to PT
+  `_JobSubmitRequest` later.
 
-```python
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, HTMLResponse
-```
+## Phase 1 — Real App-State Aggregation
 
-After `app.add_middleware(...)`, add:
+### Backend behavior
 
-```python
-WEB_DIST = REPO_ROOT / "web" / "dist"
-if WEB_DIST.exists():
-    app.mount("/assets", StaticFiles(directory=str(WEB_DIST / "assets")), name="web-assets")
-```
+- [x] Add `GET /api/app/state`.
+- [x] Call existing `api_status()` for portal health, routing, hardware, and tools.
+- [x] Fetch PT `/runtime`, `/models`, `/activity`, and `/v1/jobs` with short
+  timeouts.
+- [x] Return partial-failure sections instead of failing the whole payload when one
+  service is down.
+- [x] Map current `supervisor_jobs` into `jobs` when PT `/v1/jobs` is unavailable.
+- [x] Do not invent a top-level `runtime` from `api_status()`; source it from PT
+  `/runtime` or mark it unavailable.
 
-- [ ] **Step 2: Update root route to prefer React build**
+### Tests
 
-In `portal_server.py`, update the `/` route:
+- [x] `test_app_state_contains_real_sections`
+- [x] `test_app_state_uses_supervisor_jobs_fallback`
+- [x] `test_app_state_reports_pt_partial_failure`
+- [x] No-live-network coverage via mocked `httpx.AsyncClient`
 
-```python
-@app.get("/", response_class=None)
-async def root():
-    index_path = WEB_DIST / "index.html"
-    if index_path.exists():
-        return FileResponse(str(index_path), media_type="text/html")
-    return HTMLResponse(HTML_TEMPLATE.format(version=VERSION))
-```
+### Verification
 
-- [ ] **Step 3: Include built web assets in package metadata**
+- [x] `python3 -m pytest tests/test_portal_app_state.py -q`
 
-In `pyproject.toml`, add to both include/force-include sections:
+## Phase 2 — Swarm Preview With Routing Awareness
 
-```toml
-"web/dist",
-```
+### Backend behavior
 
-and:
+- [x] Add `POST /api/swarm/preview`.
+- [x] Validate non-empty objective and bounded string lengths.
+- [x] Produce a five-role preview for first pass:
+  `context-agent`, `architect-agent`, `executor-agent`, `verifier-agent`,
+  `crystallizer-agent`.
+- [x] Include `role`, `specialization`, `intent`, `expected_output_shape`,
+  `verification_rubric`, `backend_hint`, and `routing_source`.
+- [x] Prefer PT `/models/route` or role routing data where available.
+- [x] Fall back to deterministic local routing metadata when PT routing is unavailable.
+- [x] Always return `dispatch_allowed: false` for preview.
 
-```toml
-"web/dist" = "web/dist"
-```
+### Tests
 
-- [ ] **Step 4: Run backend tests**
+- [x] `test_swarm_preview_returns_worker_assignments`
+- [x] `test_swarm_preview_rejects_empty_objective`
+- [x] `test_swarm_preview_includes_backend_hints`
+- [x] `test_swarm_preview_marks_routing_fallback`
 
-Run: `python -m pytest tests/test_portal_app_state.py tests/test_swarm_preview.py -q`
+### Verification
 
-Expected: PASS.
+- [x] `python3 -m pytest tests/test_swarm_preview.py -q`
 
-- [ ] **Step 5: Commit**
+## Phase 3 — Fail-Closed Swarm Launch
 
-```bash
-git add portal_server.py pyproject.toml
-git commit -m "feat(portal): serve React web app"
-```
+### Backend behavior
 
----
+- [ ] Add `POST /api/swarm/launch`.
+- [ ] Require an explicit `approved: true` flag in the request.
+- [ ] Re-run preview generation server-side before dispatch; do not trust the browser's
+  submitted assignments blindly.
+- [ ] Check hardware policy and routing readiness before every dispatch.
+- [ ] If any policy check fails, return `409` with `blocked: true` and no PT jobs.
+- [ ] Submit one PT `/v1/jobs` request per approved worker assignment.
+- [ ] Encode worker fields in PT `metadata` for first pass.
+- [ ] Return accepted job ids, blocked assignments, and the generated session id.
+- [ ] Do not call the existing `/api/spawn-agent` route from this path because that
+  route currently treats affinity failures as warnings.
 
-## Self-Review
+### Tests
 
-Spec coverage:
+- [ ] `test_swarm_launch_requires_approval`
+- [ ] `test_swarm_launch_blocks_on_hardware_policy`
+- [ ] `test_swarm_launch_submits_metadata_compatible_pt_jobs`
+- [ ] `test_swarm_launch_returns_partial_dispatch_failure`
+- [ ] `test_swarm_launch_never_uses_spawn_agent_warning_path`
 
-- FastAPI + React/Vite path: covered by Tasks 3 and 4.
-- Portal aggregation route: covered by Task 1.
-- Swarm preview before launch: covered by Task 2.
-- PT remains runtime/state authority: encoded in architecture and route boundaries.
-- Existing behavior compatibility: tested through focused backend tests; full regression remains for execution phase.
+### Verification
 
-Placeholder scan:
+- [ ] `python -m pytest tests/test_swarm_launch.py -q`
 
-- No `TBD`, `TODO`, or "implement later" placeholders are used.
-- Each code-changing task includes concrete code.
+## Phase 4 — Job Proxy Routes
 
-Type consistency:
+### Backend behavior
 
-- `SwarmPreviewRequest`, `api_swarm_preview`, and `_build_preview_assignments` are introduced before use.
-- Frontend shell does not depend on API types until later tasks.
+- [ ] Add `GET /api/jobs`.
+- [ ] Add `GET /api/jobs/{job_id}`.
+- [ ] Add `POST /api/jobs/{job_id}/cancel`.
+- [ ] Add `POST /api/jobs/{job_id}/replay`.
+- [ ] Proxy PT `/v1/jobs` responses without mutating durable state in orama-system.
+- [ ] Normalize unavailable PT into explicit UI-safe error payloads.
 
----
+### Tests
 
-Plan complete and saved to `docs/superpowers/plans/2026-05-16-web-app-orchestration.md`. Two execution options:
+- [ ] `test_jobs_proxy_lists_pt_jobs`
+- [ ] `test_jobs_proxy_gets_detail`
+- [ ] `test_jobs_proxy_cancel_posts_to_pt`
+- [ ] `test_jobs_proxy_replay_posts_to_pt`
+- [ ] `test_jobs_proxy_handles_pt_down`
 
-1. **Subagent-Driven (recommended)** - Dispatch a fresh subagent per task, review between tasks, fast iteration.
-2. **Inline Execution** - Execute tasks in this session using executing-plans, batch execution with checkpoints.
+### Verification
+
+- [ ] `python -m pytest tests/test_portal_jobs_proxy.py -q`
+
+## Phase 5 — Safe Artifact Index
+
+### Backend behavior
+
+- [ ] Add `GET /api/jobs/{job_id}/artifacts`.
+- [ ] Fetch PT job detail.
+- [ ] Extract only compact summaries, `ArtifactRef`-like entries, verification findings,
+  and replay instructions.
+- [ ] Redact or omit raw transcripts, raw prompts, tool traces, and model internals.
+- [ ] Include `redacted_fields` so the UI can say content was intentionally withheld.
+- [ ] Return a stable empty artifact list for jobs without artifacts.
+
+### Tests
+
+- [ ] `test_artifacts_returns_artifact_refs`
+- [ ] `test_artifacts_redacts_raw_transcript_fields`
+- [ ] `test_artifacts_handles_missing_result`
+- [ ] `test_artifacts_handles_pt_404`
+
+### Verification
+
+- [ ] `python -m pytest tests/test_portal_artifacts.py -q`
+
+## Phase 6 — React/Vite App Foundation
+
+### Frontend setup
+
+- [ ] Create `web/package.json` with React, Vite, TypeScript, and lucide icons.
+- [ ] Keep Vite and TypeScript in `devDependencies`; keep React packages in
+  `dependencies`.
+- [ ] Create `web/index.html`.
+- [ ] Create `web/src/main.tsx`.
+- [ ] Create `web/src/App.tsx` with tab routing.
+- [ ] Create `web/src/api/types.ts` matching portal DTOs.
+- [ ] Create `web/src/api/client.ts` with typed fetch helpers and abort timeouts.
+- [ ] Create `web/src/styles/global.css` using a restrained operational palette.
+
+### Design constraints
+
+- [ ] First screen is the app, not a landing page.
+- [ ] Tabs: Command Center, Swarm Composer, Runs, Routing, Artifacts.
+- [ ] Use dense tables, timelines, chips, icon buttons, and approval controls.
+- [ ] Avoid raw decorative gradients and oversized marketing typography.
+- [ ] Keep cards for repeated items only; page sections are unframed layouts or full
+  bands.
+
+### Verification
+
+- [ ] `cd web && npm install`
+- [ ] `cd web && npm run build`
+
+## Phase 7 — Feature Screens
+
+### Command Center
+
+- [ ] Poll `/api/app/state`.
+- [ ] Render PT, orama API, portal, and gateway readiness.
+- [ ] Show runtime, model, activity, budget, and blocked-action summaries.
+- [ ] Show partial failures without blanking the whole app.
+
+### Swarm Composer
+
+- [ ] Form fields: objective, task type, optimize-for, preferred device.
+- [ ] Preview role assignments before launch.
+- [ ] Show backend hints and policy gates.
+- [ ] Require explicit launch approval.
+- [ ] Surface launch blocked states from `409` responses.
+
+### Runs
+
+- [ ] List jobs from `/api/jobs`.
+- [ ] Show selected job detail.
+- [ ] Provide cancel and replay controls.
+- [ ] Make waiting-input, failed, cancelled, and succeeded states visually distinct.
+
+### Routing & Hardware
+
+- [ ] Render model registry and backend status from app-state.
+- [ ] Port useful vocabulary from `docs/dashboard/routing-dashboard.html`.
+- [ ] Show fail-closed affinity messages.
+
+### Artifacts
+
+- [ ] Fetch `/api/jobs/{job_id}/artifacts`.
+- [ ] Render summaries, ArtifactRefs, verification findings, and replay instructions.
+- [ ] Display redaction notices for withheld raw content.
+
+## Phase 8 — Serve Build From FastAPI
+
+- [ ] Mount `web/dist/assets` at `/assets` only when the build exists.
+- [ ] Update `/` to serve `web/dist/index.html` when present.
+- [ ] Preserve compatibility for existing `/dashboard`.
+- [ ] Include `web/dist` in package metadata only after it exists.
+- [ ] Add backend tests for root fallback and static mount behavior if practical.
+
+## Phase 9 — Verification Gate
+
+- [ ] `python -m pytest tests/test_portal_app_state.py tests/test_swarm_preview.py tests/test_swarm_launch.py tests/test_portal_jobs_proxy.py tests/test_portal_artifacts.py -q`
+- [ ] Existing focused portal tests still pass.
+- [ ] `cd web && npm run build`
+- [ ] Start the local portal server.
+- [ ] Open the app in Browser/IAB on desktop and mobile-sized viewports.
+- [ ] Verify the app is nonblank, tabs fit, no text overlaps, and blocked launch states
+  are visible.
+- [ ] Verify no raw transcript fields render in Artifacts.
+
+## Subagent Work Split
+
+Use separate subagents only after Phase 0 is locked:
+
+- **Backend API worker:** Phases 1-5, owns `portal_server.py` and backend tests.
+- **Frontend worker:** Phases 6-7, owns `web/`.
+- **Packaging worker:** Phase 8, owns static serving and package metadata.
+- **Verification worker:** Phase 9, read-only after implementation.
+
+Workers are not alone in the codebase. They must not revert edits made by other agents,
+and they must adapt to current branch state before editing.
+
+## Commit Plan
+
+1. `feat(portal): add app state and preview APIs` — current shipped commit.
+3. `feat(portal): add launch jobs and artifact proxy APIs`
+4. `feat(web): add React orchestration command center`
+5. `feat(portal): serve React web app`
+
+## Remaining Decisions Before Coding
+
+- Whether to keep first-pass launch as a metadata-compatible PT shim or create a
+  lockstep PT branch that extends `_JobSubmitRequest`.
+- Whether launch should fan out one PT job per worker in orama-system or wait for a
+  future PT swarm endpoint.
+- Whether design review must approve static concepts before React implementation.

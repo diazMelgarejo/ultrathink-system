@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { StatusBadge, statusToTone } from "@/components/StatusBadge";
 import type { JobSummary } from "@/api/appState";
@@ -9,6 +9,7 @@ interface RunsTableProps {
 }
 
 const PAGE_SIZE = 7;
+const STALE_AFTER_MS = 5 * 60 * 1000;
 
 function CopyButton({ value }: { value: string }) {
   const [copied, setCopied] = useState(false);
@@ -29,10 +30,85 @@ function CopyButton({ value }: { value: string }) {
   );
 }
 
-function JobStatusBadge({ status }: { status: string | undefined }) {
-  const tone = statusToTone(status);
+function parseTimestamp(value: unknown): number | null {
+  if (value == null) return null;
+  if (value instanceof Date) return value.getTime();
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value < 1e12 ? value * 1000 : value;
+  }
+  const text = String(value).trim();
+  if (!text) return null;
+  if (/^\d+$/.test(text)) {
+    const numeric = Number(text);
+    return numeric < 1e12 ? numeric * 1000 : numeric;
+  }
+  const parsed = Date.parse(text);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}h ${minutes.toString().padStart(2, "0")}m`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds.toString().padStart(2, "0")}s`;
+  }
+  return `${seconds}s`;
+}
+
+function isActiveStatus(status: string | undefined): boolean {
+  const s = String(status || "").toLowerCase();
+  return ["queued", "waiting", "running", "in_progress", "active"].includes(s);
+}
+
+function getDispatchTime(job: JobSummary): number | null {
+  const metadata = (job.metadata ?? {}) as Record<string, unknown>;
+  return parseTimestamp(metadata.dispatch_at ?? job.updated_at ?? job.created_at);
+}
+
+function estimateWorkerLoad(job: JobSummary): { count: number; scope: "local" | "online" } {
+  const metadata = (job.metadata ?? {}) as Record<string, unknown>;
+  const explicitCount = Number(metadata.worker_count ?? metadata.workers ?? metadata.agent_count);
+  if (Number.isFinite(explicitCount) && explicitCount > 0) {
+    return {
+      count: Math.min(9, Math.max(1, Math.round(explicitCount))),
+      scope: String(metadata.worker_scope ?? "").toLowerCase() === "online" ? "online" : "local",
+    };
+  }
+
+  const backend = String(job.backend ?? "").toLowerCase();
+  const device = String(job.device ?? "").toLowerCase();
+  const mode = String(metadata.mode ?? metadata.execution_mode ?? "").toLowerCase();
+  const executors = Number(metadata.executors ?? metadata.local_executors ?? metadata.executor_count);
+
+  if (backend.startsWith("openrouter/") || mode.includes("online") || device === "shared") {
+    return { count: 9, scope: "online" };
+  }
+  if (
+    mode.includes("mac+windows") ||
+    mode.includes("mac_windows") ||
+    mode.includes("dual") ||
+    (backend.includes("lmstudio-mac") && backend.includes("lmstudio-win"))
+  ) {
+    return { count: 2, scope: "local" };
+  }
+  if (Number.isFinite(executors) && executors > 0) {
+    return { count: Math.min(5, Math.max(1, Math.round(executors) + 1)), scope: "local" };
+  }
+  if (backend.startsWith("lmstudio-win/") || backend.startsWith("lmstudio-mac/") || backend.startsWith("ollama/") || device === "mac" || device === "windows") {
+    return { count: 1, scope: "local" };
+  }
+  return { count: 1, scope: "local" };
+}
+
+function JobStatusBadge({ status, stale }: { status: string | undefined; stale?: boolean }) {
+  const tone = stale ? "err" : statusToTone(status);
   const label = status ?? "unknown";
-  return <StatusBadge tone={tone} dot>{label}</StatusBadge>;
+  return <StatusBadge tone={tone} dot className={stale ? "animate-pulse" : ""}>{label}</StatusBadge>;
 }
 
 function ActionMenu({ status, onCancel, onReplay, isPending }: {
@@ -91,6 +167,12 @@ function ActionMenu({ status, onCancel, onReplay, isPending }: {
 export function RunsTable({ jobs }: RunsTableProps) {
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const cancel = useMutation({
     mutationFn: (jobId: string) => cancelJob(jobId),
@@ -107,6 +189,26 @@ export function RunsTable({ jobs }: RunsTableProps) {
 
   const startNum = jobs.length === 0 ? 0 : safePage * PAGE_SIZE + 1;
   const endNum = Math.min(safePage * PAGE_SIZE + PAGE_SIZE, jobs.length);
+
+  const rows = useMemo(
+    () =>
+      pageJobs.map((job, index) => {
+        const id = job.job_id ?? job.id ?? `row-${index}`;
+        const dispatchTime = getDispatchTime(job);
+        const elapsedMs = dispatchTime == null ? null : Math.max(0, now - dispatchTime);
+        const stale = Boolean(elapsedMs != null && elapsedMs > STALE_AFTER_MS && isActiveStatus(job.status));
+        const workers = estimateWorkerLoad(job);
+        return {
+          job,
+          id,
+          dispatchTime,
+          elapsedMs,
+          stale,
+          workers,
+        };
+      }),
+    [now, pageJobs],
+  );
 
   return (
     <section className="mb-4">
@@ -149,12 +251,13 @@ export function RunsTable({ jobs }: RunsTableProps) {
               </tr>
             </thead>
             <tbody>
-              {pageJobs.map((j, i) => {
-                const id = j.job_id ?? j.id ?? `row-${i}`;
+              {rows.map(({ job: j, id, dispatchTime, elapsedMs, stale, workers }) => {
                 return (
                   <tr
                     key={id}
-                    className="group border-b border-line last:border-b-0 hover:bg-canvas-raised/50"
+                    className={`group border-b border-line last:border-b-0 hover:bg-canvas-raised/50 ${
+                      stale ? "border-status-err/40 bg-status-err/5" : ""
+                    }`}
                   >
                     {/* Run ID */}
                     <td className="px-3 py-2">
@@ -174,25 +277,27 @@ export function RunsTable({ jobs }: RunsTableProps) {
                     </td>
                     {/* Status */}
                     <td className="px-3 py-2">
-                      <JobStatusBadge status={j.status} />
+                      <JobStatusBadge status={j.status} stale={stale} />
                     </td>
-                    {/* Workers — not in schema yet, show placeholder */}
+                    {/* Workers */}
                     <td className="px-3 py-2">
-                      <span className="font-mono text-xs text-ink-subtle">
-                        {(j as { worker_count?: number }).worker_count ?? "—"}
+                      <span className={`font-mono text-xs ${workers.scope === "online" ? "text-status-info" : "text-ink-subtle"}`}>
+                        {workers.count} {workers.scope}
                       </span>
                     </td>
                     {/* Started */}
                     <td className="px-3 py-2">
                       <span className="font-mono text-xs text-ink-subtle">
-                        {j.created_at
-                          ? new Date(j.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        {dispatchTime
+                          ? new Date(dispatchTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                           : "—"}
                       </span>
                     </td>
-                    {/* Duration — not in schema yet */}
+                    {/* Duration */}
                     <td className="px-3 py-2">
-                      <span className="font-mono text-xs text-ink-subtle">—</span>
+                      <span className={`font-mono text-xs ${stale ? "text-status-err animate-pulse" : "text-ink-subtle"}`}>
+                        {elapsedMs != null ? formatDuration(elapsedMs) : "—"}
+                      </span>
                     </td>
                     {/* Action menu */}
                     <td className="px-2 py-2 text-right">

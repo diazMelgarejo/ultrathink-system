@@ -10,7 +10,8 @@ import type { AppState, JobSummary } from "@/api/appState";
 import type { SwarmAssignment, SwarmPreview } from "@/api/swarm";
 import type { Artifact } from "@/api/artifacts";
 
-const NOW = new Date().toISOString();
+const NOW = Date.now();
+const minutesAgo = (minutes: number) => new Date(NOW - minutes * 60_000).toISOString();
 
 const mockJobs: JobSummary[] = [
   {
@@ -20,7 +21,7 @@ const mockJobs: JobSummary[] = [
     status: "queued",
     backend: "ollama-mac",
     device: "mac",
-    created_at: NOW,
+    created_at: minutesAgo(2),
   },
   {
     job_id: "run_01JY6YXR8KD9",
@@ -29,7 +30,7 @@ const mockJobs: JobSummary[] = [
     status: "running",
     backend: "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
     device: "shared",
-    created_at: NOW,
+    created_at: minutesAgo(3),
   },
   {
     job_id: "run_01JY6W7B2NS7",
@@ -38,7 +39,7 @@ const mockJobs: JobSummary[] = [
     status: "waiting",
     backend: "openrouter/minimax/minimax-m2.5:free",
     device: "shared",
-    created_at: NOW,
+    created_at: minutesAgo(6),
   },
   {
     job_id: "run_01JY6V3P9QH2",
@@ -47,7 +48,7 @@ const mockJobs: JobSummary[] = [
     status: "failed",
     backend: "openrouter/minimax/minimax-m2.5:free",
     device: "shared",
-    created_at: NOW,
+    created_at: minutesAgo(12),
   },
   {
     job_id: "run_01JY6U0E1LA4",
@@ -56,7 +57,7 @@ const mockJobs: JobSummary[] = [
     status: "succeeded",
     backend: "ollama-mac",
     device: "mac",
-    created_at: NOW,
+    created_at: minutesAgo(15),
   },
   {
     job_id: "run_01JY6T6D7GZ0",
@@ -65,7 +66,7 @@ const mockJobs: JobSummary[] = [
     status: "succeeded",
     backend: "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
     device: "shared",
-    created_at: NOW,
+    created_at: minutesAgo(25),
   },
   {
     job_id: "run_01JY6S0H4KJ3",
@@ -74,7 +75,7 @@ const mockJobs: JobSummary[] = [
     status: "failed",
     backend: "ollama-mac",
     device: "mac",
-    created_at: NOW,
+    created_at: minutesAgo(35),
   },
 ];
 
@@ -146,7 +147,7 @@ const mockArtifacts: Artifact[] = [
     size_bytes: 2_815,
     job_id: "run_01JY6YXR8KD9",
     summary: "1-page executive summary with key risks and opportunities.",
-    created_at: NOW,
+    created_at: minutesAgo(3),
   },
   {
     artifact_id: "art_01JY6YXR8KD9_02",
@@ -155,7 +156,7 @@ const mockArtifacts: Artifact[] = [
     size_bytes: 4_120,
     job_id: "run_01JY6YXR8KD9",
     summary: "Identified 12 key risk factors with likelihood and impact.",
-    created_at: NOW,
+    created_at: minutesAgo(3),
   },
   {
     artifact_id: "art_01JY6YXR8KD9_03",
@@ -164,7 +165,7 @@ const mockArtifacts: Artifact[] = [
     size_bytes: 1_840,
     job_id: "run_01JY6YXR8KD9",
     summary: "Top 6 opportunities with strategic recommendations.",
-    created_at: NOW,
+    created_at: minutesAgo(3),
   },
   {
     artifact_id: "art_01JY6YXR8KD9_04",
@@ -173,7 +174,7 @@ const mockArtifacts: Artifact[] = [
     size_bytes: 980,
     job_id: "run_01JY6YXR8KD9",
     summary: "Source list and references.",
-    created_at: NOW,
+    created_at: minutesAgo(3),
   },
 ];
 
@@ -182,7 +183,7 @@ export const mockState: AppState = {
     available: true,
     source: "mock:portal",
     data: {
-      version: "0.9.3",
+      version: "0.9.9.9",
       env: "production",
       region: "us-east-1",
       stage: "RC-1",

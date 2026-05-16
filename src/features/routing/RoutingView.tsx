@@ -17,6 +17,7 @@ const ROUTING_PRECEDENCE = [
 
 const FALLBACK_CHAIN = [
   { model: "ollama/qwen3.5:9b-nvfp4", device: "mac", status: "primary" },
+  { model: "lmstudio-win/qwen3.5-27b-*", device: "win-lan", status: "launchable" },
   { model: "openrouter/nvidia/nemotron-3-super-120b-a12b:free", device: "cloud", status: "fallback-1" },
   { model: "openrouter/minimax/minimax-m2.5:free", device: "cloud", status: "fallback-2" },
   { model: "openrouter/deepseek/deepseek-v4-5:free", device: "cloud", status: "fallback-3" },
@@ -25,6 +26,11 @@ const FALLBACK_CHAIN = [
 
 export function RoutingView({ state }: RoutingViewProps) {
   const runtime = (state?.runtime?.data ?? {}) as Record<string, string>;
+  const lmStatus = runtime.lmstudio_win ?? "unknown";
+  const lmOnline = lmStatus === "online";
+  const fallbackChain = lmOnline
+    ? FALLBACK_CHAIN
+    : FALLBACK_CHAIN.filter((row) => row.model !== "lmstudio-win/qwen3.5-27b-*");
 
   return (
     <div className="space-y-6">
@@ -82,13 +88,13 @@ export function RoutingView({ state }: RoutingViewProps) {
               </tr>
             </thead>
             <tbody>
-              {FALLBACK_CHAIN.map((row) => (
+              {fallbackChain.map((row) => (
                 <tr key={row.model} className="border-b border-line last:border-b-0 hover:bg-canvas-raised/50">
                   <td className="px-3 py-2 font-mono text-xs text-ink">{row.model}</td>
                   <td className="px-3 py-2 font-mono text-xs text-ink-subtle">{row.device}</td>
                   <td className="px-3 py-2">
                     <StatusBadge
-                      tone={row.status === "primary" ? "ok" : "neutral"}
+                      tone={row.status === "primary" || row.status === "launchable" ? "ok" : "neutral"}
                       dot={false}
                     >
                       {row.status}
@@ -101,6 +107,9 @@ export function RoutingView({ state }: RoutingViewProps) {
         </div>
         <p className="mt-1.5 text-2xs text-ink-subtle">
           Configured in <span className="font-mono">~/.openclaw/openclaw.json</span> · Primary must be <span className="font-mono">ollama/*</span> or <span className="font-mono">lmstudio/*</span>
+        </p>
+        <p className="mt-0.5 text-2xs text-ink-subtle">
+          Windows LM Studio is <span className="font-mono">{lmStatus}</span> and may be launched when LAN availability is online.
         </p>
       </section>
 

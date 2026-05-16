@@ -37,6 +37,33 @@ This repo uses [continuous-learning-v2](https://github.com/affaan-m/everything-c
 
 ---
 
+## 2026-05-16 — Codex — GitHub MCP invalid transport postmortem
+
+### What was learned
+
+- `invalid transport` in `~/.codex/config.toml` is a schema error before it is an auth error.
+- The npm GitHub MCP server is a stdio server: use `command = "npx"`, GitHub server `args`, and
+  `[mcp_servers.github.env]`.
+- `bearer_token_env_var` belongs to HTTP MCP config, not this stdio GitHub setup.
+- A set PAT is not proof of a working MCP config; `codex mcp list` must parse, classify, launch, and
+  show the env mapping.
+- The failure was a classification failure: Codex stayed in "auth missing" mode while Claude moved to
+  "transport schema invalid" mode and validated each change.
+- Nuance matters: GitHub's remote HTTP MCP endpoint validly uses `bearer_token_env_var`; the local
+  npm stdio server does not.
+
+### Decisions made
+
+- Saved this as a Codex memory and repo skill guidance.
+- Future agents must validate MCP fixes with `codex mcp list`, not visual inspection.
+- Created reusable skills for Codex MCP debugging and agent failure postmortems.
+
+### Open questions
+
+- Codex should improve its own warning so GitHub stdio setup does not suggest an HTTP-only auth field.
+
+→ [wiki/11-codex-github-mcp-config.md](wiki/11-codex-github-mcp-config.md)
+
 ## 2026-04-06 — Claude — CI: ModuleNotFoundError for fastapi / hatchling backend missing
 
 ### What Went Wrong

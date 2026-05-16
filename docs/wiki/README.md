@@ -20,6 +20,7 @@ This wiki organizes hard-won lessons by topic. Each page contains root cause, ex
 | 07 | [Startup & IP Detection](07-startup-ip-detection.md) | stdin deadlock root cause, `load_dotenv()` placement, concurrent asyncio probing |
 | 08 | [Git Hygiene & Branching](08-git-hygiene-and-branching.md) | Clean-lineage commit identity guardrails and branch safety protocol |
 | 09 | [Policy Fail-Closed + Checklist](09-policy-fail-closed-and-checklist.md) | Enforce hardware policy fail-closed behavior and run consolidated verification after each priority block |
+| 11 | [Codex GitHub MCP Config](11-codex-github-mcp-config.md) | GitHub MCP is stdio; use command/args plus `[mcp_servers.github.env]`, not `bearer_token_env_var` |
 
 ---
 

@@ -59,6 +59,10 @@ orama-system/
 - Write `tasks/todo.md` before any 3+ step task
 - For `*.md`, keep links relative and preserve redirect/canonical-path notes
 - Ask before adding a new markdown file over 200 lines or growing an existing markdown file over 500 lines; suggest `references/`, `docs/wiki/`, or sub-skills
+- For Codex MCP config errors, especially GitHub `invalid transport`, classify stdio vs HTTP before
+  editing auth. Local npm GitHub MCP uses stdio `command`/`args` plus
+  `[mcp_servers.github.env]`; `bearer_token_env_var` is for HTTP MCP. Verify with
+  `codex mcp list`. See `docs/wiki/11-codex-github-mcp-config.md`.
 
 ---
 

@@ -295,3 +295,47 @@ Extract `choices[0].message.content`, not `reasoning_content`, in any HTTP clien
   `~/.openclaw/openclaw.json` with `grok-4.1-fast` and `grok-code-fast`.
 - Intended scope: finance / market / M&A / factcheck fallback when primary
   providers are unavailable.
+
+---
+
+## Skill 11 — Codex MCP Config Postmortem Rule
+
+**Trigger:** Any Codex MCP config error, especially `invalid transport`, GitHub MCP, OAuth/PAT confusion,
+or `bearer_token_env_var`.
+
+**Pattern:** classify transport before editing auth.
+
+```toml
+[mcp_servers.github]
+transport = "stdio"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+
+[mcp_servers.github.env]
+GITHUB_PERSONAL_ACCESS_TOKEN = "${CODEX_GITHUB_PERSONAL_ACCESS_TOKEN}"
+```
+
+**Never treat this as the whole GitHub stdio fix:**
+
+```toml
+[mcp_servers.github]
+bearer_token_env_var = "CODEX_GITHUB_PERSONAL_ACCESS_TOKEN"
+```
+
+That field belongs to HTTP MCP config. For stdio servers, pass credentials through
+`[mcp_servers.<name>.env]`.
+
+Verify every MCP config fix with:
+
+```bash
+codex mcp list
+```
+
+`Auth: Unsupported` is expected for stdio and is not the failure.
+
+**Why this rule exists:** Codex previously failed by treating the GitHub warning as a missing-token
+problem. Claude fixed it by running `codex mcp list`, recognizing `invalid transport` as a schema
+failure, and switching to transport-specific config. Preserve the nuance: `bearer_token_env_var` is
+valid for GitHub's remote HTTP MCP endpoint, but wrong for the local npm stdio server.
+
+→ [docs/wiki/11-codex-github-mcp-config.md](docs/wiki/11-codex-github-mcp-config.md)

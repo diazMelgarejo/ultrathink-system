@@ -37,6 +37,40 @@ This repo uses [continuous-learning-v2](https://github.com/affaan-m/everything-c
 
 ---
 
+## 2026-05-16 — Codex — Claude CLI auth must run outside sandbox
+
+### What was learned
+
+- Symptom: `claude -p --permission-mode dontAsk --max-budget-usd 0.25 "Reply with exactly: claude-ready"` returned `Not logged in · Please run /login`.
+- False lead: repeated `claude auth login --claudeai` inside the sandbox printed `Login successful`, but `claude auth status --text` stayed unauthenticated.
+- Root cause: Claude's OAuth callback server and credential persistence can fail inside a sandbox. Debug output showed `Failed to start OAuth callback server: Failed to start server. Is port 0 in use?`.
+- A second risk was an install split: PATH `claude` pointed to a native install while the npm-global binary was newer. Auth probes must use the same binary that orchestration will call.
+
+### Decisions made
+
+- Run `claude auth login --claudeai` outside the sandbox or with explicit escalation when fixing auth for automated Claude workers.
+- Treat `Login successful` as insufficient until both `claude auth status --text` and a real `claude -p` probe pass.
+- Compare `which claude`, `claude --version`, and any known full binary path before debugging orchestration failures.
+
+### Runbook
+
+```bash
+which claude
+claude --version
+claude auth login --claudeai
+claude auth status --text
+claude -p --permission-mode dontAsk --max-budget-usd 0.25 "Reply with exactly: claude-ready"
+```
+
+If failure persists:
+
+```bash
+claude --debug --debug-file /tmp/claude-auth-debug.log auth login --claudeai
+sed -n '1,120p' /tmp/claude-auth-debug.log
+```
+
+Do not trust sandboxed login loops when the debug log reports an OAuth callback server failure.
+
 ## 2026-05-16 — Codex — GitHub MCP invalid transport postmortem
 
 ### What was learned

@@ -1853,3 +1853,31 @@ Key decisions:
   (AFRP gate) → Waves 2+3 parallel ports → Wave 4 integrative decisions
 - Architectural revision protocol: kernel reshape permitted during port if
   bounded and AFRP-gated
+
+## 2026-05-17 — Salvage translation + v1 IP-aware discovery landed (73 tests green)
+
+Generation labeling (per Canonical Repo Registry):
+
+- **v2-planning (`oramasys/perpetua-core` on `feat/salvage-plugins-rc1`):** max_steps cycle guard (Task 5, a3712b2); set_entry/compile (Task 6, ad67577); 5 new plugins — routing/LabelRouter (Task 7, 283af1a), tool_node/ToolNode async subprocess (Task 8), validator/Validated pre-post (Task 9), interrupt_guard/resume_policy (Task 10, a7c9772), parallel/parallel_dispatch (Task 11, 8eaba56); typed ChatMessage/ChatHistory closing OQ17 (Task 12, 309c60a); canonical perpetua_core/discovery/ verbatim port from v1 (Task 13, 222450b); Hypothesis invariants (Task 15, 8b1a3f1). Engine grew 66→102 lines; all 32 baseline tests still green; 24 new tests added; full suite 56/56.
+
+- **v2-planning (`oramasys/oramasys` on `feat/dispatch-discovery-bridge`):** dispatch_node now accepts an optional BackendRegistry and calls select_backend() from canonical perpetua_core.discovery; graceful degradation via state.error when registry empty (Task 14, 21605f6). 4 baseline tests preserved + 1 new = 5/5.
+
+- **v1-legacy (`diazMelgarejo/Perpetua-Tools` on `feat/ip-aware-discovery`):** tactical fix — perpetua/discovery/ with Backend dataclass (Task 1, 9b11e9d), async health_probe (Task 2, 7e4a40b), BackendRegistry autodetect + register_by_ip (Task 3, 06c1da3), tier+task selector (Task 4, 8d42f2e), orchestrator/agent_launcher.resolve_backend_for_spec (Task 4b, bf15d0d). Shape designed to match v2 canon (Task 13 copied it forward verbatim). 12/12 tests pass. New orchestrator/agent_launcher.py is additive — root agent_launcher.py untouched; a follow-up may consolidate.
+
+- **cross-cutting (`orama-system/docs/`):** plan at docs/superpowers/plans/2026-05-17-salvage-translation-v1-discovery.md (1962 lines, 16 tasks), spec at docs/superpowers/specs/2026-05-17-salvage-translation-design.md (315 lines), PROGRESS.md ledger at perpetua-core repo root, this LESSONS append.
+
+LangGraph concept map (CSV) mirrored 1:1 in v2-planning code: State=PerpetuaState · Node=async fn · Edge=string · ConditionalEdge=LabelRouter · Cycle=max_steps guard · START/END=sentinels · Checkpointer=plugin (shipped earlier) · Send()=parallel_dispatch · ToolNode=plugin · Validator=plugin · InterruptGuard=plugin.
+
+### Race-condition LESSON
+
+Wave 1A dispatched 7 parallel subagents on the same `oramasys/perpetua-core` branch. Three of them (C8/C9/C11) hit a `.git/index.lock` race and the serializing winner (C11) committed all three plugins under one SHA `8eaba56` mis-labeled "Task 11". **No work was lost** — each subagent verified its writes against the plan post-commit. But this is a pattern to avoid:
+
+**Lesson:** for parallel dispatch on the SAME branch, the orchestrator should either (a) own commits — subagents write files only, orchestrator git adds + commits each — or (b) give each parallel subagent its own worktree. Option (a) is simpler. Option (b) is cleaner for very long-running work.
+
+### Push policy
+
+All three code branches stay **local** until user reviews end-to-end on Mac+Win hardware (Mac Ollama localhost:11434 + Win LM Studio 192.168.254.103:1234). Only cross-cutting docs (this LESSONS append + plan doc) push immediately to `orama-system`.
+
+### Build philosophy reaffirmed
+
+Per user direction: "simultaneous top-down + bottoms-up development." v2-planning bakes architectural decisions first (engine + plugins + canonical discovery), v1-legacy ships the first implementation (discovery wired into agent_launcher), then Track D copies v1 → v2 verbatim so the shape lives in one canonical home. v1 is the live sandbox; v2 absorbs what works.

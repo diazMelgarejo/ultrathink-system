@@ -1881,3 +1881,68 @@ All three code branches stay **local** until user reviews end-to-end on Mac+Win 
 ### Build philosophy reaffirmed
 
 Per user direction: "simultaneous top-down + bottoms-up development." v2-planning bakes architectural decisions first (engine + plugins + canonical discovery), v1-legacy ships the first implementation (discovery wired into agent_launcher), then Track D copies v1 → v2 verbatim so the shape lives in one canonical home. v1 is the live sandbox; v2 absorbs what works.
+
+---
+
+## 2026-05-17 — Policy enshrinement (hardware + Node.js)
+
+### HARD POLICY: Mac inference via Ollama only — LM Studio Mac is a MIRROR
+
+This is a **non-negotiable hardware safety rule**, not a preference.
+
+| Machine | Endpoint | Role | Inference? |
+|---------|----------|------|-----------|
+| Mac (Apple Silicon) | `localhost:11434` (Ollama) | Primary Mac inference | ✅ ALWAYS |
+| Mac (Apple Silicon) | `localhost:1234` (LM Studio Mac) | **MIRROR ONLY** | ❌ NEVER dispatch here |
+| Win (RTX 3080) | `192.168.254.103:1234` (LM Studio Win) | Primary Win inference + heavy models | ✅ ALWAYS |
+
+**Why this is a hard rule:**
+- `qwen3.5-27b-claude-4.6-opus-reasoning-distilled-v2` physically runs on the RTX 3080.
+- LM Studio Mac proxies all Win models over the LAN — they appear in `/v1/models` on Mac but Mac cannot actually run them.
+- Dispatching the same heavy model to **both** LM Studio Mac and LM Studio Win simultaneously = "double barrel" = two concurrent requests funneled to one RTX 3080 = GPU contention → potential hardware damage.
+- See also `docs/LESSONS.md` 2026-04-29 entry: `/v1/models` endpoint presence does NOT indicate physical home.
+
+**Code enforcement (2026-05-17):**
+- `perpetua/discovery/registry.py` (v1) and `perpetua_core/discovery/registry.py` (v2): `lmstudio-mac` seed annotated `# MIRROR — discovery only`.
+- `perpetua/discovery/selector.py` (v1) and `perpetua_core/discovery/selector.py` (v2): added `_MIRROR_BACKENDS = frozenset({"lmstudio-mac"})`, filtered from ALL candidate selection including model_hint resolution. `_TIER_HOSTS["mac"]` now contains only `{"ollama-local"}`.
+
+**Agents / future plans:** Before dispatching inference, check `b.name not in _MIRROR_BACKENDS`. Never route by model presence in `/v1/models` alone.
+
+---
+
+### HARD POLICY: Node.js — always resolve explicit full path
+
+**Problem:** `node` in PATH resolves to system v14.21.3 (macOS bundled). Any script using `#!/usr/bin/env node` or bare `node` silently runs on v14 and fails with modern syntax (`??=`, optional chaining, top-level await, etc.) with cryptic errors.
+
+**Rule:** Whenever invoking Node for scripts or CLI tools, resolve to the explicit full NVM path:
+
+```bash
+# Check available versions
+ls ~/.nvm/versions/node/
+
+# Use the pinned v22+ binary directly
+~/.nvm/versions/node/v22.22.2/bin/node script.js
+
+# For npm-installed CLIs (openclaw, gemini, etc.)
+~/.nvm/versions/node/v22.22.2/bin/openclaw ...
+~/.nvm/versions/node/v22.22.2/bin/npx ...
+```
+
+**Wrapper pattern** (for Gemini CLI and others that use shebang):
+```bash
+# ~/.local/bin/gemini  (must be on PATH before ~/.nvm shims)
+#!/bin/bash
+exec ~/.nvm/versions/node/v22.22.2/bin/node \
+     ~/.nvm/versions/node/v22.22.2/bin/gemini "$@"
+```
+
+**Verification before any Node script:**
+```bash
+node --version   # if this returns v14.x.x → use explicit path
+~/.nvm/versions/node/v22.22.2/bin/node --version  # should return v22.22.2
+```
+
+**Prior instances of this lesson:**
+- 2026-04-xx: Gemini CLI broken because `#!/usr/bin/env node` resolved to v14 (wrapper fix applied).
+- 2026-04-29: `openclaw` CLI requires Node ≥ v22; full path used: `~/.nvm/versions/node/v24.14.1/bin/openclaw`.
+- 2026-05-17: General policy enshrined — applies to ALL Node tooling.
